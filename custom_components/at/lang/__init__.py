@@ -30,6 +30,7 @@ class LanguagePack:
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
     generic_action_summary: str = "Run action"
+    joiner: str = ", "  # joins several target names, " and " in English
     domain_words: Mapping[str, str] = field(default_factory=dict)  # domain -> plural noun, "light" -> "lights"
     place_target: str = "{place}"  # an area or floor target, with {place} and {things}
     recognize_errors: Mapping[str, str] = field(default_factory=dict)  # no_match|refused|no_target[_domain]

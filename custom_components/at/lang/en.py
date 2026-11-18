@@ -144,6 +144,7 @@ EN = LanguagePack(
         "HassLawnMowerDock": "Dock {name}",
     },
     generic_action_summary="Run action",
+    joiner=" and ",
     domain_words={
         "light": "lights",
         "switch": "switches",

@@ -5,9 +5,11 @@ from dataclasses import dataclass
 import json
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.at.const import REFUSED_INTENT_TYPES
+from custom_components.at.ha_internal import recognize as recognize_module
+from custom_components.at.ha_internal.intents import async_run_intent
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
 from custom_components.at.lang import get_language_pack
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
@@ -128,6 +130,41 @@ async def test_uses_satellite_area(hass: HomeAssistant, home: Home) -> None:
     assert command.targets.area_ids == [home.kitchen_area_id]
     assert command.targets.entity_ids == ["light.kitchen"]
     assert command.summary == "Turn off Kitchen lights"
+    assert command.intent.slots["preferred_area_id"] == {"value": home.kitchen_area_id}
+    assert_nothing_ran(hass, home)
+
+
+async def test_satellite_area_is_kept_in_slots(
+    hass: HomeAssistant, home: Home, device_registry: dr.DeviceRegistry, entity_registry: er.EntityRegistry
+) -> None:
+    """A satellite with its own area, on a device in no area, keeps that area for fire time."""
+    entry = MockConfigEntry(domain="test")
+    entry.add_to_hass(hass)
+    device = device_registry.async_get_or_create(config_entry_id=entry.entry_id, identifiers={("test", "no_area")})
+    satellite = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        "kitchen_satellite",
+        device_id=device.id,
+        suggested_object_id="kitchen_satellite",
+        original_name="Kitchen satellite",
+    )
+    entity_registry.async_update_entity(satellite.entity_id, area_id=home.kitchen_area_id)
+
+    assert PACK is not None
+    command = await async_recognize_command(
+        hass,
+        "turn off the lights",
+        language=LANGUAGE,
+        device_id=device.id,
+        satellite_id=satellite.entity_id,
+        context=Context(),
+        pack=PACK,
+    )
+
+    assert command.targets.area_ids == [home.kitchen_area_id]
+    assert command.intent.slots["preferred_area_id"] == {"value": home.kitchen_area_id}
+    assert json.loads(json.dumps(command.intent.slots)) == command.intent.slots
     assert_nothing_ran(hass, home)
 
 
@@ -155,6 +192,40 @@ async def test_unknown_name_is_no_target(hass: HomeAssistant, home: Home) -> Non
 
     assert err.value.code == "no_target"
     assert err.value.message == "Sorry, I am not aware of any device called zzz"
+    assert_nothing_ran(hass, home)
+
+
+async def test_recognized_area_command_runs_later(hass: HomeAssistant, home: Home) -> None:
+    """The stored slots, preferred area included, run through the fire-time adapter."""
+    turn_off_calls = async_mock_service(hass, "light", "turn_off")
+    command = await recognize(hass, "turn off the lights", home.kitchen_device_id)
+    stored = json.loads(json.dumps(command.intent.slots))
+    command.intent.slots = stored
+
+    await async_run_intent(hass, command.intent, Context())
+
+    assert [call.data["entity_id"] for call in turn_off_calls] == [["light.kitchen"]]
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        ("turn on the garage light", "I couldn't find anything called Garage light."),
+        ("turn on the zzz light", "I couldn't find anything called zzz."),
+    ],
+)
+async def test_no_target_without_ha_wording_helpers(
+    hass: HomeAssistant, home: Home, monkeypatch: pytest.MonkeyPatch, text: str, message: str
+) -> None:
+    """If a Home Assistant release drops the private wording helpers, the pack's wording is used."""
+    monkeypatch.setattr(recognize_module, "_get_match_error_response", None)
+    monkeypatch.setattr(recognize_module, "_get_unmatched_response", None)
+
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, text, home.office_device_id)
+
+    assert err.value.code == "no_target"
+    assert err.value.message == message
     assert_nothing_ran(hass, home)
 
 

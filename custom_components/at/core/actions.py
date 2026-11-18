@@ -123,7 +123,7 @@ def summarize_action(hass: HomeAssistant, action: list[dict[str, Any]], pack: La
         if isinstance(name, str) and entity_ids:
             verb = pack.summary_verbs.get(name) or pack.summary_verbs.get(name.partition(".")[2])
             if verb:
-                return verb.format(name=" and ".join(_friendly_name(hass, e) for e in entity_ids))
+                return verb.format(name=pack.joiner.join(_friendly_name(hass, e) for e in entity_ids))
     return pack.generic_action_summary
 
 

@@ -15,12 +15,16 @@ from custom_components.at.const import REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYP
 from custom_components.at.core.models import IntentSpec, Targets
 from homeassistant.components import conversation
 from homeassistant.components.conversation.agent_manager import get_agent_manager
-from homeassistant.components.conversation.default_agent import (  # private: HA's error wording
-    _get_match_error_response,
-    _get_unmatched_response,
-)
 from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, intent, template
+
+# Private helpers that pick HA's own error sentence. Only the wording depends on them, so a
+# Home Assistant release that renames them falls back to the language pack's wording.
+try:
+    from homeassistant.components.conversation.default_agent import _get_match_error_response, _get_unmatched_response
+except ImportError:  # pragma: no cover - depends on the Home Assistant version
+    _get_match_error_response = None
+    _get_unmatched_response = None
 
 if TYPE_CHECKING:
     from hassil.recognize import RecognizeResult
@@ -31,6 +35,7 @@ if TYPE_CHECKING:
 
 ASSISTANT = conversation.DOMAIN
 _NO_INTENT_KEY = "no_intent"
+_MISSING_ENTITY = "<missing>"
 _JSON_SCALARS = (str, int, float, bool, type(None))
 
 type RecognizeErrorCode = Literal["no_match", "no_target", "refused"]
@@ -136,11 +141,11 @@ def _target_name(
 ) -> str | None:
     """Name the target for the summary: the entities by name, or the area or floor."""
     if constraints.name:
-        return " and ".join(state.name for state in match.states) or None
+        return pack.joiner.join(state.name for state in match.states) or None
     places = [area.name for area in match.areas] or [floor.name for floor in match.floors]
     if not places:
         return None
-    place = " and ".join(places)
+    place = pack.joiner.join(places)
     domains = sorted(constraints.domains or ())
     things = pack.domain_words.get(domains[0]) if len(domains) == 1 else None
     return pack.place_target.format(place=place, things=things).strip() if things else place
@@ -161,6 +166,32 @@ def _spoken_names(slots: dict[str, Any], match: intent.MatchTargetsResult | None
         if text and text.lower() != "all" and text.lower() not in {name.lower() for name in names}:
             names.append(text)
     return names
+
+
+async def _unmatched_error(
+    hass: HomeAssistant, agent: DefaultAgent, result: RecognizeResult, language: str, pack: LanguagePack, text: str
+) -> RecognizeError:
+    """Describe a recognition whose name, area or floor matched nothing."""
+    if _get_unmatched_response is None:
+        unmatched = [
+            spoken.strip()
+            for key, entity in result.unmatched_entities.items()
+            if key in {"name", "area", "floor"}
+            and isinstance(spoken := getattr(entity, "text", None), str)
+            and spoken.strip()
+            and spoken.strip() != _MISSING_ENTITY
+        ]
+        name = unmatched[0] if unmatched else text
+        return RecognizeError("no_target", _fallback_no_target(pack, intent.MatchTargetsConstraints(name=name), text))
+    key, args = _get_unmatched_response(result)
+    if getattr(key, "value", key) == _NO_INTENT_KEY:
+        return RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
+    message = await _ha_error_text(hass, agent, language, key, args)
+    unmatched_name = str(next(iter(args.values()), text))
+    return RecognizeError(
+        "no_target",
+        message or _fallback_no_target(pack, intent.MatchTargetsConstraints(name=unmatched_name), text),
+    )
 
 
 async def async_recognize_command(
@@ -211,24 +242,23 @@ async def async_recognize_command(
     constraints = _constraints(slots)
 
     if result.unmatched_entities:
-        key, args = _get_unmatched_response(result)
-        if getattr(key, "value", key) == _NO_INTENT_KEY:
-            raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
-        message = await _ha_error_text(hass, agent, language, key, args)
-        unmatched = next(iter(args.values()), text)
-        raise RecognizeError(
-            "no_target",
-            message or _fallback_no_target(pack, intent.MatchTargetsConstraints(name=unmatched), text),
-        )
+        raise await _unmatched_error(hass, agent, result, language, pack, text)
 
+    area_id = _satellite_area_id(hass, device_id, satellite_id)
     match: intent.MatchTargetsResult | None = None
     if constraints.has_constraints:
-        preferences = intent.MatchTargetsPreferences(area_id=_satellite_area_id(hass, device_id, satellite_id))
+        preferences = intent.MatchTargetsPreferences(area_id=area_id)
         match = intent.async_match_targets(hass, constraints, preferences)
         if not match.is_match:
-            key, args = _get_match_error_response(intent.MatchFailedError(match, constraints, preferences))
-            message = await _ha_error_text(hass, agent, language, key, args)
+            message = None
+            if _get_match_error_response is not None:
+                key, args = _get_match_error_response(intent.MatchFailedError(match, constraints, preferences))
+                message = await _ha_error_text(hass, agent, language, key, args)
             raise RecognizeError("no_target", message or _fallback_no_target(pack, constraints, text))
+
+    # Fix the area the default agent would prefer now, so the job prefers the same one later.
+    if area_id is not None:
+        slots["preferred_area_id"] = {"value": area_id}
 
     by_name = bool(constraints.name)
     targets = Targets(
