@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from custom_components.at.const import DOMAIN
 from custom_components.at.core.actions import build_action_job, summarize_action
 from custom_components.at.core.models import Via
-from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve
+from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve, wall_time_to_utc
 from custom_components.at.lang import get_language_pack
 from custom_components.at.lang.en import EN
 from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command
@@ -26,7 +26,7 @@ def _invalid(key: str, **placeholders: str) -> ServiceValidationError:
 
 def _due_from_fields(data: dict[str, Any]) -> datetime | None:
     if (at := data.get("at")) is not None:
-        return dt_util.as_utc(at)
+        return dt_util.as_utc(at) if at.tzinfo else wall_time_to_utc(at, dt_util.get_default_time_zone())
     if (delay := data.get("delay")) is not None:
         return dt_util.utcnow() + delay
     return None

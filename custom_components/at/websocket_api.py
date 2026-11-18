@@ -26,6 +26,7 @@ from .core.actions import (
 )
 from .core.errors import JobNotFound, JobStateError
 from .core.models import Job, JobStatus, Via
+from .core.timeparse import wall_time_to_utc
 from .lang import get_language_pack
 from .lang.en import EN
 from .voice.scheduling import ScheduleRefused, async_schedule_command
@@ -78,7 +79,7 @@ def _parse_due(value: str) -> datetime | None:
     parsed = dt_util.parse_datetime(value)
     if parsed is None:
         return None
-    return dt_util.as_utc(parsed if parsed.tzinfo else parsed.replace(tzinfo=dt_util.get_default_time_zone()))
+    return dt_util.as_utc(parsed) if parsed.tzinfo else wall_time_to_utc(parsed, dt_util.get_default_time_zone())
 
 
 @callback

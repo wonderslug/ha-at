@@ -318,3 +318,9 @@ async def test_list_naive_bounds_are_local(hass: HomeAssistant, manager: JobMana
 
     response = await call(hass, "list", {"start": "2026-11-17 22:00:00", "end": "2026-11-17 23:59:00"})
     assert [j["id"] for j in response["pending"]] == [soon.id]
+
+
+async def test_schedule_naive_at_in_spring_forward_gap(hass: HomeAssistant, manager: JobManager) -> None:
+    """A naive `at` inside the DST gap moves to the first valid minute after it, as the parser does."""
+    response = await call(hass, "schedule", {"action": ACTION, "at": "2027-03-14 02:30:00"})
+    assert response["due"] == "2027-03-14T08:00:00+00:00"

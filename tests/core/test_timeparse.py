@@ -5,7 +5,13 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve, split_time_and_command
+from custom_components.at.core.timeparse import (
+    TimeParseError,
+    parse_time_text,
+    resolve,
+    split_time_and_command,
+    wall_time_to_utc,
+)
 from custom_components.at.lang import get_language_pack
 from custom_components.at.lang.en import EN
 
@@ -118,3 +124,18 @@ def test_get_language_pack() -> None:
     assert get_language_pack("en") is EN
     assert get_language_pack("en-GB") is EN
     assert get_language_pack("de") is None
+
+
+@pytest.mark.parametrize(
+    ("naive", "expected_utc"),
+    [
+        pytest.param("2026-03-08 02:30", "2026-03-08 08:00", id="spring-forward gap moves to 03:00 CDT"),
+        pytest.param("2026-03-08 01:30", "2026-03-08 07:30", id="before the gap"),
+        pytest.param("2026-03-08 03:30", "2026-03-08 08:30", id="after the gap"),
+        pytest.param("2026-11-01 01:30", "2026-11-01 06:30", id="fall-back repeat takes the first"),
+    ],
+)
+def test_wall_time_to_utc(naive: str, expected_utc: str) -> None:
+    """A naive local time resolves with the parser's rule: a gap time moves to the first valid minute."""
+    resolved = wall_time_to_utc(datetime.strptime(naive, FMT), TZ)
+    assert resolved == datetime.strptime(expected_utc, FMT).replace(tzinfo=UTC)

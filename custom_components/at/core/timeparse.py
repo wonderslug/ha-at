@@ -6,7 +6,7 @@ pattern comes from the ``LanguagePack``; this module contains no natural languag
 """
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from functools import lru_cache
 import re
 from typing import TYPE_CHECKING, Literal
@@ -188,13 +188,26 @@ def split_time_and_command(text: str, pack: LanguagePack) -> tuple[TimeSpec, str
 
 def _wall_to_aware(d: date, hour: int, minute: int, tz: ZoneInfo) -> datetime:
     """Build a local time; a non-existent one moves forward to the first valid minute."""
-    naive = datetime(d.year, d.month, d.day, hour, minute)
+    return _first_valid(datetime(d.year, d.month, d.day, hour, minute), tz)
+
+
+def _first_valid(naive: datetime, tz: tzinfo) -> datetime:
     for _ in range(24 * 60):
         local = naive.replace(tzinfo=tz, fold=0)
         if local.astimezone(UTC).astimezone(tz).replace(tzinfo=None) == naive:
             return local
-        naive += timedelta(minutes=1)
+        naive = (naive + timedelta(minutes=1)).replace(second=0, microsecond=0)
     return naive.replace(tzinfo=tz, fold=0)  # pragma: no cover
+
+
+def wall_time_to_utc(naive: datetime, tz: tzinfo) -> datetime:
+    """
+    Read a naive wall-clock time in ``tz`` with the parser's rules, as an aware UTC instant.
+
+    A time in a spring-forward gap moves to the first valid minute after it; a repeated
+    fall-back time is the first of the two.
+    """
+    return _first_valid(naive, tz).astimezone(UTC)
 
 
 def candidate_hours(spec: TimeSpec) -> list[int]:

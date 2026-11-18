@@ -50,16 +50,30 @@ function zoneOffsetMs(ts: number, timeZone: string): number {
   return asUtc - Math.floor(ts / 1000) * 1000;
 }
 
-/** Interpret "YYYY-MM-DDTHH:MM" as wall-clock time in `timeZone`. Invalid input gives an Invalid Date. */
+/**
+ * Interpret "YYYY-MM-DDTHH:MM" as wall-clock time in `timeZone`. Invalid input gives an Invalid Date.
+ *
+ * Same rule as the backend parser: a time in a spring-forward gap moves to the first valid minute
+ * after it, and a repeated fall-back time is the first of the two.
+ */
 export function wallTimeToDate(value: string, timeZone: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
   if (!m) {
     return new Date(NaN);
   }
-  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-  let ts = guess - zoneOffsetMs(guess, timeZone);
-  ts = guess - zoneOffsetMs(ts, timeZone); // one DST correction pass
-  return new Date(ts);
+  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  for (let minute = 0; minute < 24 * 60; minute++) {
+    const guess = wall + minute * 60_000;
+    // The earlier of the two offsets around the guess gives the first occurrence of a repeated time.
+    const offsets = [zoneOffsetMs(guess - 86_400_000, timeZone), zoneOffsetMs(guess + 86_400_000, timeZone)];
+    const candidates = offsets.map((offset) => guess - offset).sort((a, b) => a - b);
+    for (const ts of candidates) {
+      if (ts + zoneOffsetMs(ts, timeZone) === guess) {
+        return new Date(ts);
+      }
+    }
+  }
+  return new Date(wall - zoneOffsetMs(wall, timeZone));
 }
 
 /** Inverse of wallTimeToDate: "YYYY-MM-DDTHH:MM" wall-clock time of `date` in `timeZone`. */

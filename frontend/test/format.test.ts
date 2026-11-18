@@ -44,6 +44,10 @@ describe("wallTimeToDate", () => {
     expect(wallTimeToDate("2026-03-08T01:30", "America/Chicago").toISOString()).toBe("2026-03-08T07:30:00.000Z");
     expect(wallTimeToDate("2026-03-08T03:30", "America/Chicago").toISOString()).toBe("2026-03-08T08:30:00.000Z");
   });
+  it("moves a time in the spring-forward gap to the first valid minute after it", () => {
+    // 02:30 does not exist on 2026-03-08 in Chicago; the parser's rule gives 03:00 CDT (08:00 UTC).
+    expect(wallTimeToDate("2026-03-08T02:30", "America/Chicago").toISOString()).toBe("2026-03-08T08:00:00.000Z");
+  });
   it("round-trips through dateToWallTime", () => {
     const d = wallTimeToDate("2026-11-18T12:00", "Europe/Berlin");
     expect(dateToWallTime(d, "Europe/Berlin")).toBe("2026-11-18T12:00");

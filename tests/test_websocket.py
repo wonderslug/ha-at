@@ -351,3 +351,12 @@ async def test_not_loaded(hass: HomeAssistant, hass_ws_client: WebSocketGenerato
     client = await hass_ws_client(hass)
     response = await send(client, "info")
     assert response["error"]["code"] == "not_loaded"
+
+
+async def test_schedule_naive_due_in_spring_forward_gap(
+    hass: HomeAssistant, manager: JobManager, admin_client: Client
+) -> None:
+    """A naive due time inside the DST gap moves to the first valid minute after it."""
+    response = await send(admin_client, "schedule", action=ACTION, due="2027-03-14T02:30")
+    assert response["success"], response
+    assert response["result"]["job"]["due"] == "2027-03-14T08:00:00+00:00"
