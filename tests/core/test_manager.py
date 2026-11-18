@@ -334,6 +334,26 @@ async def test_history_pruned_after_finish(
     assert len(reloaded) == 2
 
 
+async def test_stop_runs_every_callback_even_if_one_raises(
+    hass: HomeAssistant, make_manager: MakeManager, caplog: pytest.LogCaptureFixture
+) -> None:
+    manager = await make_manager()
+    stopped: list[str] = []
+
+    def failing() -> None:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+    manager.subscribe(lambda change: None, on_stop=failing)
+    manager.subscribe(lambda change: None, on_stop=lambda: stopped.append("second"))
+
+    await manager.async_stop()
+
+    assert stopped == ["second"]
+    assert "A stop callback raised an error" in caplog.text
+    assert manager._subscribers == []  # noqa: SLF001 - stop must still drop every subscriber
+
+
 async def test_subscribe_receives_changes(hass: HomeAssistant, make_manager: MakeManager) -> None:
     manager = await make_manager()
     changes: list[JobChange] = []

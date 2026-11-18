@@ -133,7 +133,10 @@ class JobManager:
         self._tasks.clear()
         self._in_flight.clear()
         for on_stop in list(self._stop_callbacks):
-            on_stop()
+            try:
+                on_stop()
+            except Exception:  # noqa: BLE001 - a subscriber's code; the remaining callbacks and the teardown must still run
+                LOGGER.exception("A stop callback raised an error")
         self._stop_callbacks.clear()
         self._subscribers.clear()
 
