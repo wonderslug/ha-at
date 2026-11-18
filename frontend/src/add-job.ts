@@ -57,3 +57,8 @@ export function parseRawAction(text: string): Parsed<Record<string, unknown>[]> 
     return { ok: false, error: "Invalid JSON" };
   }
 }
+
+/** True when `due` is a valid date strictly after `now`. */
+export function isFuture(due: Date, now: Date): boolean {
+  return !Number.isNaN(due.getTime()) && due.getTime() > now.getTime();
+}

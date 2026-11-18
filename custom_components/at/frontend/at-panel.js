@@ -655,15 +655,18 @@ function U(e) {
 		};
 	}
 }
+function ze(e, t) {
+	return !Number.isNaN(e.getTime()) && e.getTime() > t.getTime();
+}
 // src/format.ts
-var ze = 36e5, Be = 864e5;
-function Ve(e, t) {
+var Be = 36e5, Ve = 864e5;
+function He(e, t) {
 	let n = e - t;
-	if (n < 0 || n >= ze) return "";
+	if (n < 0 || n >= Be) return "";
 	let r = Math.floor(n / 1e3), i = Math.floor(r / 60), a = r % 60;
 	return `${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`;
 }
-function He(e, t, n) {
+function Ue(e, t, n) {
 	return new Intl.DateTimeFormat(t, {
 		timeZone: n,
 		year: "numeric",
@@ -677,9 +680,9 @@ function W(e, t, n, r) {
 		hour: "numeric",
 		minute: "2-digit"
 	}).format(e);
-	if (He(e, n, r) === He(t, n, r)) return i;
+	if (Ue(e, n, r) === Ue(t, n, r)) return i;
 	let a = e.getTime() - t.getTime();
-	return a > 0 && a < 7 * Be ? `${new Intl.DateTimeFormat(n, {
+	return a > 0 && a < 7 * Ve ? `${new Intl.DateTimeFormat(n, {
 		timeZone: r,
 		weekday: "short"
 	}).format(e)} ${i}` : `${new Intl.DateTimeFormat(n, {
@@ -701,13 +704,13 @@ function G(e, t) {
 	}).formatToParts(new Date(e)), r = (e) => Number(n.find((t) => t.type === e)?.value);
 	return Date.UTC(r("year"), r("month") - 1, r("day"), r("hour"), r("minute"), r("second")) - Math.floor(e / 1e3) * 1e3;
 }
-function Ue(e, t) {
+function We(e, t) {
 	let n = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(e);
 	if (!n) return /* @__PURE__ */ new Date(NaN);
 	let r = Date.UTC(+n[1], n[2] - 1, +n[3], +n[4], +n[5]), i = r - G(r, t);
 	return i = r - G(i, t), new Date(i);
 }
-function We(e, t) {
+function Ge(e, t) {
 	return new Date(e.getTime() + G(e.getTime(), t)).toISOString().slice(0, 16);
 }
 // \0@oxc-project+runtime@0.156.0/helpers/esm/decorate.js
@@ -718,7 +721,7 @@ function K(e, t, n, r) {
 	return i > 3 && a && Object.defineProperty(t, n, a), a;
 }
 // src/components/add-job-dialog.ts
-var Ge = [
+var Ke = [
 	"light",
 	"switch",
 	"fan",
@@ -732,10 +735,15 @@ var Ge = [
 	"vacuum"
 ], q = class extends R {
 	constructor(...e) {
-		super(...e), this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.op = "turn_on", this.entity = "", this.varsText = "", this.chip = "+15m", this.when = "", this.rawText = "", this.error = "", this.busy = !1, this.parseSeq = 0;
+		super(...e), this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.op = "turn_on", this.entity = "", this.varsText = "", this.chip = "+15m", this.when = "", this.rawText = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.onKey = (e) => {
+			e.key === "Escape" && this.open && this.close();
+		};
+	}
+	connectedCallback() {
+		super.connectedCallback(), window.addEventListener("keydown", this.onKey);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), window.clearTimeout(this.debounce);
+		super.disconnectedCallback(), window.removeEventListener("keydown", this.onKey), window.clearTimeout(this.debounce);
 	}
 	updated(e) {
 		e.has("open") && this.open && this.reset();
@@ -744,7 +752,7 @@ var Ge = [
 		window.clearTimeout(this.debounce), this.parseSeq++, this.mode = "type", this.text = "", this.preview = void 0, this.op = "turn_on", this.entity = "", this.varsText = "", this.chip = "+15m", this.when = "", this.rawText = "", this.error = "", this.busy = !1;
 	}
 	close() {
-		this.open = !1, this.dispatchEvent(new CustomEvent("close-add-job"));
+		this.reset(), this.open = !1, this.dispatchEvent(new CustomEvent("close-add-job"));
 	}
 	onText(e) {
 		this.text = e, this.preview = void 0, this.error = "", window.clearTimeout(this.debounce);
@@ -777,7 +785,7 @@ var Ge = [
 		return this.hass?.locale?.language ?? this.hass?.language ?? "en";
 	}
 	get domains() {
-		return this.op === "script" ? ["script"] : this.op === "automation" ? ["automation"] : Ge;
+		return this.op === "script" ? ["script"] : this.op === "automation" ? ["automation"] : Ke;
 	}
 	get entities() {
 		let e = this.hass?.states ?? {};
@@ -793,10 +801,10 @@ var Ge = [
 		};
 	}
 	get whenValid() {
-		return this.chip !== "" || !Number.isNaN(this.dueDate().getTime());
+		return this.chip !== "" || ze(this.dueDate(), /* @__PURE__ */ new Date());
 	}
 	dueDate() {
-		return Ue(this.when, this.hass?.config.time_zone ?? "UTC");
+		return We(this.when, this.hass?.config.time_zone ?? "UTC");
 	}
 	get canSubmit() {
 		return this.busy || !this.hass ? !1 : this.mode === "type" ? this.preview?.ok === !0 : this.mode === "raw" ? this.rawText.trim() !== "" && this.whenValid : this.entity !== "" && this.vars.ok && this.whenValid;
@@ -853,13 +861,14 @@ var Ge = [
 		this.when = e, this.chip = e ? "" : "+15m";
 	}
 	whenSection() {
-		let e = this.hass?.config.time_zone ?? "UTC", t = We(/* @__PURE__ */ new Date(), e);
+		let e = this.hass?.config.time_zone ?? "UTC", t = Ge(/* @__PURE__ */ new Date(), e);
 		return k`<div class="field">
       <span class="label">When</span>
       <div class="row">
         ${["+15m", "+1h"].map((e) => k`<button class="chip ${this.chip === e ? "on" : ""}" @click=${() => this.onChip(e)}>${e}</button>`)}
         <input type="datetime-local" aria-label="Date and time" .value=${this.when} min=${t} @input=${(e) => this.onWhen(e.target.value)} />
       </div>
+      ${this.chip === "" && !this.whenValid ? k`<div class="inline-error">${this.when ? "Time must be in the future" : "Choose a time"}</div>` : j}
     </div>`;
 	}
 	pickSection() {
@@ -1050,12 +1059,12 @@ K([B({ attribute: !1 })], q.prototype, "hass", void 0), K([B({ type: Boolean })]
 	reflect: !0
 })], q.prototype, "open", void 0), K([V()], q.prototype, "mode", void 0), K([V()], q.prototype, "text", void 0), K([V()], q.prototype, "preview", void 0), K([V()], q.prototype, "op", void 0), K([V()], q.prototype, "entity", void 0), K([V()], q.prototype, "varsText", void 0), K([V()], q.prototype, "chip", void 0), K([V()], q.prototype, "when", void 0), K([V()], q.prototype, "rawText", void 0), K([V()], q.prototype, "error", void 0), K([V()], q.prototype, "busy", void 0), q = K([z("at-add-job-dialog")], q);
 // src/components/history-table.ts
-var Ke = {
+var qe = {
 	done: "✓",
 	failed: "✗",
 	missed: "⚠",
 	cancelled: "⊘"
-}, qe = [
+}, Je = [
 	"all",
 	"done",
 	"failed",
@@ -1074,7 +1083,7 @@ var Ke = {
 	}
 	submit(e) {
 		if (!this.value) return;
-		let t = Ue(this.value, this.hass?.config.time_zone ?? "UTC");
+		let t = We(this.value, this.hass?.config.time_zone ?? "UTC");
 		Number.isNaN(t.getTime()) || (this.fire("reschedule-job", {
 			job: e,
 			due: t.toISOString()
@@ -1083,7 +1092,7 @@ var Ke = {
 	row(e) {
 		let t = W(new Date(e.finished_at ?? e.due), new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
 		return k`<tr @click=${() => this.fire("open-job", { job: e })}>
-      <td class="status ${e.status}" title=${e.status}>${Ke[e.status] ?? e.status}</td>
+      <td class="status ${e.status}" title=${e.status}>${qe[e.status] ?? e.status}</td>
       <td class="nowrap">${t}</td>
       <td>${e.summary}</td>
       <td class="result">${e.result.error ?? ""}</td>
@@ -1091,7 +1100,7 @@ var Ke = {
         ${this.editing === e.id ? k`<input type="datetime-local" .value=${this.value} @input=${(e) => this.value = e.target.value} />
               <button @click=${() => this.submit(e)}>Save</button>
               <button @click=${() => this.editing = null}>Cancel</button>` : k`<button @click=${() => {
-			this.editing = e.id, this.value = We(new Date(Date.now() + 36e5), this.hass?.config.time_zone ?? "UTC");
+			this.editing = e.id, this.value = Ge(new Date(Date.now() + 36e5), this.hass?.config.time_zone ?? "UTC");
 		}}>Re-schedule</button>`}
       </td>
     </tr>`;
@@ -1100,7 +1109,7 @@ var Ke = {
 		let e = this.filter === "all" ? this.history : this.history.filter((e) => e.status === this.filter);
 		return k`
       <div class="chips">
-        ${qe.map((e) => k`<button class="chip ${this.filter === e ? "on" : ""}" @click=${() => this.filter = e}>${e === "all" ? "All" : `${Ke[e]} ${e}`}</button>`)}
+        ${Je.map((e) => k`<button class="chip ${this.filter === e ? "on" : ""}" @click=${() => this.filter = e}>${e === "all" ? "All" : `${qe[e]} ${e}`}</button>`)}
       </div>
       ${e.length ? k`<table>
             <thead><tr><th></th><th>Time</th><th>Job</th><th>Result</th><th></th></tr></thead>
@@ -1132,7 +1141,7 @@ var Ke = {
 };
 K([B({ attribute: !1 })], J.prototype, "hass", void 0), K([B({ attribute: !1 })], J.prototype, "history", void 0), K([B({ type: Number })], J.prototype, "now", void 0), K([V()], J.prototype, "filter", void 0), K([V()], J.prototype, "editing", void 0), K([V()], J.prototype, "value", void 0), J = K([z("at-history-table")], J);
 // src/source.ts
-function Je(e, t) {
+function Ye(e, t) {
 	let { via: n, device_id: r, user_id: i } = e.source;
 	if (n === "voice" || n === "llm") {
 		let e = r ? t?.devices?.[r] : void 0;
@@ -1181,7 +1190,7 @@ var Z = class extends R {
           <dt>${e.intent ? "Intent" : "Action"}</dt>
           <dd><pre>${i}</pre></dd>
           <dt>Created by</dt>
-          <dd>${Je(e, this.hass)}</dd>
+          <dd>${Ye(e, this.hass)}</dd>
           <dt>Created</dt>
           <dd>${r}</dd>
           <dt>ID</dt>
@@ -1218,14 +1227,14 @@ var Q = class extends R {
 	}
 	when(e) {
 		let t = new Date(e.due);
-		return Ve(t.getTime(), this.now) || W(t, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
+		return He(t.getTime(), this.now) || W(t, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
 	}
 	row(e, t) {
 		let n = !t && (this.isAdmin || !e.raw_action);
 		return k`<tr @click=${() => this.fire("open-job", e)}>
       <td class="when">${t ? "Running…" : this.when(e)}</td>
       <td>${e.summary}</td>
-      <td>${Je(e, this.hass)}</td>
+      <td>${Ye(e, this.hass)}</td>
       <td class="actions">
         ${t ? j : k`${n ? k`<button title="Run now" aria-label="Run now" @click=${(t) => this.fire("run-job", e, t)}>▶</button>` : j}
             <button title="Cancel" aria-label="Cancel" @click=${(t) => this.fire("cancel-job", e, t)}>✕</button>`}
@@ -1256,29 +1265,29 @@ var Q = class extends R {
 };
 K([B({ attribute: !1 })], Q.prototype, "hass", void 0), K([B({ attribute: !1 })], Q.prototype, "pending", void 0), K([B({ attribute: !1 })], Q.prototype, "running", void 0), K([B({ type: Number })], Q.prototype, "now", void 0), K([B({ type: Boolean })], Q.prototype, "isAdmin", void 0), Q = K([z("at-upcoming-table")], Q);
 // src/reconnect.ts
-var Ye = 1e3, Xe = 3e4;
-function Ze(e) {
-	return Math.min(Ye * 2 ** Math.min(e, 10), Xe);
+var Xe = 1e3, Ze = 3e4;
+function Qe(e) {
+	return Math.min(Xe * 2 ** Math.min(e, 10), Ze);
 }
 // src/state.ts
-var Qe = (e, t) => Date.parse(e.due) - Date.parse(t.due), $e = (e) => Date.parse(e.finished_at ?? e.due), et = (e, t) => $e(t) - $e(e);
-function tt(e) {
+var $e = (e, t) => Date.parse(e.due) - Date.parse(t.due), et = (e) => Date.parse(e.finished_at ?? e.due), tt = (e, t) => et(t) - et(e);
+function nt(e) {
 	return {
-		pending: [...e.pending].sort(Qe),
-		running: [...e.running].sort(Qe),
-		history: [...e.history].sort(et)
+		pending: [...e.pending].sort($e),
+		running: [...e.running].sort($e),
+		history: [...e.history].sort(tt)
 	};
 }
-function nt(e, t) {
+function rt(e, t) {
 	let { job: n } = t, r = (e) => e.filter((e) => e.id !== n.id), i = {
 		pending: r(e.pending),
 		running: r(e.running),
 		history: r(e.history)
 	};
-	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), tt(i);
+	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), nt(i);
 }
 // src/at-panel.ts
-var rt = "at", $ = class extends R {
+var it = "at", $ = class extends R {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.tab = "upcoming", this.menuOpen = !1, this.data = {
 			pending: [],
@@ -1324,8 +1333,8 @@ var rt = "at", $ = class extends R {
 		}
 	}
 	onEvent(e) {
-		if ("snapshot" in e) this.data = tt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
-		else if ("change" in e) this.data = nt(this.data, e.change);
+		if ("snapshot" in e) this.data = nt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
+		else if ("change" in e) this.data = rt(this.data, e.change);
 		else if ("stopped" in e) {
 			let e = this.unsub;
 			this.unsub = void 0, e?.().catch(() => void 0), this.scheduleRetry();
@@ -1333,7 +1342,7 @@ var rt = "at", $ = class extends R {
 	}
 	scheduleRetry() {
 		if (this.reconnecting = !0, this.gone) return;
-		let e = Ze(this.attempt++);
+		let e = Qe(this.attempt++);
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	async call(e) {
@@ -1364,7 +1373,7 @@ var rt = "at", $ = class extends R {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : rt;
+		return typeof e == "string" && e ? e : it;
 	}
 	tabButton(e, t) {
 		return k`<button

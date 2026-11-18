@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import * as api from "../api";
-import { buildPickedAction, parseJsonObject, parseRawAction, quickDue, type Verb } from "../add-job";
+import { buildPickedAction, isFuture, parseJsonObject, parseRawAction, quickDue, type Verb } from "../add-job";
 import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
 import type { HomeAssistant, SchedulePayload } from "../types";
 
@@ -36,8 +36,18 @@ export class AddJobDialog extends LitElement {
   private debounce?: number;
   private parseSeq = 0;
 
+  private onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape" && this.open) this.close();
+  };
+
+  override connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.onKey);
+  }
+
   override disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("keydown", this.onKey);
     window.clearTimeout(this.debounce);
   }
 
@@ -62,6 +72,7 @@ export class AddJobDialog extends LitElement {
   }
 
   private close() {
+    this.reset();
     this.open = false;
     this.dispatchEvent(new CustomEvent("close-add-job"));
   }
@@ -113,7 +124,7 @@ export class AddJobDialog extends LitElement {
   }
 
   private get whenValid(): boolean {
-    return this.chip !== "" || !Number.isNaN(this.dueDate().getTime());
+    return this.chip !== "" || isFuture(this.dueDate(), new Date());
   }
 
   private dueDate(): Date {
@@ -194,6 +205,7 @@ export class AddJobDialog extends LitElement {
         )}
         <input type="datetime-local" aria-label="Date and time" .value=${this.when} min=${min} @input=${(e: Event) => this.onWhen((e.target as HTMLInputElement).value)} />
       </div>
+      ${this.chip === "" && !this.whenValid ? html`<div class="inline-error">${this.when ? "Time must be in the future" : "Choose a time"}</div>` : nothing}
     </div>`;
   }
 

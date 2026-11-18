@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { buildPickedAction, parseJsonObject, parseRawAction, quickDue } from "../src/add-job";
+import { buildPickedAction, isFuture, parseJsonObject, parseRawAction, quickDue, type PickedInput } from "../src/add-job";
+import shapes from "./picked-shapes.json";
+
+describe("shared picked shapes", () => {
+  it.each(shapes)("builds $expected", ({ input, expected }) => {
+    expect(buildPickedAction(input as PickedInput)).toEqual(expected);
+  });
+});
+
+describe("isFuture", () => {
+  const now = new Date("2026-11-18T18:00:00Z");
+  it("requires a valid later date", () => {
+    expect(isFuture(new Date("2026-11-18T18:00:01Z"), now)).toBe(true);
+    expect(isFuture(new Date("2026-11-18T17:59:00Z"), now)).toBe(false);
+    expect(isFuture(now, now)).toBe(false);
+    expect(isFuture(new Date(NaN), now)).toBe(false);
+  });
+});
 
 describe("buildPickedAction", () => {
   it("builds homeassistant verbs with an entity list", () => {
