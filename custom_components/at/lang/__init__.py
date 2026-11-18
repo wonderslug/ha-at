@@ -31,6 +31,7 @@ class LanguagePack:
     # Sentence trigger templates by group: schedule_absolute, schedule_relative, list, cancel
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use
+    run_pattern: str = ""  # regex with a ``name`` group for "run <automation>" outside a sentence trigger
     sentence_clock: str = ""  # a time phrase built from matched {hour}, {minute} and {meridiem}
     sentence_weekday: str = "{weekday}"  # a matched {weekday} as the time parser reads it, "on {weekday}"
     summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
