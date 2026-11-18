@@ -1,5 +1,7 @@
 """Sentence triggers on the built-in agent: schedule, list and cancel by voice."""
 
+import asyncio
+from collections.abc import AsyncIterator
 import logging
 from typing import Any, override
 from unittest.mock import patch
@@ -395,9 +397,15 @@ async def llm_pipeline(hass: HomeAssistant, manager: JobManager) -> StubLlmAgent
 
 
 async def run_pipeline(hass: HomeAssistant, home: Assist, text: str) -> str:
+    speech, _conversation_id = await run_pipeline_with_id(hass, home, text)
+    return speech
+
+
+async def run_pipeline_with_id(hass: HomeAssistant, home: Assist, text: str) -> tuple[str, str]:
     (pipeline,) = async_get_pipelines(hass)
     events: list[PipelineEvent] = []
     with chat_session.async_get_chat_session(hass) as session:
+        conversation_id = session.conversation_id
         await PipelineInput(
             session=session,
             intent_input=text,
@@ -413,7 +421,7 @@ async def run_pipeline(hass: HomeAssistant, home: Assist, text: str) -> str:
         ).execute(validate=True)
     (intent_end,) = [event for event in events if event.type is PipelineEventType.INTENT_END]
     assert intent_end.data is not None
-    return intent_end.data["intent_output"]["response"]["speech"]["plain"]["speech"]
+    return intent_end.data["intent_output"]["response"]["speech"]["plain"]["speech"], conversation_id
 
 
 async def test_unknown_command_goes_to_llm_agent_once(
@@ -434,3 +442,67 @@ async def test_known_command_scheduled_without_llm(
     assert speech.startswith("OK, at 11 PM")
     assert llm_pipeline.texts == []
     assert len(manager.pending()) == 1
+
+
+LONG_REPLY = "I can't set reminders, but I can schedule a light or a script for later if you like."
+
+
+class StreamingStubAgent(conversation.AbstractConversationAgent):
+    """A stand-in LLM that answers through its chat log by streaming, like the real ones."""
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Start with no calls."""
+        self.hass = hass
+        self.seen: list[list[conversation.Content]] = []
+
+    @property
+    @override
+    def supported_languages(self) -> list[str] | str:
+        """Accept every language."""
+        return MATCH_ALL
+
+    @override
+    async def async_process(self, user_input: conversation.ConversationInput) -> conversation.ConversationResult:
+        """Record the history it was given, then stream a long reply into it."""
+        with (
+            chat_session.async_get_chat_session(self.hass, user_input.conversation_id) as session,
+            conversation.async_get_chat_log(self.hass, session, user_input) as chat_log,
+        ):
+            self.seen.append(list(chat_log.content))
+
+            async def stream() -> AsyncIterator[conversation.AssistantContentDeltaDict]:
+                yield {"role": "assistant"}
+                yield {"content": LONG_REPLY[:30]}
+                yield {"content": LONG_REPLY[30:]}
+
+            async for _content in chat_log.async_add_delta_content_stream("stub", stream()):
+                pass
+            response = intent.IntentResponse(language=user_input.language)
+            response.async_set_speech(LONG_REPLY)
+            return conversation.ConversationResult(response=response, conversation_id=chat_log.conversation_id)
+
+
+async def test_llm_hand_off_uses_its_own_chat_log(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
+    assert await async_setup_component(hass, "assist_pipeline", {})
+    stub_agent = StreamingStubAgent(hass)
+    agent_entry = MockConfigEntry(domain="test", title="Streaming stub LLM")
+    agent_entry.add_to_hass(hass)
+    conversation.async_set_agent(hass, agent_entry, stub_agent)
+    (pipeline,) = async_get_pipelines(hass)
+    await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
+
+    async with asyncio.timeout(10):
+        speech, conversation_id = await run_pipeline_with_id(hass, home, "remind me at 5")
+
+    assert speech == LONG_REPLY
+    assert manager.pending() == []
+    (history,) = stub_agent.seen
+    assert [(c.role, c.content) for c in history if c.role != "system"] == [("user", "remind me at 5")]
+    with (
+        chat_session.async_get_chat_session(hass, conversation_id) as session,
+        conversation.async_get_chat_log(hass, session) as chat_log,
+    ):
+        pipeline_log = [c for c in chat_log.content if c.role != "system"]
+    assert [c.role for c in pipeline_log] == ["user", "assistant", "tool_result", "assistant"]
+    assert [tool.tool_name for tool in pipeline_log[1].tool_calls or []] == ["trigger_sentence"]
+    assert pipeline_log[-1].content == LONG_REPLY

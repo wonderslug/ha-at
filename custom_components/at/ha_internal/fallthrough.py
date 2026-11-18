@@ -10,12 +10,27 @@ sentence on itself:
   don't run sentence triggers, so this can't loop back into `at`;
 - otherwise to the built-in agent's intent matching, without its sentence triggers, so
   Home Assistant answers with its own response.
+
+Both run in a fresh, isolated chat session. The trigger runs inside the pipeline's live chat
+log, which at that moment ends in the default agent's unanswered ``trigger_sentence`` tool
+call and has the pipeline's streaming listener attached. Reusing it would send an LLM a
+history its API rejects, store that broken history for later turns, and stream the reply into
+a pipeline that never closes the stream. ``async_get_chat_session`` and ``async_get_chat_log``
+reuse whatever their context variables hold, so the hand-off runs as a task in a copied
+context with both cleared.
+
+Trade-off: the forwarded exchange starts a new conversation. The LLM doesn't see the earlier
+turns of the user's conversation, and its reply isn't added to them.
 """
 
-from typing import TYPE_CHECKING
+import asyncio
+from collections.abc import Coroutine
+import contextvars
+from typing import TYPE_CHECKING, Any
 
 from custom_components.at.const import REFUSED_INTENT_PREFIX
 from homeassistant.components import conversation
+from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.helpers import chat_session
 
 if TYPE_CHECKING:
@@ -34,6 +49,44 @@ def _is_at_intent(result: RecognizeResult) -> bool:
     return result.intent.name.startswith(REFUSED_INTENT_PREFIX)
 
 
+async def _isolated[T](coro: Coroutine[Any, Any, T]) -> T:
+    """Run ``coro`` with no active chat session or chat log, without touching the caller's."""
+    context = contextvars.copy_context()
+    context.run(chat_session.current_session.set, None)
+    context.run(current_chat_log.set, None)
+    return await asyncio.get_running_loop().create_task(coro, context=context)
+
+
+async def _async_forward(hass: HomeAssistant, given: TriggerInput) -> str:
+    result = await conversation.async_converse(
+        hass,
+        given.sentence,
+        None,
+        given.context,
+        given.language,
+        agent_id=given.agent_id,
+        device_id=given.device_id,
+        satellite_id=given.satellite_id,
+    )
+    return _speech(result.response)
+
+
+async def _async_default_intents(hass: HomeAssistant, given: TriggerInput) -> str | None:
+    with chat_session.async_get_chat_session(hass) as session:
+        user_input = conversation.ConversationInput(
+            text=given.sentence,
+            context=given.context,
+            conversation_id=session.conversation_id,
+            device_id=given.device_id,
+            satellite_id=given.satellite_id,
+            language=given.language,
+            agent_id=conversation.HOME_ASSISTANT_AGENT,
+        )
+        with conversation.async_get_chat_log(hass, session, user_input) as chat_log:
+            response = await conversation.async_handle_intents(hass, user_input, chat_log, intent_filter=_is_at_intent)
+    return None if response is None else _speech(response)
+
+
 async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None:
     """
     Answer the full sentence the way its agent would have without `at`.
@@ -43,30 +96,5 @@ async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None
 
     """
     if given.agent_id is not None and given.agent_id != conversation.HOME_ASSISTANT_AGENT:
-        result = await conversation.async_converse(
-            hass,
-            given.sentence,
-            given.conversation_id,
-            given.context,
-            given.language,
-            agent_id=given.agent_id,
-            device_id=given.device_id,
-            satellite_id=given.satellite_id,
-        )
-        return _speech(result.response)
-
-    user_input = conversation.ConversationInput(
-        text=given.sentence,
-        context=given.context,
-        conversation_id=given.conversation_id,
-        device_id=given.device_id,
-        satellite_id=given.satellite_id,
-        language=given.language,
-        agent_id=conversation.HOME_ASSISTANT_AGENT,
-    )
-    with (
-        chat_session.async_get_chat_session(hass, given.conversation_id) as session,
-        conversation.async_get_chat_log(hass, session, user_input) as chat_log,
-    ):
-        response = await conversation.async_handle_intents(hass, user_input, chat_log, intent_filter=_is_at_intent)
-    return None if response is None else _speech(response)
+        return await _isolated(_async_forward(hass, given))
+    return await _isolated(_async_default_intents(hass, given))
