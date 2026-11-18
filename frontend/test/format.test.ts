@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCountdown, formatWhen } from "../src/format";
+import { dateToWallTime, formatCountdown, formatWhen, wallTimeToDate } from "../src/format";
 
 const TZ = "America/Chicago";
 const LOCALE = "en-US";
@@ -29,5 +29,26 @@ describe("formatWhen", () => {
   it("shows the date after that", () => {
     // Dec 3 14:00 UTC = 8:00 AM in Chicago.
     expect(formatWhen(new Date("2026-12-03T14:00:00Z"), now, LOCALE, TZ)).toBe("Dec 3, 8:00 AM");
+  });
+});
+
+describe("wallTimeToDate", () => {
+  it("Chicago normal day (CST)", () => {
+    expect(wallTimeToDate("2026-11-18T12:00", "America/Chicago").toISOString()).toBe("2026-11-18T18:00:00.000Z");
+  });
+  it("Berlin summer (CEST)", () => {
+    expect(wallTimeToDate("2026-07-01T09:30", "Europe/Berlin").toISOString()).toBe("2026-07-01T07:30:00.000Z");
+  });
+  it("US DST change day, before and after the switch", () => {
+    // 2026-03-08: Chicago springs forward at 02:00 CST.
+    expect(wallTimeToDate("2026-03-08T01:30", "America/Chicago").toISOString()).toBe("2026-03-08T07:30:00.000Z");
+    expect(wallTimeToDate("2026-03-08T03:30", "America/Chicago").toISOString()).toBe("2026-03-08T08:30:00.000Z");
+  });
+  it("round-trips through dateToWallTime", () => {
+    const d = wallTimeToDate("2026-11-18T12:00", "Europe/Berlin");
+    expect(dateToWallTime(d, "Europe/Berlin")).toBe("2026-11-18T12:00");
+  });
+  it("rejects garbage", () => {
+    expect(Number.isNaN(wallTimeToDate("", "UTC").getTime())).toBe(true);
   });
 });

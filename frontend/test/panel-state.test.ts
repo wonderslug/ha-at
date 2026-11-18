@@ -83,8 +83,8 @@ describe("nextRetryDelay", () => {
     expect(nextRetryDelay(2)).toBe(4000);
     expect(nextRetryDelay(7)).toBe(30000);
   });
-  it("gives up after the maximum attempts", () => {
-    expect(nextRetryDelay(8)).not.toBeNull();
-    expect(nextRetryDelay(9)).toBeNull();
+  it("never gives up and stays at the cap", () => {
+    expect(nextRetryDelay(9)).toBe(30000);
+    expect(nextRetryDelay(1000)).toBe(30000);
   });
 });

@@ -1,6 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { formatWhen } from "../format";
+import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
 import type { HomeAssistant, Job, JobStatus } from "../types";
 
 const ICONS: Record<string, string> = { done: "✓", failed: "✗", missed: "⚠", cancelled: "⊘" };
@@ -22,7 +22,7 @@ export class HistoryTable extends LitElement {
 
   private submit(job: Job) {
     if (!this.value) return;
-    const due = new Date(this.value);
+    const due = wallTimeToDate(this.value, this.hass?.config.time_zone ?? "UTC");
     if (Number.isNaN(due.getTime())) return;
     this.fire("reschedule-job", { job, due: due.toISOString() });
     this.editing = null;
@@ -46,7 +46,7 @@ export class HistoryTable extends LitElement {
           ? html`<input type="datetime-local" .value=${this.value} @input=${(e: Event) => (this.value = (e.target as HTMLInputElement).value)} />
               <button @click=${() => this.submit(job)}>Save</button>
               <button @click=${() => (this.editing = null)}>Cancel</button>`
-          : html`<button @click=${() => { this.editing = job.id; this.value = ""; }}>Re-schedule</button>`}
+          : html`<button @click=${() => { this.editing = job.id; this.value = dateToWallTime(new Date(Date.now() + 3_600_000), this.hass?.config.time_zone ?? "UTC"); }}>Re-schedule</button>`}
       </td>
     </tr>`;
   }

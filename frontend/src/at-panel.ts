@@ -6,7 +6,7 @@ import "./components/job-details";
 import "./components/upcoming-table";
 import { nextRetryDelay } from "./reconnect";
 import { applyChange, normalize, type PanelState } from "./state";
-import type { AtInfo, HomeAssistant, Job, PanelInfo } from "./types";
+import type { AtInfo, HomeAssistant, Job, PanelInfo, SubscribeEvent } from "./types";
 
 type Tab = "upcoming" | "history";
 
@@ -35,10 +35,13 @@ export class AtPanel extends LitElement {
   private attempt = 0;
   private subscribed = false;
   private gone = false;
+  private generation = 0;
 
   override connectedCallback() {
     super.connectedCallback();
     this.gone = false;
+    this.generation++;
+    window.clearInterval(this.tick);
     this.tick = window.setInterval(() => (this.now = Date.now()), 1000);
     if (this.hass) void this.start();
   }
@@ -46,6 +49,7 @@ export class AtPanel extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.gone = true;
+    this.generation++;
     window.clearInterval(this.tick);
     window.clearTimeout(this.retryTimer);
     this.subscribed = false;
@@ -68,19 +72,22 @@ export class AtPanel extends LitElement {
 
   private async subscribe() {
     if (!this.hass || this.gone) return;
+    const generation = this.generation;
     try {
-      const unsub = await api.subscribeJobs(this.hass, (event) => this.onEvent(event));
-      if (this.gone) {
+      const unsub = await api.subscribeJobs(this.hass, (event) => {
+        if (generation === this.generation) this.onEvent(event);
+      });
+      if (generation !== this.generation) {
         void unsub().catch(() => undefined);
         return;
       }
       this.unsub = unsub;
     } catch {
-      this.scheduleRetry();
+      if (generation === this.generation) this.scheduleRetry();
     }
   }
 
-  private onEvent(event: import("./types").SubscribeEvent) {
+  private onEvent(event: SubscribeEvent) {
     if ("snapshot" in event) {
       this.data = normalize(event.snapshot);
       this.reconnecting = false;
@@ -97,8 +104,8 @@ export class AtPanel extends LitElement {
 
   private scheduleRetry() {
     this.reconnecting = true;
+    if (this.gone) return;
     const delay = nextRetryDelay(this.attempt++);
-    if (delay === null || this.gone) return;
     window.clearTimeout(this.retryTimer);
     this.retryTimer = window.setTimeout(() => void this.subscribe(), delay);
   }
@@ -142,6 +149,7 @@ export class AtPanel extends LitElement {
   private clearHistory() {
     const hass = this.hass;
     this.menuOpen = false;
+    this.confirmCancelAll = false;
     if (hass) void this.call(() => api.clearHistory(hass));
   }
 

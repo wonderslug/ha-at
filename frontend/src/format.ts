@@ -33,3 +33,37 @@ export function formatWhen(due: Date, now: Date, locale: string, timeZone: strin
   const date = new Intl.DateTimeFormat(locale, { timeZone, month: "short", day: "numeric" }).format(due);
   return `${date}, ${time}`;
 }
+
+function zoneOffsetMs(ts: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  }).formatToParts(new Date(ts));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return asUtc - Math.floor(ts / 1000) * 1000;
+}
+
+/** Interpret "YYYY-MM-DDTHH:MM" as wall-clock time in `timeZone`. Invalid input gives an Invalid Date. */
+export function wallTimeToDate(value: string, timeZone: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  if (!m) {
+    return new Date(NaN);
+  }
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  let ts = guess - zoneOffsetMs(guess, timeZone);
+  ts = guess - zoneOffsetMs(ts, timeZone); // one DST correction pass
+  return new Date(ts);
+}
+
+/** Inverse of wallTimeToDate: "YYYY-MM-DDTHH:MM" wall-clock time of `date` in `timeZone`. */
+export function dateToWallTime(date: Date, timeZone: string): string {
+  const wall = new Date(date.getTime() + zoneOffsetMs(date.getTime(), timeZone));
+  return wall.toISOString().slice(0, 16);
+}
