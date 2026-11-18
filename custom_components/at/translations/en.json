@@ -13,7 +13,7 @@
     "step": {
       "init": {
         "title": "at options",
-        "description": "Tune how scheduled jobs are kept and how voice commands are handled. Changes reload the integration.",
+        "description": "Tune how scheduled jobs are kept and how voice commands are handled. Changes apply right away; running jobs are not interrupted.",
         "data": {
           "grace_minutes": "Grace window",
           "history_days": "History age",
