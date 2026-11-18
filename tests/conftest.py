@@ -4,10 +4,12 @@ from collections.abc import Generator
 import logging
 from unittest.mock import patch
 
+from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.at.const import DISPLAY_NAME, DOMAIN
+from custom_components.at.core.manager import JobManager
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
@@ -125,3 +127,32 @@ async def assist(
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
     await hass.async_block_till_done()
     return Assist(device_id=satellite.id, turn_on_calls=turn_on_calls)
+
+
+@pytest.fixture
+async def home(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, assist: Assist, entity_registry: er.EntityRegistry
+) -> Assist:
+    """Freeze now at 22:22 Chicago on Tuesday 2026-11-17 and expose the bathroom light and the bedtime script."""
+    await hass.config.async_set_time_zone("America/Chicago")
+    freezer.move_to("2026-11-18 04:22:00+00:00")
+    for domain, object_id, name in (
+        ("light", "master_bathroom", "Master Bathroom Light"),
+        ("script", "bedtime", "Bedtime"),
+    ):
+        entry = entity_registry.async_get_or_create(
+            domain, "test", object_id, suggested_object_id=object_id, original_name=name
+        )
+        hass.states.async_set(entry.entity_id, "off", {ATTR_FRIENDLY_NAME: name})
+        async_expose_entity(hass, ASSISTANT, entry.entity_id, True)
+    await hass.async_block_till_done()
+    return assist
+
+
+@pytest.fixture
+async def manager(hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry) -> JobManager:
+    """Load the integration once the home is set up."""
+    config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    return config_entry.runtime_data.manager

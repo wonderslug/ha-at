@@ -1,6 +1,5 @@
 """Tests for the single-instance config flow and its options."""
 
-# ruff: noqa: F811  (the voice fixtures are imported, then used as arguments)
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -25,15 +24,14 @@ from custom_components.at.core.manager import JobManager, ManagerOptions
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
-from tests.assist import Assist  # noqa: TID251  (plain module; see tests/assist.py)
-from tests.voice.test_triggers import home, manager, say  # noqa: F401, TID251  (shared voice fixtures and helpers)
+from tests.assist import Assist, say  # noqa: TID251  (plain module; see tests/assist.py)
 
 NEW_OPTIONS = {
     CONF_GRACE_MINUTES: 10,
     CONF_HISTORY_DAYS: 3,
     CONF_HISTORY_MAX: 20,
     CONF_PANEL_ADMIN_ONLY: True,
-    CONF_DEFER_RELATIVE: False,
+    CONF_DEFER_RELATIVE: True,
 }
 
 
@@ -78,6 +76,14 @@ async def test_options_flow_shows_current_values(init_integration: MockConfigEnt
         CONF_PANEL_ADMIN_ONLY: DEFAULT_PANEL_ADMIN_ONLY,
         CONF_DEFER_RELATIVE: DEFAULT_DEFER_RELATIVE,
     }
+
+
+@pytest.mark.parametrize("config_entry", [NEW_OPTIONS], indirect=True)
+async def test_options_flow_shows_stored_values(init_integration: MockConfigEntry, hass: HomeAssistant) -> None:
+    """Stored options are the form defaults."""
+    result = await hass.config_entries.options.async_init(init_integration.entry_id)
+
+    assert {str(key): key.default() for key in result["data_schema"].schema} == NEW_OPTIONS
 
 
 async def test_options_flow_saves_values(init_integration: MockConfigEntry, hass: HomeAssistant) -> None:
@@ -146,7 +152,7 @@ async def test_options_reload_applies_defer_relative(hass: HomeAssistant, home: 
     assert len(entry.runtime_data.manager.pending()) == 1
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    await hass.config_entries.options.async_configure(result["flow_id"], {**NEW_OPTIONS, CONF_DEFER_RELATIVE: True})
+    await hass.config_entries.options.async_configure(result["flow_id"], NEW_OPTIONS)
     await hass.async_block_till_done()
 
     reloaded = entry.runtime_data.manager

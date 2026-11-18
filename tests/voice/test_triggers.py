@@ -6,7 +6,6 @@ import logging
 from typing import Any, override
 from unittest.mock import patch
 
-from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
@@ -25,12 +24,11 @@ from homeassistant.components.assist_pipeline.pipeline import async_get_pipeline
 from homeassistant.components.assist_pipeline.run import PipelineInput, PipelineRun
 from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
-from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.const import ATTR_FRIENDLY_NAME, MATCH_ALL
+from homeassistant.const import MATCH_ALL
 from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import chat_session, entity_registry as er, intent
+from homeassistant.helpers import chat_session, intent
 from homeassistant.setup import async_setup_component
-from tests.assist import ASSISTANT, LANGUAGE, Assist  # noqa: TID251  (plain module; see tests/assist.py)
+from tests.assist import LIGHT, Assist, say  # noqa: TID251  (plain module; see tests/assist.py)
 
 pytestmark = [
     pytest.mark.real_dependencies,
@@ -40,47 +38,12 @@ pytestmark = [
 UNRECOGNIZED = (
     "Sorry, I can only schedule commands I can check right now. Try rephrasing, or schedule a script or scene."
 )
-LIGHT = "light.master_bathroom"
-
-
-@pytest.fixture
-async def home(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, assist: Assist, entity_registry: er.EntityRegistry
-) -> Assist:
-    """Freeze now at 22:22 Chicago on Tuesday 2026-11-17 and expose the bathroom light and the bedtime script."""
-    await hass.config.async_set_time_zone("America/Chicago")
-    freezer.move_to("2026-11-18 04:22:00+00:00")
-    for domain, object_id, name in (
-        ("light", "master_bathroom", "Master Bathroom Light"),
-        ("script", "bedtime", "Bedtime"),
-    ):
-        entry = entity_registry.async_get_or_create(
-            domain, "test", object_id, suggested_object_id=object_id, original_name=name
-        )
-        hass.states.async_set(entry.entity_id, "off", {ATTR_FRIENDLY_NAME: name})
-        async_expose_entity(hass, ASSISTANT, entry.entity_id, True)
-    await hass.async_block_till_done()
-    return assist
 
 
 @pytest.fixture
 def script_calls(hass: HomeAssistant) -> list[ServiceCall]:
     """Record script runs instead of running them."""
     return async_mock_service(hass, "script", "turn_on")
-
-
-@pytest.fixture
-async def manager(hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry) -> JobManager:
-    """Load the integration once the home is set up."""
-    config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    return config_entry.runtime_data.manager
-
-
-async def say(hass: HomeAssistant, home: Assist, text: str) -> str:
-    result = await conversation.async_converse(hass, text, None, Context(), LANGUAGE, device_id=home.device_id)
-    return result.response.speech["plain"]["speech"]
 
 
 def bathroom_light_untouched(hass: HomeAssistant, home: Assist) -> bool:
