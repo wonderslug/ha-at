@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import probatio
 
 from custom_components.at.const import DOMAIN
-from custom_components.at.core.models import Job, JobStatus, Via
+from custom_components.at.core.models import Job, Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text
 from custom_components.at.lang import LanguagePack, get_language_pack, message
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
@@ -212,7 +212,7 @@ class AtCancelHandler(_AtHandler):
         if _slot(intent_obj, "all") is True:
             matches = match_for_cancel(pending, CancelQuery(all=True), now, tz)
             await manager.async_cancel_many([j.id for j in matches], by)
-            left_alone = sum(1 for j in pending if j.status == JobStatus.PENDING and j.source.via == Via.SERVICE)
+            left_alone = sum(1 for j in pending if j.source.via == Via.SERVICE)
             return _speak(intent_obj, cancel_all_speech(pack, len(matches), left_alone))
 
         query = CancelQuery(name=_text_slot(intent_obj, "name"))
