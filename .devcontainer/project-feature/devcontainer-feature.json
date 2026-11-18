@@ -5,7 +5,7 @@
   "description": "VS Code extensions this project requires for every contributor; see docs/development/CUSTOMIZATION.md.",
   "customizations": {
     "vscode": {
-      "extensions": []
+      "extensions": ["eamodio.gitlens"]
     }
   }
 }
