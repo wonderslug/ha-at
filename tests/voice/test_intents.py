@@ -8,10 +8,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
-from custom_components.at.voice.intents import INTENT_CANCEL, INTENT_LIST, INTENT_SCHEDULE
+from custom_components.at.voice.intents import INTENT_CANCEL, INTENT_LIST, INTENT_SCHEDULE, AtListHandler
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import entity_registry as er, intent
 from homeassistant.util import dt as dt_util
 from tests.assist import ASSISTANT, Assist  # noqa: TID251  (plain module; see tests/assist.py)
@@ -165,10 +165,34 @@ async def test_at_cancel_ambiguous_cancels_nothing(hass: HomeAssistant, manager:
     assert len(manager.pending()) == 2
 
 
-async def test_no_loaded_entry_is_error(
+async def test_at_cancel_without_criteria_cancels_nothing(hass: HomeAssistant, manager: JobManager) -> None:
+    await add_job(manager, "Turn on Porch Light", 1)
+
+    response = await handle(hass, INTENT_CANCEL, {})
+
+    assert speech(response) == "I couldn't find a scheduled job matching that."
+    assert len(manager.pending()) == 1
+
+
+async def test_unload_removes_handlers_and_reload_restores_them(
     hass: HomeAssistant, manager: JobManager, config_entry: MockConfigEntry
 ) -> None:
     await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
     with pytest.raises(intent.UnknownIntent):
         await handle(hass, INTENT_LIST, {})
+
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    response = await handle(hass, INTENT_SCHEDULE, {"time": "at 11pm", "command": "turn on the porch light"})
+    assert speech(response) == "OK, at 11 PM I'll turn on Porch Light."
+    assert len(config_entry.runtime_data.manager.pending()) == 1
+
+
+async def test_handler_without_loaded_entry_is_error(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    obj = intent.Intent(hass, "test", INTENT_LIST, {}, None, Context(), "en")
+
+    response = await AtListHandler().async_handle(obj)
+
+    assert response.response_type == intent.IntentResponseType.ERROR
+    assert speech(response) == "Sorry, scheduling isn't set up."

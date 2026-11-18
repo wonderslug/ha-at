@@ -59,6 +59,8 @@ def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: Zon
     selected = _pending(jobs)
     if query.all:
         return [j for j in selected if j.source.via != Via.SERVICE]
+    if query.time is None and not query.name:
+        return []
     if query.time is not None:
         wanted = resolve(query.time, now, tz).due.astimezone(tz)
         selected = [

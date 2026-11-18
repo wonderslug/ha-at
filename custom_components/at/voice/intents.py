@@ -133,8 +133,8 @@ class AtScheduleHandler(_AtHandler):
         outcome = await async_schedule_command(
             intent_obj.hass,
             manager,
-            command_text=str(_slot(intent_obj, "command")),
-            time_text=str(_slot(intent_obj, "time")),
+            command_text=_text_slot(intent_obj, "command") or "",
+            time_text=_text_slot(intent_obj, "time"),
             language=intent_obj.language,
             via=self._via_for(intent_obj),
             user_id=intent_obj.context.user_id,

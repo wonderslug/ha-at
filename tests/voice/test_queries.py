@@ -108,6 +108,12 @@ def test_cancel_ambiguous_returns_multiple() -> None:
     assert "master bathroom" in ambiguous_speech(PACK, [a, other], "master bathroom", TZ)
 
 
+def test_cancel_without_criteria_matches_nothing() -> None:
+    jobs = [_job(_at(0, 23)), _job(_at(1, 6))]
+    assert match_for_cancel(jobs, CancelQuery(), NOW, TZ) == []
+    assert match_for_cancel(jobs, CancelQuery(name=""), NOW, TZ) == []
+
+
 def test_cancel_all_skips_service_jobs() -> None:
     a, b = _job(_at(0, 23)), _job(_at(0, 22), via=Via.SERVICE)
     assert match_for_cancel([a, b], CancelQuery(all=True), NOW, TZ) == [a]
