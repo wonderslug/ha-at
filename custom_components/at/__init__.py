@@ -24,6 +24,7 @@ from .core.manager import JobManager, ManagerOptions
 from .core.store import JobStore
 from .data import AtRuntimeData
 from .service_actions import async_setup_services
+from .voice.intents import async_register_intents, async_remove_intents
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -75,6 +76,7 @@ async def async_setup_entry(
     manager = JobManager(hass, JobStore(hass), JobExecutor(hass), manager_options(entry))
     await manager.async_start()
     entry.runtime_data = AtRuntimeData(manager=manager)
+    async_register_intents(hass)
     return True
 
 
@@ -89,5 +91,6 @@ async def async_unload_entry(
         True, since no platforms are forwarded yet.
 
     """
+    async_remove_intents(hass)
     await entry.runtime_data.manager.async_stop()
     return True
