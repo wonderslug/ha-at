@@ -1,5 +1,6 @@
 """Constants for at."""
 
+from datetime import timedelta
 from logging import Logger, getLogger
 
 LOGGER: Logger = getLogger(__package__)
@@ -25,3 +26,11 @@ DEFAULT_DEFER_RELATIVE = False
 STORAGE_KEY = "at.jobs"
 STORAGE_VERSION = 1
 STORAGE_MINOR_VERSION = 1
+
+SWEEP_INTERVAL = timedelta(minutes=1)
+
+EVENT_JOB_CANCELLED = "at_job_cancelled"
+EVENT_JOB_EXECUTED = "at_job_executed"
+EVENT_JOB_FAILED = "at_job_failed"
+EVENT_JOB_MISSED = "at_job_missed"
+EVENT_JOB_SCHEDULED = "at_job_scheduled"

@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
+    from .core.manager import JobManager
+
 
 type AtConfigEntry = ConfigEntry[AtRuntimeData]
 
@@ -17,3 +19,5 @@ type AtConfigEntry = ConfigEntry[AtRuntimeData]
 @dataclass
 class AtRuntimeData:
     """Runtime data stored on the config entry after setup."""
+
+    manager: JobManager
