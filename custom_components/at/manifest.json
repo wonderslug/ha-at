@@ -1,0 +1,26 @@
+{
+  "domain": "at",
+  "name": "at (placeholder)",
+  "codeowners": [
+    "@PLACEHOLDER_OWNER"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/PLACEHOLDER_OWNER/ha-at",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/PLACEHOLDER_OWNER/ha-at/issues",
+  "requirements": [],
+  "version": "0.1.0",
+  "single_config_entry": true,
+  "dependencies": [
+    "conversation",
+    "intent",
+    "http",
+    "frontend",
+    "panel_custom"
+  ],
+  "after_dependencies": [
+    "logbook",
+    "todo"
+  ]
+}

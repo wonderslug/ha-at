@@ -23,8 +23,13 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
 
 @pytest.fixture(autouse=True)
 def mark_manifest_dependencies_loaded(request: pytest.FixtureRequest) -> None:
-    """Treat the heavy manifest dependencies as set up, so tests do not start a real HTTP server."""
-    if "hass" not in request.fixturenames:
+    """
+    Treat the heavy manifest dependencies as set up, so tests do not start a real HTTP server.
+
+    Marking a component loaded bypasses its own dependency setup. A test that needs the real
+    conversation, intent, frontend or panel_custom setup opts out with @pytest.mark.real_dependencies.
+    """
+    if "hass" not in request.fixturenames or request.node.get_closest_marker("real_dependencies"):
         return
     hass: HomeAssistant = request.getfixturevalue("hass")
     hass.config.components.update({"conversation", "intent", "http", "frontend", "panel_custom"})

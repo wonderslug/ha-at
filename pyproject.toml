@@ -45,6 +45,7 @@ addopts = "-ra -q --strict-markers"
 markers = [
     "unit: Unit tests (fast, no external dependencies)",
     "integration: Integration tests (may use coordinator/time service)",
+    "real_dependencies: Set up the manifest dependencies for real instead of marking them loaded",
 ]
 filterwarnings = [
     # Treat warnings as errors to catch issues early
