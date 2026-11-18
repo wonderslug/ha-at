@@ -280,6 +280,8 @@ config=None, require_admin=False, config_panel_domain=None, ...)`, public and do
 - Serving the JS bundle (`hass.http.async_register_static_paths([StaticPathConfig(...)])`) is not part of this spike.
 - **Manual check, Task 21:** whether a custom panel can reliably load HA's own `ha-selector` target and action pickers
   in the browser can't be tested in pytest. If it can't, ship the simpler built-in pickers (spec §10 item 6).
+  - **Status (Task 21):** the manual check is still pending (headless environment). The Add job dialog ships the
+    plain `<select>` pickers built from `hass.states` and does not use `ha-selector`, so it works either way.
 
 ## Summary for the adapters (`ha_internal/`)
 

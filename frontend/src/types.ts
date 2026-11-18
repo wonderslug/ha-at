@@ -85,6 +85,7 @@ export interface HomeAssistant {
   config: { time_zone: string };
   themes?: { darkMode?: boolean };
   user?: { id: string; name: string };
+  states?: Record<string, { state: string; attributes: { friendly_name?: string } }>;
   devices?: Record<string, { name?: string | null; name_by_user?: string | null }>;
 }
 

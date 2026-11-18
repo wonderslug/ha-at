@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import * as api from "./api";
+import "./components/add-job-dialog";
 import "./components/history-table";
 import "./components/job-details";
 import "./components/upcoming-table";
@@ -28,6 +29,7 @@ export class AtPanel extends LitElement {
   @state() private confirmCancelAll = false;
   @state() private details?: Job;
   @state() private atInfo?: AtInfo;
+  @state() private addOpen = false;
 
   private tick?: number;
   private unsub?: () => Promise<void>;
@@ -179,7 +181,7 @@ export class AtPanel extends LitElement {
       <header>
         <h1>${this.title_}</h1>
         <div class="tabs" role="tablist">${this.tabButton("upcoming", "Upcoming")} ${this.tabButton("history", "History")}</div>
-        <button class="add">+ Add job</button>
+        <button class="add" @click=${() => (this.addOpen = true)}>+ Add job</button>
         <div class="menu-wrap">
           <button class="menu" aria-label="More options" @click=${() => this.toggleMenu()}>⋮</button>
           ${this.menuOpen ? html`<div class="menu-pop" role="menu">
@@ -203,6 +205,12 @@ export class AtPanel extends LitElement {
             ></at-upcoming-table>`
           : html`<at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now}></at-history-table>`}
       </main>
+      <at-add-job-dialog
+        .hass=${this.hass}
+        .isAdmin=${this.atInfo?.is_admin ?? false}
+        .open=${this.addOpen}
+        @close-add-job=${() => (this.addOpen = false)}
+      ></at-add-job-dialog>
       <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => (this.details = undefined)}></at-job-details>
     `;
   }
