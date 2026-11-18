@@ -6,7 +6,7 @@ import "./components/history-table";
 import "./components/job-details";
 import "./components/upcoming-table";
 import { nextRetryDelay } from "./reconnect";
-import { applyChange, normalize, type PanelState } from "./state";
+import { applyChange, normalize, type PanelState, upcomingLabel } from "./state";
 import type { AtInfo, HomeAssistant, Job, PanelInfo, SubscribeEvent } from "./types";
 
 type Tab = "upcoming" | "history";
@@ -180,7 +180,7 @@ export class AtPanel extends LitElement {
     return html`
       <header>
         <h1>${this.title_}</h1>
-        <div class="tabs" role="tablist">${this.tabButton("upcoming", "Upcoming")} ${this.tabButton("history", "History")}</div>
+        <div class="tabs" role="tablist">${this.tabButton("upcoming", upcomingLabel(this.data))} ${this.tabButton("history", "History")}</div>
         <button class="add" @click=${() => (this.addOpen = true)}>+ Add job</button>
         <div class="menu-wrap">
           <button class="menu" aria-label="More options" @click=${() => this.toggleMenu()}>⋮</button>

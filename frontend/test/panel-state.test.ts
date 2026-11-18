@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyChange, type PanelState } from "../src/state";
+import { applyChange, type PanelState, upcomingLabel } from "../src/state";
 import { nextRetryDelay } from "../src/reconnect";
 import type { Job, JobStatus } from "../src/types";
 
@@ -86,5 +86,13 @@ describe("nextRetryDelay", () => {
   it("never gives up and stays at the cap", () => {
     expect(nextRetryDelay(9)).toBe(30000);
     expect(nextRetryDelay(1000)).toBe(30000);
+  });
+});
+
+describe("upcomingLabel", () => {
+  it("shows the pending count", () => {
+    const state: PanelState = { pending: [job("a", "pending"), job("b", "pending")], running: [job("c", "running")], history: [] };
+    expect(upcomingLabel(state)).toBe("Upcoming (2)");
+    expect(upcomingLabel({ pending: [], running: [], history: [] })).toBe("Upcoming (0)");
   });
 });

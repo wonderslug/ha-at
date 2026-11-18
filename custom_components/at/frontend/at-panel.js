@@ -1290,8 +1290,11 @@ function rt(e, t) {
 	};
 	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), nt(i);
 }
+function it(e) {
+	return `Upcoming (${e.pending.length})`;
+}
 // src/at-panel.ts
-var it = "at", $ = class extends R {
+var at = "at", $ = class extends R {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.tab = "upcoming", this.menuOpen = !1, this.data = {
 			pending: [],
@@ -1377,7 +1380,7 @@ var it = "at", $ = class extends R {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : it;
+		return typeof e == "string" && e ? e : at;
 	}
 	tabButton(e, t) {
 		return k`<button
@@ -1393,7 +1396,7 @@ var it = "at", $ = class extends R {
 		return k`
       <header>
         <h1>${this.title_}</h1>
-        <div class="tabs" role="tablist">${this.tabButton("upcoming", "Upcoming")} ${this.tabButton("history", "History")}</div>
+        <div class="tabs" role="tablist">${this.tabButton("upcoming", it(this.data))} ${this.tabButton("history", "History")}</div>
         <button class="add" @click=${() => this.addOpen = !0}>+ Add job</button>
         <div class="menu-wrap">
           <button class="menu" aria-label="More options" @click=${() => this.toggleMenu()}>⋮</button>

@@ -35,3 +35,8 @@ export function applyChange(state: PanelState, change: { kind: JobChangeKind; jo
   }
   return normalize(next);
 }
+
+/** The Upcoming tab's label, with the number of pending jobs (spec 7.5). */
+export function upcomingLabel(state: PanelState): string {
+  return `Upcoming (${state.pending.length})`;
+}
