@@ -26,4 +26,3 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 20: minor (deferred): wallTimeToDate gap time resolves 1h EARLIER (backend moves forward) — align in final review
 - Task 21: minor (deferred): single-entity picker; no focus trap; no component tests for debounce
 - Task 21: minor (deferred): Escape during in-flight submit resets busy dialog
-- Task 23: minor (deferred): README top HTML comment still mentions BuyMeCoffee/Discord badges
