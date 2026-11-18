@@ -1,6 +1,6 @@
 """English language pack."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from . import LanguagePack
 
@@ -8,6 +8,27 @@ from . import LanguagePack
 def format_clock(dt: datetime) -> str:
     """Format a datetime as a 12-hour clock time such as ``11:00 PM`` or ``6:30 AM``."""
     return f"{dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+
+
+UNSUPPORTED_LANGUAGE = "Sorry, scheduling is only available in English for now."
+
+
+def format_spoken_time(dt: datetime) -> str:
+    """Format a datetime as it is said aloud: ``6 AM``, ``6:30 AM``, ``12 PM``, ``10:42 PM``."""
+    suffix = "AM" if dt.hour < 12 else "PM"
+    hour = dt.hour % 12 or 12
+    return f"{hour} {suffix}" if dt.minute == 0 else f"{hour}:{dt.minute:02d} {suffix}"
+
+
+def format_duration(delta: timedelta) -> str:
+    """Format a duration as it is said aloud: ``20 minutes``, ``1 hour and 30 minutes``."""
+    total = max(round(delta.total_seconds()), 1)
+    parts: list[str] = []
+    for unit, size in (("day", 86400), ("hour", 3600), ("minute", 60), ("second", 1)):
+        count, total = divmod(total, size)
+        if count:
+            parts.append(f"{count} {unit}{'' if count == 1 else 's'}")
+    return " and ".join(parts)
 
 
 _NUMBERS = {
@@ -169,6 +190,31 @@ EN = LanguagePack(
         ),
         "no_target": "I couldn't find anything called {name}.",
         "no_target_domain": "I couldn't find a {domain} called {name}.",
+    },
+    responses={
+        "absolute": "OK, at {time}{day} I'll {summary}.",
+        "relative": "OK, in {duration}, at {time}, I'll {summary}.",
+        "tomorrow": " tomorrow",
+        "weekday": " on {weekday}",
+        "date": " on {month} {day}",
+        "weekday_names": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "month_names": [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+        ],
+        "bad_time": "Sorry, I didn't understand when.",
+        "spoken_time": format_spoken_time,
+        "duration": format_duration,
     },
     logbook={
         "scheduled": "scheduled {summary} for {time}",
