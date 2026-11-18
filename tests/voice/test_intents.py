@@ -155,6 +155,17 @@ async def test_at_cancel_by_name_and_time(hass: HomeAssistant, manager: JobManag
     assert manager.pending() == []
 
 
+async def test_at_cancel_by_relative_time(hass: HomeAssistant, manager: JobManager) -> None:
+    await add_job(manager, "Turn on Porch Light", 2, names=["Porch Light"])
+    await add_job(manager, "Turn on Hall Light", 5, names=["Hall Light"])
+
+    response = await handle(hass, INTENT_CANCEL, {"time": "in 2 hours"})
+
+    assert response.response_type == intent.IntentResponseType.ACTION_DONE
+    assert speech(response).startswith("Cancelled: turn on Porch Light")
+    assert [j.summary for j in manager.pending()] == ["Turn on Hall Light"]
+
+
 async def test_at_cancel_ambiguous_cancels_nothing(hass: HomeAssistant, manager: JobManager) -> None:
     await add_job(manager, "Turn on Porch Light", 1, names=["Porch Light"])
     await add_job(manager, "Turn off Porch Light", 2, names=["Porch Light"])

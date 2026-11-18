@@ -4,7 +4,6 @@ These are known minor issues that were reviewed and deferred while building v1. 
 
 ## Known issue (found in the last review)
 
-- In `voice/queries.py` `_matches_time`, a relative time ("in 20 minutes") reaching AtCancel from the LLM tool raises `TimeParseError`, and the user hears an unexpected error. Fix: handle `spec.relative` (resolve it as before), or catch `TimeParseError` and reply with the `bad_time` speech.
 - Saving options reloads the entry, which interrupts a running job, and the job is then reported as "Interrupted by restart".
 
 ## Deferred minors
