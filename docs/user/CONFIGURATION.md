@@ -194,7 +194,8 @@ The events also show in the logbook.
 
 ## Known limitations
 
-- Voice and time phrases are English only. In another language, use the actions, the panel, or an LLM agent with `at` or `delay` times.
+- Voice and time phrases are English only. In another language, use the panel or the `at.schedule` action with its `at` or `delay` field. The LLM tools take a spoken time phrase, so they also need English.
+- A job that runs `script.turn_on` or `automation.trigger` counts as done once the script or automation starts, not when it finishes. A failure inside the script or automation does not mark the job failed.
 - Commands must be ones the built-in agent understands. Anything else is refused.
 - Spelled-out hours such as "at seven" are not recognized. Use digits.
 - Exchanges forwarded to another conversation agent start a new conversation.
