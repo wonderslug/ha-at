@@ -13,18 +13,18 @@
 ### Marketplace (Home Assistant 2026.11 and newer)
 
 1. Go to **Settings** > **Marketplace**.
-2. Add `https://github.com/PLACEHOLDER_OWNER/ha-at` as a custom repository with the category **Integration**.
+2. Add `https://github.com/wonderslug/ha-at` as a custom repository with the category **Integration**.
 3. Open **at (placeholder)** and select **Download**.
 
 ### HACS (before Home Assistant 2026.11)
 
 1. Open HACS, then select the three-dot menu > **Custom repositories**.
-2. Add `https://github.com/PLACEHOLDER_OWNER/ha-at` with the category **Integration**.
+2. Add `https://github.com/wonderslug/ha-at` with the category **Integration**.
 3. Find **at (placeholder)**, select **Download**, and restart Home Assistant.
 
 ### Manual installation
 
-1. Download the latest release from the [releases page](https://github.com/PLACEHOLDER_OWNER/ha-at/releases).
+1. Download the latest release from the [releases page](https://github.com/wonderslug/ha-at/releases).
 2. Copy the `at` folder to `custom_components/at/` in your Home Assistant configuration directory.
 3. Restart Home Assistant.
 

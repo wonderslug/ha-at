@@ -2,13 +2,13 @@
   "domain": "at",
   "name": "at (placeholder)",
   "codeowners": [
-    "@PLACEHOLDER_OWNER"
+    "@wonderslug"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/PLACEHOLDER_OWNER/ha-at",
+  "documentation": "https://github.com/wonderslug/ha-at",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/PLACEHOLDER_OWNER/ha-at/issues",
+  "issue_tracker": "https://github.com/wonderslug/ha-at/issues",
   "requirements": [],
   "version": "0.1.0",
   "single_config_entry": true,

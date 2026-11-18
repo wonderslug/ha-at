@@ -2,7 +2,7 @@
 Custom integration to integrate at with Home Assistant.
 
 For more details about this integration, please refer to:
-https://github.com/PLACEHOLDER_OWNER/ha-at
+https://github.com/wonderslug/ha-at
 """
 
 from datetime import timedelta

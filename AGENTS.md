@@ -27,7 +27,7 @@ touch. See [`blueprint-tooling`](.agents/skills/blueprint-tooling/SKILL.md).
 - **Domain:** `at`
 - **Title:** at (placeholder)
 - **Class prefix:** `At`
-- **Repository:** PLACEHOLDER_OWNER/ha-at
+- **Repository:** wonderslug/ha-at
 
 **Key directories:**
 

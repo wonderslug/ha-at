@@ -34,7 +34,7 @@ Jobs survive restarts. A job that comes due while Home Assistant is down still r
 
 Open the integration in the Marketplace (Home Assistant 2026.11 and newer) or in HACS:
 
-[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=PLACEHOLDER_OWNER&repository=ha-at&category=integration)
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=wonderslug&repository=ha-at&category=integration)
 
 Then add the integration:
 
@@ -60,16 +60,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by [@PLACEHOLDER_OWNER][user_profile]**
+**Made with ❤️ by [@wonderslug][user_profile]**
 
 ---
 
-[commits-shield]: https://img.shields.io/github/commit-activity/y/PLACEHOLDER_OWNER/ha-at.svg?style=for-the-badge
-[commits]: https://github.com/PLACEHOLDER_OWNER/ha-at/commits/main
+[commits-shield]: https://img.shields.io/github/commit-activity/y/wonderslug/ha-at.svg?style=for-the-badge
+[commits]: https://github.com/wonderslug/ha-at/commits/main
 [hacs]: https://www.hacs.xyz/docs/marketplace/
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
-[license-shield]: https://img.shields.io/github/license/PLACEHOLDER_OWNER/ha-at.svg?style=for-the-badge
-[maintenance-shield]: https://img.shields.io/badge/maintainer-%40PLACEHOLDER_OWNER-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/PLACEHOLDER_OWNER/ha-at.svg?style=for-the-badge
-[releases]: https://github.com/PLACEHOLDER_OWNER/ha-at/releases
-[user_profile]: https://github.com/PLACEHOLDER_OWNER
+[license-shield]: https://img.shields.io/github/license/wonderslug/ha-at.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/maintainer-%40wonderslug-blue.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/wonderslug/ha-at.svg?style=for-the-badge
+[releases]: https://github.com/wonderslug/ha-at/releases
+[user_profile]: https://github.com/wonderslug
