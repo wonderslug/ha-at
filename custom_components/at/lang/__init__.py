@@ -28,7 +28,10 @@ class LanguagePack:
     number_words: Mapping[str, int]
     meridiem_words: Mapping[str, str]  # word -> am|pm
     named_times: Mapping[str, tuple[int, int]]  # word -> (hour, minute)
+    # Sentence trigger templates by group: schedule_absolute, schedule_relative, list, cancel
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
+    sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use
+    sentence_clock: str = ""  # a time phrase built from matched {hour}, {minute} and {meridiem}
     summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
     domain_summary_verbs: Mapping[str, str] = field(default_factory=dict)  # "intent:domain" -> template with {name}
     generic_action_summary: str = "Run action"
