@@ -19,7 +19,7 @@ from .const import (
     DEFAULT_HISTORY_MAX,
     DOMAIN,
 )
-from .core.errors import JobExecutionError
+from .core.executor import JobExecutor
 from .core.manager import JobManager, ManagerOptions
 from .core.store import JobStore
 from .data import AtRuntimeData
@@ -28,17 +28,9 @@ from .service_actions import async_setup_services
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-    from .core.models import Job
     from .data import AtConfigEntry
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-
-
-class _UnconfiguredExecutor:
-    """Placeholder until the real executor lands; every job fails."""
-
-    async def async_execute(self, job: Job) -> None:
-        raise JobExecutionError("executor not configured")
 
 
 def manager_options(entry: AtConfigEntry) -> ManagerOptions:
@@ -80,7 +72,7 @@ async def async_setup_entry(
         True once the job manager is running.
 
     """
-    manager = JobManager(hass, JobStore(hass), _UnconfiguredExecutor(), manager_options(entry))
+    manager = JobManager(hass, JobStore(hass), JobExecutor(hass), manager_options(entry))
     await manager.async_start()
     entry.runtime_data = AtRuntimeData(manager=manager)
     return True

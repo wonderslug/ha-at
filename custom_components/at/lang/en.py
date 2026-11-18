@@ -107,4 +107,12 @@ EN = LanguagePack(
         "p.m": "pm",
     },
     named_times={"noon": (12, 0), "midnight": (0, 0)},
+    summary_verbs={
+        "turn_on": "Turn on {name}",
+        "turn_off": "Turn off {name}",
+        "toggle": "Toggle {name}",
+        "script.turn_on": "Run {name}",
+        "automation.trigger": "Trigger {name}",
+    },
+    generic_action_summary="Run action",
 )

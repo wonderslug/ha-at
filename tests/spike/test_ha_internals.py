@@ -17,7 +17,7 @@ from hassil import Intents, recognize_best
 from hassil.recognize import RecognizeResult
 import probatio
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service, mock_platform
+from pytest_homeassistant_custom_component.common import MockConfigEntry, mock_platform
 
 from custom_components.at.const import DOMAIN
 from homeassistant.components import conversation
@@ -37,19 +37,12 @@ from homeassistant.components.frontend import DATA_PANELS
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.components.llm import LLMTools
 from homeassistant.components.panel_custom import async_register_panel
-from homeassistant.const import ATTR_FRIENDLY_NAME, MATCH_ALL
-from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import (
-    area_registry as ar,
-    chat_session,
-    config_validation as cv,
-    device_registry as dr,
-    entity_registry as er,
-    intent,
-    llm,
-)
+from homeassistant.const import MATCH_ALL
+from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant
+from homeassistant.helpers import chat_session, config_validation as cv, intent, llm
 from homeassistant.loader import async_get_integration
 from homeassistant.setup import async_setup_component
+from tests.conftest import Assist  # noqa: TID251  (shared fixture's result type)
 
 # Home Assistant's http component stores plain string keys on its aiohttp app, which the
 # project-wide "warnings are errors" filter would turn into a failed http setup.
@@ -58,19 +51,11 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore::aiohttp.web_exceptions.NotAppKeyWarning"),
 ]
 
-ASSISTANT = conversation.DOMAIN
-LANGUAGE = "en"
 AT_SENTENCES = ["at {hour} {command}", "{command} at {hour}"]
 AT_LISTS = {"hour": {"range": {"from": 1, "to": 12}}}
+ASSISTANT = conversation.DOMAIN
+LANGUAGE = "en"
 TriggerCallback = Callable[[conversation.ConversationInput, RecognizeResult], Any]
-
-
-@dataclass
-class Assist:
-    """What the voice tests share: a satellite in the office and two lights."""
-
-    device_id: str
-    turn_on_calls: list[ServiceCall]
 
 
 @dataclass
@@ -177,38 +162,6 @@ def user_input(text: str, device_id: str | None) -> conversation.ConversationInp
         language=LANGUAGE,
         agent_id=conversation.HOME_ASSISTANT_AGENT,
     )
-
-
-@pytest.fixture
-async def assist(
-    hass: HomeAssistant,
-    area_registry: ar.AreaRegistry,
-    device_registry: dr.DeviceRegistry,
-    entity_registry: er.EntityRegistry,
-) -> Assist:
-    """Set up the real conversation stack with an exposed and an unexposed light."""
-    assert await async_setup_component(hass, "homeassistant", {})
-    assert await async_setup_component(hass, "conversation", {})
-    assert await async_setup_component(hass, "intent", {})
-
-    office = area_registry.async_create("Office")
-    satellite_entry = MockConfigEntry(domain="test")
-    satellite_entry.add_to_hass(hass)
-    satellite = device_registry.async_get_or_create(
-        config_entry_id=satellite_entry.entry_id, identifiers={("test", "satellite")}
-    )
-    device_registry.async_update_device(satellite.id, area_id=office.id)
-
-    for object_id, name, exposed in (("kitchen", "Kitchen light", True), ("garage", "Garage light", False)):
-        entry = entity_registry.async_get_or_create(
-            "light", "test", object_id, suggested_object_id=object_id, original_name=name
-        )
-        hass.states.async_set(entry.entity_id, "off", {ATTR_FRIENDLY_NAME: name})
-        async_expose_entity(hass, ASSISTANT, entry.entity_id, exposed)
-
-    turn_on_calls = async_mock_service(hass, "light", "turn_on")
-    await hass.async_block_till_done()
-    return Assist(device_id=satellite.id, turn_on_calls=turn_on_calls)
 
 
 async def test_programmatic_sentence_trigger_wildcard_both_orders(hass: HomeAssistant, assist: Assist) -> None:

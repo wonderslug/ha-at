@@ -28,6 +28,8 @@ class LanguagePack:
     meridiem_words: Mapping[str, str]  # word -> am|pm
     named_times: Mapping[str, tuple[int, int]]  # word -> (hour, minute)
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
+    summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
+    generic_action_summary: str = "Run action"
     responses: Any = None
 
 
