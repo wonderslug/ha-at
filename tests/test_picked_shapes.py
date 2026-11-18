@@ -28,4 +28,4 @@ def test_panel_shapes_validate(shape: list[dict]) -> None:
 
 def test_non_allowlisted_shape_still_fails() -> None:
     with pytest.raises(InvalidAction):
-        validate_picked_action([{"action": "light.turn_on", "target": {"entity_id": ["light.a"]}}])
+        validate_picked_action([{"action": "shell_command.run", "target": {"entity_id": ["light.a"]}}])
