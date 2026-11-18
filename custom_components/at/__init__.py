@@ -28,6 +28,7 @@ from .core.manager import JobManager, ManagerOptions
 from .core.store import JobStore
 from .data import AtRuntimeData
 from .lang import get_language_pack
+from .panel import async_register_panel, async_remove_panel
 from .service_actions import async_setup_services
 from .voice.intents import async_register_intents, async_remove_intents
 from .voice.triggers import async_setup_triggers
@@ -87,6 +88,7 @@ async def async_setup_entry(
     entry.runtime_data = AtRuntimeData(manager=manager)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_intents(hass)
+    await async_register_panel(hass, entry)
     if (pack := get_language_pack(hass.config.language)) is None:
         LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
     else:
@@ -109,5 +111,6 @@ async def async_unload_entry(
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
     async_remove_intents(hass)
+    async_remove_panel(hass)
     await entry.runtime_data.manager.async_stop()
     return True

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# script/build-frontend: Build the panel bundle
+#
+# Installs the pinned frontend dependencies and builds frontend/ into the single
+# ES module custom_components/at/frontend/at-panel.js, which is committed so
+# HACS installs in one step. Needs node and npm (mise.toml pins node).
+#
+# Usage:
+#   ./script/build-frontend
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+npm --prefix frontend ci && npm --prefix frontend run build

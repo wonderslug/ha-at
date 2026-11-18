@@ -2,6 +2,7 @@
 
 from collections.abc import Generator
 import logging
+from unittest.mock import patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
@@ -32,6 +33,19 @@ def mark_manifest_dependencies_loaded(request: pytest.FixtureRequest) -> None:
         return
     hass: HomeAssistant = request.getfixturevalue("hass")
     hass.config.components.update({"conversation", "intent", "http", "frontend", "panel_custom"})
+
+
+@pytest.fixture(autouse=True)
+def mock_panel(request: pytest.FixtureRequest) -> Generator[None]:
+    """Skip the sidebar panel unless a test opts into the real frontend with @pytest.mark.real_dependencies."""
+    if request.node.get_closest_marker("real_dependencies"):
+        yield
+        return
+    with (
+        patch("custom_components.at.async_register_panel"),
+        patch("custom_components.at.async_remove_panel"),
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)
