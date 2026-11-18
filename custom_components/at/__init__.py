@@ -5,6 +5,7 @@ For more details about this integration, please refer to:
 https://github.com/wonderslug/ha-at
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -72,6 +73,41 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     return True
 
 
+def _register_voice(hass: HomeAssistant, entry: AtConfigEntry) -> Callable[[], None]:
+    """
+    Register the voice sentences the options ask for.
+
+    Returns:
+        The callback that unregisters them; a no-op when none could be registered.
+
+    """
+    if (pack := get_language_pack(hass.config.language)) is None:
+        LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
+        return _noop
+    defer_relative = entry.options.get(CONF_DEFER_RELATIVE, DEFAULT_DEFER_RELATIVE)
+    try:
+        return async_setup_triggers(hass, pack, defer_relative=defer_relative)
+    except Exception as err:  # noqa: BLE001 - Home Assistant internals; without sentences, at still works
+        LOGGER.warning(
+            "Could not register the at voice sentences, so only the actions, panel and LLM tools work: %s", err
+        )
+        return _noop
+
+
+def _noop() -> None:
+    """Stand in for an unregister callback when nothing was registered."""
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: AtConfigEntry) -> None:
+    """Apply saved options in place, so a running job is never interrupted by a reload."""
+    runtime = entry.runtime_data
+    runtime.manager.update_options(manager_options(entry))
+    runtime.unregister_voice()
+    runtime.unregister_voice = _register_voice(hass, entry)
+    async_remove_panel(hass)
+    await async_register_panel(hass, entry)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: AtConfigEntry,
@@ -93,16 +129,9 @@ async def async_setup_entry(
     entry.async_on_unload(lambda: async_remove_intents(hass))
     await async_register_panel(hass, entry)
     entry.async_on_unload(lambda: async_remove_panel(hass))
-    if (pack := get_language_pack(hass.config.language)) is None:
-        LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
-    else:
-        defer_relative = entry.options.get(CONF_DEFER_RELATIVE, DEFAULT_DEFER_RELATIVE)
-        try:
-            entry.async_on_unload(async_setup_triggers(hass, pack, defer_relative=defer_relative))
-        except Exception as err:  # noqa: BLE001 - Home Assistant internals; without sentences, at still works
-            LOGGER.warning(
-                "Could not register the at voice sentences, so only the actions, panel and LLM tools work: %s", err
-            )
+    entry.runtime_data.unregister_voice = _register_voice(hass, entry)
+    entry.async_on_unload(lambda: entry.runtime_data.unregister_voice())
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

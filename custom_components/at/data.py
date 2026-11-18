@@ -4,7 +4,8 @@ Runtime data types for at.
 Access pattern: entry.runtime_data (fields are added as features land).
 """
 
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,3 +22,4 @@ class AtRuntimeData:
     """Runtime data stored on the config entry after setup."""
 
     manager: JobManager
+    unregister_voice: Callable[[], None] = field(default=lambda: None)

@@ -4,7 +4,7 @@ Everything `at` offers, from options to events. For installation, see [getting s
 
 ## Options
 
-Go to **Settings** > **Devices & services** > **at (placeholder)** > **Configure**. Saving reloads the integration.
+Go to **Settings** > **Devices & services** > **at (placeholder)** > **Configure**. Saving applies the changes right away, without restarting the integration or interrupting a running job.
 
 | Option                                     | Default | What it does                                                                                           |
 | ------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------ |

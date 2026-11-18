@@ -7,8 +7,8 @@ from homeassistant import config_entries
 from .schemas import options_schema
 
 
-class AtOptionsFlow(config_entries.OptionsFlowWithReload):
-    """Options flow; the entry reloads when the options change."""
+class AtOptionsFlow(config_entries.OptionsFlow):
+    """Options flow; saved options are applied in place, without reloading the entry."""
 
     async def async_step_init(
         self,

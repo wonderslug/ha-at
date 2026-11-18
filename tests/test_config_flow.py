@@ -87,7 +87,8 @@ async def test_options_flow_shows_stored_values(init_integration: MockConfigEntr
 
 
 async def test_options_flow_saves_values(init_integration: MockConfigEntry, hass: HomeAssistant) -> None:
-    """Submitted options are stored in the entry and reach the reloaded manager."""
+    """Submitted options are stored in the entry and reach the running manager, which is not replaced."""
+    manager = init_integration.runtime_data.manager
     result = await hass.config_entries.options.async_init(init_integration.entry_id)
     result = await hass.config_entries.options.async_configure(result["flow_id"], NEW_OPTIONS)
     await hass.async_block_till_done()
@@ -95,6 +96,7 @@ async def test_options_flow_saves_values(init_integration: MockConfigEntry, hass
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert init_integration.options == NEW_OPTIONS
     assert init_integration.state is ConfigEntryState.LOADED
+    assert init_integration.runtime_data.manager is manager
     options = init_integration.runtime_data.manager._options  # noqa: SLF001
     assert options == ManagerOptions(grace=timedelta(minutes=10), history_days=3, history_max=20)
 
@@ -133,7 +135,7 @@ async def test_options_validation_accepts_bounds(
 
 
 async def test_options_reload_applies_panel_admin_only(init_integration: MockConfigEntry, hass: HomeAssistant) -> None:
-    """The reload registers the panel again with the new admin-only setting."""
+    """Saving registers the panel again, in place, with the new admin-only setting."""
     with patch("custom_components.at.async_register_panel") as register:
         result = await hass.config_entries.options.async_init(init_integration.entry_id)
         await hass.config_entries.options.async_configure(result["flow_id"], NEW_OPTIONS)
@@ -146,7 +148,7 @@ async def test_options_reload_applies_panel_admin_only(init_integration: MockCon
 @pytest.mark.real_dependencies
 @pytest.mark.filterwarnings("ignore::aiohttp.web_exceptions.NotAppKeyWarning")
 async def test_options_reload_applies_defer_relative(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
-    """Turning on defer-relative hands relative times back to Home Assistant after the reload."""
+    """Turning on defer-relative hands relative times back to Home Assistant, on the same manager."""
     entry = manager_entry(hass)
     await say(hass, home, "turn on the master bathroom light in 5 minutes")
     assert len(entry.runtime_data.manager.pending()) == 1
@@ -155,8 +157,17 @@ async def test_options_reload_applies_defer_relative(hass: HomeAssistant, home: 
     await hass.config_entries.options.async_configure(result["flow_id"], NEW_OPTIONS)
     await hass.async_block_till_done()
 
-    reloaded = entry.runtime_data.manager
-    assert reloaded is not manager
-    before = len(reloaded.pending())
+    assert entry.runtime_data.manager is manager
+    before = len(manager.pending())
     await say(hass, home, "turn on the master bathroom light in 5 minutes")
-    assert len(reloaded.pending()) == before
+    assert len(manager.pending()) == before
+
+
+async def test_unload_after_options_change(init_integration: MockConfigEntry, hass: HomeAssistant) -> None:
+    """The entry still unloads cleanly once saved options have swapped its registrations."""
+    result = await hass.config_entries.options.async_init(init_integration.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], NEW_OPTIONS)
+    await hass.async_block_till_done()
+
+    assert await hass.config_entries.async_unload(init_integration.entry_id)
+    assert init_integration.state is ConfigEntryState.NOT_LOADED
