@@ -34,3 +34,26 @@ EVENT_JOB_EXECUTED = "at_job_executed"
 EVENT_JOB_FAILED = "at_job_failed"
 EVENT_JOB_MISSED = "at_job_missed"
 EVENT_JOB_SCHEDULED = "at_job_scheduled"
+
+# Intents a voice job must not store: timers, queries, chit-chat and `at`'s own ("At*").
+REFUSED_INTENT_PREFIX = "At"
+REFUSED_INTENT_TYPES = frozenset(
+    {
+        "HassStartTimer",
+        "HassCancelTimer",
+        "HassCancelAllTimers",
+        "HassIncreaseTimer",
+        "HassDecreaseTimer",
+        "HassPauseTimer",
+        "HassUnpauseTimer",
+        "HassTimerStatus",
+        "HassGetState",
+        "HassGetWeather",
+        "HassGetCurrentTime",
+        "HassGetCurrentDate",
+        # Not in the plan's list, but "what's the temperature" is recognized as this query intent.
+        "HassClimateGetTemperature",
+        "HassNevermind",
+        "HassRespond",
+    }
+)
