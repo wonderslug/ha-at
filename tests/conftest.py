@@ -2,18 +2,12 @@
 
 from collections.abc import Generator
 import logging
-from typing import Any
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.at.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from custom_components.at.const import DISPLAY_NAME, DOMAIN
 from homeassistant.core import HomeAssistant
-
-# The response the demo endpoint returns; the client turns it into the device payload.
-API_RESPONSE: dict[str, Any] = {"userId": 1, "id": 1, "title": "demo", "body": "demo"}
 
 
 @pytest.fixture(autouse=True)
@@ -50,24 +44,12 @@ def fail_on_deprecation_report(caplog: pytest.LogCaptureFixture) -> Generator[No
 
 
 @pytest.fixture
-def mock_api() -> Generator[AsyncMock]:
-    """Replace the client's HTTP layer, keeping its payload logic under test."""
-    with patch(
-        "custom_components.at.api.client.AtApiClient._api_wrapper",
-        new_callable=AsyncMock,
-        return_value=API_RESPONSE,
-    ) as api_wrapper:
-        yield api_wrapper
-
-
-@pytest.fixture
 def config_entry(request: pytest.FixtureRequest) -> MockConfigEntry:
     """Return a config entry for this integration; parametrize it indirectly to set its options."""
     return MockConfigEntry(
         domain=DOMAIN,
-        title="demo",
-        unique_id="demo",
-        data={CONF_USERNAME: "demo", CONF_PASSWORD: "secret"},
+        title=DISPLAY_NAME,
+        data={},
         options=getattr(request, "param", {}),
     )
 
@@ -75,7 +57,6 @@ def config_entry(request: pytest.FixtureRequest) -> MockConfigEntry:
 @pytest.fixture
 async def init_integration(
     hass: HomeAssistant,
-    mock_api: AsyncMock,
     config_entry: MockConfigEntry,
 ) -> MockConfigEntry:
     """

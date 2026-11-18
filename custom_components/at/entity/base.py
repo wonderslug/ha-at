@@ -2,80 +2,24 @@
 
 from typing import TYPE_CHECKING
 
-from custom_components.at.api import AtApiClientError
-from custom_components.at.const import ATTRIBUTION, DOMAIN
-from custom_components.at.coordinator import AtDataUpdateCoordinator
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from custom_components.at.const import DISPLAY_NAME, DOMAIN
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity import Entity
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
-    from custom_components.at.api import AtApiClient
-    from homeassistant.helpers.entity import EntityDescription
+    from custom_components.at.data import AtConfigEntry
 
 
-class AtEntity(CoordinatorEntity[AtDataUpdateCoordinator]):
-    """
-    Base entity providing device info, unique ID and attribution.
+class AtEntity(Entity):
+    """Base entity attaching to the single service-type device of the entry."""
 
-    The unique ID is `{entry_id}_{key}`, the documented identifier of last resort.
-    A real integration switches to the device's serial, MAC or account ID before its
-    first release, because changing it afterwards needs a registry migration.
-    """
-
-    _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
 
-    def __init__(
-        self,
-        coordinator: AtDataUpdateCoordinator,
-        entity_description: EntityDescription,
-    ) -> None:
+    def __init__(self, entry: AtConfigEntry) -> None:
         """Initialize the entity."""
-        super().__init__(coordinator)
-        self.entity_description = entity_description
-        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{entity_description.key}"
+        super().__init__()
         self._attr_device_info = DeviceInfo(
-            identifiers={
-                (
-                    coordinator.config_entry.domain,
-                    coordinator.config_entry.entry_id,
-                ),
-            },
-            name=coordinator.config_entry.title,
-            manufacturer="at (placeholder)",
-            model=coordinator.data["model"],
-            serial_number=coordinator.data["serial_number"],
-            sw_version=coordinator.data["sw_version"],
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=DISPLAY_NAME,
+            entry_type=DeviceEntryType.SERVICE,
         )
-
-    async def _async_write(
-        self,
-        call: Callable[[AtApiClient], Awaitable[None]],
-        translation_key: str,
-        **placeholders: str,
-    ) -> None:
-        """
-        Run a write against the device, then refresh the coordinator.
-
-        Args:
-            call: Receives the API client and performs the write.
-            translation_key: Key of the exception message used when the write fails.
-            **placeholders: Values for that message's placeholders.
-
-        Raises:
-            HomeAssistantError: If the device cannot be reached or rejects the write.
-
-        """
-        try:
-            await call(self.coordinator.config_entry.runtime_data.client)
-        except AtApiClientError as exception:
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key=translation_key,
-                translation_placeholders=placeholders or None,
-            ) from exception
-
-        await self.coordinator.async_request_refresh()

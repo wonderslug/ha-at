@@ -1,14 +1,12 @@
-"""Options flow for at."""
+"""Options flow for at (stub; options are added later)."""
 
 from typing import Any
 
 from homeassistant import config_entries
 
-from .schemas import get_options_schema
-
 
 class AtOptionsFlow(config_entries.OptionsFlowWithReload):
-    """Let the user tune how the integration interprets the device after setup."""
+    """Options flow, currently an empty form."""
 
     async def async_step_init(
         self,
@@ -18,16 +16,13 @@ class AtOptionsFlow(config_entries.OptionsFlowWithReload):
         Show and process the options form.
 
         Returns:
-            The form, or the stored options.
+            The empty form, or the stored options.
 
         """
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=get_options_schema(self.config_entry.options),
-        )
+        return self.async_show_form(step_id="init")
 
 
 __all__ = ["AtOptionsFlow"]
