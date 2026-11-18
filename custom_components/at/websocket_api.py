@@ -210,7 +210,7 @@ async def ws_schedule(
         connection.send_error(msg_id, "invalid", str(err))
         return
     try:
-        validate_picked_action(action)
+        validate_picked_action(action, get_language_pack(hass.config.language))
         raw_action = False
     except ActionNotAllowed:
         if not connection.user.is_admin:

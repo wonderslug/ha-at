@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 from custom_components.at.core.errors import JobExecutionError
+from custom_components.at.lang import get_language_pack, message
 from homeassistant.components import conversation
 from homeassistant.helpers import device_registry as dr, intent
 
@@ -43,6 +44,7 @@ async def async_run_intent(hass: HomeAssistant, spec: IntentSpec, context: Conte
 
     """
     target = _target_name(spec)
+    pack = get_language_pack(hass.config.language)
     try:
         response = await intent.async_handle(
             hass,
@@ -58,22 +60,20 @@ async def async_run_intent(hass: HomeAssistant, spec: IntentSpec, context: Conte
         )
     except intent.MatchFailedError as err:
         reason = err.result.no_match_reason
-        detail = (
-            "is not exposed to voice assistants"
-            if reason is intent.MatchFailedReason.ASSISTANT
-            else f"not found ({reason.name if reason else 'no match'})"
-        )
-        msg = f"{spec.type}: {target} {detail}"
-        raise JobExecutionError(msg) from err
+        if reason is intent.MatchFailedReason.ASSISTANT:
+            text = message(pack, "intent_not_exposed", intent=spec.type, target=target)
+        else:
+            why = reason.name if reason else message(pack, "intent_no_match")
+            text = message(pack, "intent_not_found", intent=spec.type, target=target, reason=why)
+        raise JobExecutionError(text) from err
     except intent.UnknownIntent as err:
-        msg = f"{spec.type}: the intent no longer exists"
-        raise JobExecutionError(msg) from err
+        raise JobExecutionError(message(pack, "intent_gone", intent=spec.type)) from err
     except intent.IntentError as err:
-        msg = f"{spec.type} for {target} failed: {err}"
-        raise JobExecutionError(msg) from err
+        raise JobExecutionError(message(pack, "intent_failed", intent=spec.type, target=target, error=err)) from err
     if response.response_type is intent.IntentResponseType.ERROR:
-        msg = f"{spec.type} for {target} failed: {response.error_code}"
-        raise JobExecutionError(msg)
+        raise JobExecutionError(
+            message(pack, "intent_failed", intent=spec.type, target=target, error=response.error_code)
+        )
 
 
 def probe() -> dict[str, bool]:

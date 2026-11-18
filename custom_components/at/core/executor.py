@@ -6,6 +6,7 @@ import voluptuous as vol
 
 from custom_components.at.const import DOMAIN
 from custom_components.at.ha_internal.intents import async_run_intent
+from custom_components.at.lang import get_language_pack, message
 from homeassistant.core import Context
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, entity_registry as er, script
@@ -25,6 +26,9 @@ class JobExecutor:
     def __init__(self, hass: HomeAssistant) -> None:
         """Keep the Home Assistant instance."""
         self._hass = hass
+
+    def _message(self, key: str, **placeholders: object) -> str:
+        return message(get_language_pack(self._hass.config.language), key, **placeholders)
 
     async def _context(self, job: Job) -> Context:
         """Run as the job's user if it still exists, otherwise as the system."""
@@ -46,8 +50,7 @@ class JobExecutor:
             await async_run_intent(self._hass, job.intent, context)
             return
         if not job.action:
-            msg = "the job has nothing to run"
-            raise JobExecutionError(msg)
+            raise JobExecutionError(self._message("nothing_to_run"))
         await self._run_action(job, context)
 
     async def _run_action(self, job: Job, context: Context) -> None:
@@ -55,14 +58,12 @@ class JobExecutor:
         for entity_id in entity_ids_in(action):
             if self._hass.states.get(entity_id) is None:
                 registered = er.async_get(self._hass).async_get(entity_id) is not None
-                msg = f"{entity_id} is unavailable" if registered else f"{entity_id} no longer exists"
-                raise JobExecutionError(msg)
+                key = "entity_unavailable" if registered else "entity_gone"
+                raise JobExecutionError(self._message(key, entity_id=entity_id))
         try:
             sequence = cv.SCRIPT_SCHEMA(action)
             await script.Script(self._hass, sequence, f"at job {job.id}", DOMAIN).async_run(context=context)
         except vol.Invalid as err:
-            msg = f"the stored action is invalid: {err}"
-            raise JobExecutionError(msg) from err
+            raise JobExecutionError(self._message("action_invalid", error=err)) from err
         except HomeAssistantError as err:
-            msg = f"{job.summary}: {err}"
-            raise JobExecutionError(msg) from err
+            raise JobExecutionError(self._message("action_failed", summary=job.summary, error=err)) from err

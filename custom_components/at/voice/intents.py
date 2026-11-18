@@ -8,7 +8,7 @@ import probatio
 from custom_components.at.const import DOMAIN
 from custom_components.at.core.models import Job, JobStatus, Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text
-from custom_components.at.lang import LanguagePack, get_language_pack
+from custom_components.at.lang import LanguagePack, get_language_pack, message
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
 from custom_components.at.voice.queries import (
     CancelQuery,
@@ -112,7 +112,7 @@ class _AtHandler(intent.IntentHandler):
             return _error(intent_obj, UNSUPPORTED_LANGUAGE)
         manager = _manager(intent_obj.hass)
         if manager is None:
-            return _error(intent_obj, "Sorry, scheduling isn't set up.")
+            return _error(intent_obj, message(pack, "not_set_up"))
         try:
             return await self._async_run(intent_obj, pack, manager)
         except ScheduleRefused as err:

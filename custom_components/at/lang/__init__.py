@@ -43,6 +43,7 @@ class LanguagePack:
     responses: Any = None
     logbook: Mapping[str, str] = field(default_factory=dict)  # event key -> template
     todo: Mapping[str, str] = field(default_factory=dict)  # done|failed|missed|cancelled -> description
+    messages: Mapping[str, str] = field(default_factory=dict)  # error key -> template, see ``message``
 
 
 def get_language_pack(language: str) -> LanguagePack | None:
@@ -53,6 +54,14 @@ def get_language_pack(language: str) -> LanguagePack | None:
 
         return EN
     return None
+
+
+def message(pack: LanguagePack | None, key: str, **placeholders: object) -> str:
+    """Return an error message from the pack, or the English one when the pack has none."""
+    from .en import EN  # noqa: PLC0415 - en imports this module
+
+    template = (pack.messages.get(key) if pack is not None else None) or EN.messages[key]
+    return template.format(**placeholders)
 
 
 _WEEK_DAYS = 7

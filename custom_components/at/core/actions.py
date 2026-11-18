@@ -3,6 +3,7 @@
 import copy
 from typing import TYPE_CHECKING, Any
 
+from custom_components.at.lang import message
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import dt as dt_util
@@ -55,40 +56,33 @@ def _is_template(value: Any) -> bool:
     return isinstance(value, str) and ("{{" in value or "{%" in value)
 
 
-def _check_target(name: str, target: Any) -> None:
+def _check_target(name: str, target: Any, pack: LanguagePack | None) -> None:
     """Allow only a dict of known keys holding explicit ids (no ``all``, no templates)."""
     if not isinstance(target, dict) or not target:
-        msg = f"{name} needs a target"
-        raise InvalidAction(msg)
+        raise InvalidAction(message(pack, "target_missing", name=name))
     if extra := set(target) - _TARGET_KEYS:
-        msg = f"{name} target does not allow {', '.join(sorted(map(str, extra)))}"
-        raise InvalidAction(msg)
+        raise InvalidAction(message(pack, "target_extra_keys", name=name, keys=", ".join(sorted(map(str, extra)))))
     for value in target.values():
         values = value if isinstance(value, list) else [value]
         if not values or not all(isinstance(item, str) and item for item in values):
-            msg = f"{name} target ids must be strings"
-            raise InvalidAction(msg)
+            raise InvalidAction(message(pack, "target_ids_strings", name=name))
         if any(item.strip().lower() in _BROAD or _is_template(item) for item in values):
-            msg = f"{name} target must name specific ids"
-            raise ActionNotAllowed(msg)
+            raise ActionNotAllowed(message(pack, "target_specific", name=name))
 
 
-def _check_data(data: Any) -> None:
+def _check_data(data: Any, pack: LanguagePack | None) -> None:
     if not isinstance(data, dict) or set(data) - {"variables"}:
-        msg = "script.turn_on only allows data.variables"
-        raise ActionNotAllowed(msg)
+        raise ActionNotAllowed(message(pack, "data_variables_only"))
     variables = data.get("variables", {})
     if not isinstance(variables, dict):
-        msg = "data.variables must be a mapping"
-        raise InvalidAction(msg)
+        raise InvalidAction(message(pack, "data_variables_mapping"))
     if any(_is_template(value) for value in variables.values()):
-        msg = "data.variables must not contain templates"
-        raise ActionNotAllowed(msg)
+        raise ActionNotAllowed(message(pack, "data_variables_templates"))
 
 
-def validate_picked_action(action: list[dict[str, Any]]) -> None:
+def validate_picked_action(action: list[dict[str, Any]], pack: LanguagePack | None = None) -> None:
     """
-    Check an action against the allowlist.
+    Check an action against the allowlist; messages come from ``pack``, or English without one.
 
     Raises:
         ActionNotAllowed: The action is well formed but outside the allowlist.
@@ -96,28 +90,23 @@ def validate_picked_action(action: list[dict[str, Any]]) -> None:
 
     """
     if len(action) != 1:
-        msg = "an action must have exactly one step"
-        raise ActionNotAllowed(msg)
+        raise ActionNotAllowed(message(pack, "action_one_step"))
     step = action[0]
     if not isinstance(step, dict):
-        msg = "the step must be a mapping"
-        raise InvalidAction(msg)
+        raise InvalidAction(message(pack, "action_step_mapping"))
     name = step.get("action")
     if not isinstance(name, str) or "." not in name:
-        msg = "the step must call a service"
-        raise ActionNotAllowed(msg)
+        raise ActionNotAllowed(message(pack, "action_step_service"))
     service = name.partition(".")[2]
     toggle = service in _TOGGLES and name != _SCRIPT_RUN
     if not (toggle or name in (_SCRIPT_RUN, _AUTOMATION_TRIGGER)):
-        msg = f"{name} is not an allowed action"
-        raise ActionNotAllowed(msg)
+        raise ActionNotAllowed(message(pack, "action_not_allowed", name=name))
     allowed_keys = {"action", "target"} | ({"data"} if name == _SCRIPT_RUN else set())
     if extra := set(step) - allowed_keys:
-        msg = f"{name} does not allow {', '.join(sorted(extra))}"
-        raise ActionNotAllowed(msg)
-    _check_target(name, step.get("target"))
+        raise ActionNotAllowed(message(pack, "action_extra_keys", name=name, keys=", ".join(sorted(extra))))
+    _check_target(name, step.get("target"), pack)
     if "data" in step:
-        _check_data(step["data"])
+        _check_data(step["data"], pack)
 
 
 def _target_ids(step: dict[str, Any], key: str) -> list[str]:

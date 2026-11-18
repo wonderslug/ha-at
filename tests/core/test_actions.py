@@ -1,5 +1,6 @@
 """Tests for the picked-action allowlist and its summaries."""
 
+import dataclasses
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from custom_components.at.core.actions import (
 )
 from custom_components.at.core.models import Targets
 from custom_components.at.lang import get_language_pack
+from custom_components.at.lang.en import EN
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
 
@@ -118,3 +120,12 @@ async def test_targets_from_action(hass: HomeAssistant) -> None:
         names=["Porch Light", "switch.x"],
     )
     assert targets_from_action(hass, [{"delay": 5}]) == Targets()
+
+
+def test_messages_come_from_the_pack_with_english_fallback() -> None:
+    """A pack's own wording is used; a key it lacks falls back to English."""
+    pack = dataclasses.replace(EN, messages={"action_one_step": "une seule étape"})
+    with pytest.raises(InvalidAction, match="une seule étape"):
+        validate_picked_action([], pack)
+    with pytest.raises(InvalidAction, match="the step must call a service"):
+        validate_picked_action([{"delay": 1}], pack)
