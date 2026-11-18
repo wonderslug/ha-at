@@ -28,10 +28,17 @@ from collections.abc import Coroutine
 import contextvars
 from typing import TYPE_CHECKING, Any
 
-from custom_components.at.const import REFUSED_INTENT_PREFIX
+from custom_components.at.const import LOGGER, REFUSED_INTENT_PREFIX
 from homeassistant.components import conversation
-from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.helpers import chat_session
+
+# Private: the pipeline's active chat log. Without it the hand-off is still isolated, because
+# it always uses a fresh conversation id and async_get_chat_log only reuses a log whose id
+# matches, so a rename in Home Assistant must not stop the integration from loading.
+try:
+    from homeassistant.components.conversation.chat_log import current_chat_log
+except ImportError:  # pragma: no cover - depends on the Home Assistant version
+    current_chat_log = None
 
 if TYPE_CHECKING:
     from hassil.recognize import RecognizeResult
@@ -49,11 +56,23 @@ def _is_at_intent(result: RecognizeResult) -> bool:
     return result.intent.name.startswith(REFUSED_INTENT_PREFIX)
 
 
+_warned_missing: set[str] = set()
+
+
+def _clear(context: contextvars.Context, name: str, variable: contextvars.ContextVar[Any] | None) -> None:
+    if variable is None:
+        if name not in _warned_missing:
+            _warned_missing.add(name)
+            LOGGER.debug("Home Assistant has no %s context variable; relying on a fresh conversation id", name)
+        return
+    context.run(variable.set, None)
+
+
 async def _isolated[T](coro: Coroutine[Any, Any, T]) -> T:
     """Run ``coro`` with no active chat session or chat log, without touching the caller's."""
     context = contextvars.copy_context()
-    context.run(chat_session.current_session.set, None)
-    context.run(current_chat_log.set, None)
+    _clear(context, "current_session", getattr(chat_session, "current_session", None))
+    _clear(context, "current_chat_log", current_chat_log)
     return await asyncio.get_running_loop().create_task(coro, context=context)
 
 

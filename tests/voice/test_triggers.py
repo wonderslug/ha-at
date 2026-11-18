@@ -23,6 +23,7 @@ from homeassistant.components.assist_pipeline import (
 from homeassistant.components.assist_pipeline.models import PipelineStage
 from homeassistant.components.assist_pipeline.pipeline import async_get_pipeline
 from homeassistant.components.assist_pipeline.run import PipelineInput, PipelineRun
+from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME, MATCH_ALL
@@ -386,13 +387,8 @@ class StubLlmAgent(conversation.AbstractConversationAgent):
 @pytest.fixture
 async def llm_pipeline(hass: HomeAssistant, manager: JobManager) -> StubLlmAgent:
     """Make a stub LLM the pipeline's agent, with prefer-local on."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
     stub_agent = StubLlmAgent()
-    agent_entry = MockConfigEntry(domain="test", title="Stub LLM")
-    agent_entry.add_to_hass(hass)
-    conversation.async_set_agent(hass, agent_entry, stub_agent)
-    (pipeline,) = async_get_pipelines(hass)
-    await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
+    await use_agent(hass, stub_agent)
     return stub_agent
 
 
@@ -482,17 +478,29 @@ class StreamingStubAgent(conversation.AbstractConversationAgent):
             return conversation.ConversationResult(response=response, conversation_id=chat_log.conversation_id)
 
 
-async def test_llm_hand_off_uses_its_own_chat_log(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
+async def use_agent(hass: HomeAssistant, agent: conversation.AbstractConversationAgent) -> None:
+    """Make ``agent`` the pipeline's agent, with prefer-local on."""
     assert await async_setup_component(hass, "assist_pipeline", {})
-    stub_agent = StreamingStubAgent(hass)
-    agent_entry = MockConfigEntry(domain="test", title="Streaming stub LLM")
+    agent_entry = MockConfigEntry(domain="test", title="Stub LLM")
     agent_entry.add_to_hass(hass)
-    conversation.async_set_agent(hass, agent_entry, stub_agent)
+    conversation.async_set_agent(hass, agent_entry, agent)
     (pipeline,) = async_get_pipelines(hass)
     await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
 
-    async with asyncio.timeout(10):
-        speech, conversation_id = await run_pipeline_with_id(hass, home, "remind me at 5")
+
+@pytest.mark.parametrize(
+    "chat_log_variable",
+    [pytest.param(current_chat_log, id="chat-log-cleared"), pytest.param(None, id="private-chat-log-variable-missing")],
+)
+async def test_llm_hand_off_uses_its_own_chat_log(
+    hass: HomeAssistant, home: Assist, manager: JobManager, chat_log_variable: object
+) -> None:
+    stub_agent = StreamingStubAgent(hass)
+    await use_agent(hass, stub_agent)
+
+    with patch("custom_components.at.ha_internal.fallthrough.current_chat_log", chat_log_variable):
+        async with asyncio.timeout(10):
+            speech, conversation_id = await run_pipeline_with_id(hass, home, "remind me at 5")
 
     assert speech == LONG_REPLY
     assert manager.pending() == []
@@ -506,3 +514,28 @@ async def test_llm_hand_off_uses_its_own_chat_log(hass: HomeAssistant, home: Ass
     assert [c.role for c in pipeline_log] == ["user", "assistant", "tool_result", "assistant"]
     assert [tool.tool_name for tool in pipeline_log[1].tool_calls or []] == ["trigger_sentence"]
     assert pipeline_log[-1].content == LONG_REPLY
+
+
+class FailingAgent(StubLlmAgent):
+    """A non-default agent that breaks."""
+
+    @override
+    async def async_process(self, user_input: conversation.ConversationInput) -> conversation.ConversationResult:
+        """Fail every sentence."""
+        self.texts.append(user_input.text)
+        msg = "agent exploded"
+        raise RuntimeError(msg)
+
+
+async def test_failing_agent_gets_refusal_not_crash(
+    hass: HomeAssistant, home: Assist, manager: JobManager, caplog: pytest.LogCaptureFixture
+) -> None:
+    failing_agent = FailingAgent()
+    await use_agent(hass, failing_agent)
+
+    speech = await run_pipeline(hass, home, "remind me at 5")
+
+    assert speech == UNRECOGNIZED
+    assert failing_agent.texts == ["remind me at 5"]
+    assert manager.pending() == []
+    assert "agent exploded" in caplog.text

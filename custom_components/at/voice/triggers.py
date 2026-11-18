@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from custom_components.at.const import DOMAIN
+from custom_components.at.const import DOMAIN, LOGGER
 from custom_components.at.ha_internal.fallthrough import async_hand_off
 from custom_components.at.ha_internal.sentence_triggers import (
     SentenceGroup,
@@ -67,7 +67,11 @@ def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relat
 
     async def hand_off_or(given: TriggerInput, refusal: str) -> str:
         """Let the sentence's own agent answer it, and refuse only when nothing else can."""
-        speech = await async_hand_off(hass, given)
+        try:
+            speech = await async_hand_off(hass, given)
+        except Exception:  # noqa: BLE001 - another agent's code; whatever it raises, the user still gets an answer
+            LOGGER.exception("Handing %r back to its agent failed", given.sentence)
+            return pack.recognize_errors["no_match"]
         return refusal if speech is None else speech
 
     async def schedule(given: TriggerInput) -> str:
