@@ -54,6 +54,10 @@ class JobStore:
             return []
         return [Job.from_dict(item) for item in data.get("jobs", [])]
 
+    async def async_remove(self) -> None:
+        """Delete the stored jobs."""
+        await self._store.async_remove()
+
     async def async_save(self, jobs: Iterable[Job]) -> None:
         """Persist the jobs."""
         await self._store.async_save({"jobs": [job.to_dict() for job in jobs]})

@@ -53,4 +53,4 @@ The [configuration page](CONFIGURATION.md) lists every phrase, the panel, the en
 1. Go to **Settings** > **Devices & services** and select **at (placeholder)**.
 2. Open the three-dot menu and select **Delete**.
 
-This removes the sidebar panel, the entities, the voice sentences and the intents. Jobs are stored in `.storage/at.jobs` in your configuration directory; Home Assistant leaves that file behind, so delete it if you want the history gone. If you installed through the Marketplace or HACS, you can also remove the download there, which asks for a restart. Delete any automations that use `at.*` actions or `at_job_*` events yourself.
+This removes the sidebar panel, the entities, the voice sentences and the intents. The job queue and history are deleted too. If you installed through the Marketplace or HACS, you can also remove the download there, which asks for a restart. Delete any automations that use `at.*` actions or `at_job_*` events yourself.

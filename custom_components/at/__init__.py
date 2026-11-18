@@ -114,3 +114,11 @@ async def async_unload_entry(
     async_remove_panel(hass)
     await entry.runtime_data.manager.async_stop()
     return True
+
+
+async def async_remove_entry(
+    hass: HomeAssistant,
+    entry: AtConfigEntry,
+) -> None:
+    """Delete the stored jobs when the integration is removed."""
+    await JobStore(hass).async_remove()

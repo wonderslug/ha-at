@@ -72,11 +72,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40PLACEHOLDER_OWNER-blue.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/PLACEHOLDER_OWNER/ha-at.svg?style=for-the-badge
 [releases]: https://github.com/PLACEHOLDER_OWNER/ha-at/releases
-[user_profile]: https://github.com/jpawlowski
-
-<!-- Optional badge definitions - uncomment if needed:
-[buymecoffee]: https://www.buymeacoffee.com/jpawlowski
-[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
-[discord]: https://discord.gg/Qa5fW2R
-[discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
--->
+[user_profile]: https://github.com/PLACEHOLDER_OWNER
