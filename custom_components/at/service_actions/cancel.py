@@ -2,10 +2,11 @@
 
 from typing import TYPE_CHECKING
 
+from custom_components.at.core.errors import JobStateError
 from custom_components.at.core.models import Via
 from homeassistant.helpers import config_validation as cv
 
-from .common import async_get_manager
+from .common import async_get_job, async_get_manager, job_not_pending
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
@@ -24,5 +25,10 @@ async def async_handle_cancel(hass: HomeAssistant, call: ServiceCall) -> Service
         ids = [job.id for job in manager.pending()]
     else:
         ids = cv.ensure_list(call.data["job_id"])
-    cancelled = await manager.async_cancel_many(ids, str(Via.SERVICE))
+    for job_id in ids:
+        async_get_job(manager, job_id, pending=True)
+    try:
+        cancelled = await manager.async_cancel_many(ids, str(Via.SERVICE))
+    except JobStateError as err:
+        raise job_not_pending(", ".join(ids)) from err
     return {"cancelled": [job.id for job in cancelled]}

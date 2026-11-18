@@ -16,7 +16,11 @@ from .run_now import async_handle_run_now
 from .schedule import async_handle_schedule
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant
+    from collections.abc import Awaitable, Callable
+
+    from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
+
+    type Handler = Callable[[HomeAssistant, ServiceCall], Awaitable[ServiceResponse]]
 
 SERVICE_SCHEDULE = "schedule"
 SERVICE_LIST = "list"
@@ -85,7 +89,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         if hass.services.has_service(DOMAIN, name):
             continue
 
-        async def call(service_call, handler=handler):
+        async def call(service_call: ServiceCall, handler: Handler = handler) -> ServiceResponse:
             return await handler(hass, service_call)
 
         hass.services.async_register(DOMAIN, name, call, schema=schema, supports_response=supports_response)

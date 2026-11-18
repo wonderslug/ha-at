@@ -255,3 +255,22 @@ async def test_clear_history(hass: HomeAssistant, manager: JobManager) -> None:
     await manager.async_cancel(job.id, "voice")
     assert await call(hass, "clear_history", {}) == {"removed": 1}
     assert manager.history() == []
+
+
+@pytest.mark.parametrize("service", ["cancel", "run_now"])
+async def test_unknown_job_is_translated(hass: HomeAssistant, manager: JobManager, service: str) -> None:
+    """An unknown id is a translated validation error."""
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, service, {"job_id": "nope"})
+    assert err.value.translation_key == "job_not_found"
+    assert err.value.translation_placeholders == {"job_id": "nope"}
+
+
+@pytest.mark.parametrize("service", ["cancel", "run_now"])
+async def test_finished_job_is_translated(hass: HomeAssistant, manager: JobManager, service: str) -> None:
+    """A job that is no longer pending is a translated validation error."""
+    job = await manager.async_add(make_job(datetime(2026, 11, 19, tzinfo=UTC)))
+    await manager.async_cancel(job.id, "voice")
+    with pytest.raises(ServiceValidationError) as err:
+        await call(hass, service, {"job_id": job.id})
+    assert err.value.translation_key == "job_not_pending"
