@@ -83,6 +83,7 @@ class JobManager:
         self._settling: set[str] = set()
         self._tasks: set[asyncio.Task[None]] = set()
         self._subscribers: list[Callable[[JobChange], None]] = []
+        self._stop_callbacks: list[Callable[[], None]] = []
         self._unsub_sweep: CALLBACK_TYPE | None = None
 
     # Lifecycle
@@ -131,6 +132,15 @@ class JobManager:
             await asyncio.gather(*tasks, return_exceptions=True)
         self._tasks.clear()
         self._in_flight.clear()
+        for on_stop in list(self._stop_callbacks):
+            on_stop()
+        self._stop_callbacks.clear()
+        self._subscribers.clear()
+
+    @property
+    def subscriber_count(self) -> int:
+        """Return how many subscribers are registered."""
+        return len(self._subscribers)
 
     # Reads
 
@@ -240,13 +250,23 @@ class JobManager:
         """Use new options from the next schedule, run or prune on."""
         self._options = options
 
-    def subscribe(self, cb: Callable[[JobChange], None]) -> Callable[[], None]:
-        """Call ``cb`` synchronously on every change; return an unsubscribe function."""
+    def subscribe(
+        self, cb: Callable[[JobChange], None], on_stop: Callable[[], None] | None = None
+    ) -> Callable[[], None]:
+        """
+        Call ``cb`` synchronously on every change; return an unsubscribe function.
+
+        ``on_stop`` is called once when the manager stops, just before every subscriber is dropped.
+        """
         self._subscribers.append(cb)
+        if on_stop is not None:
+            self._stop_callbacks.append(on_stop)
 
         def _unsubscribe() -> None:
             if cb in self._subscribers:
                 self._subscribers.remove(cb)
+            if on_stop is not None and on_stop in self._stop_callbacks:
+                self._stop_callbacks.remove(on_stop)
 
         return _unsubscribe
 

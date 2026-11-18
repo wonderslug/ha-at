@@ -99,14 +99,58 @@ async def test_subscribe_unsubscribes_on_unsubscribe(
     hass: HomeAssistant, manager: JobManager, admin_client: Client
 ) -> None:
     """Unsubscribing removes the manager subscription."""
+    before = manager.subscriber_count
     await admin_client.send_json_auto_id({"type": "at/subscribe"})
     sub_id = (await admin_client.receive_json())["id"]
     await admin_client.receive_json()
-    assert len(manager._subscribers) >= 1  # noqa: SLF001
-    before = len(manager._subscribers)  # noqa: SLF001
+    assert manager.subscriber_count == before + 1
     await admin_client.send_json_auto_id({"type": "unsubscribe_events", "subscription": sub_id})
     assert (await admin_client.receive_json())["success"]
-    assert len(manager._subscribers) == before - 1  # noqa: SLF001
+    assert manager.subscriber_count == before
+
+
+async def test_subscribe_dropped_on_close(hass: HomeAssistant, manager: JobManager, admin_client: Client) -> None:
+    """Closing the connection drops the manager subscription."""
+    before = manager.subscriber_count
+    await admin_client.send_json_auto_id({"type": "at/subscribe"})
+    await admin_client.receive_json()
+    await admin_client.receive_json()
+    assert manager.subscriber_count == before + 1
+    await admin_client.close()
+    await hass.async_block_till_done()
+    assert manager.subscriber_count == before
+
+
+async def test_subscribe_stopped_on_unload_then_resubscribe(
+    hass: HomeAssistant, manager: JobManager, config_entry: MockConfigEntry, admin_client: Client
+) -> None:
+    """Unloading sends {stopped: true}; after a reload the client can subscribe again."""
+    await admin_client.send_json_auto_id({"type": "at/subscribe"})
+    await admin_client.receive_json()
+    await admin_client.receive_json()
+    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert (await admin_client.receive_json())["event"] == {"stopped": True}
+    assert manager.subscriber_count == 0
+
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    new_manager = config_entry.runtime_data.manager
+    baseline = new_manager.subscriber_count
+    await admin_client.send_json_auto_id({"type": "at/subscribe"})
+    assert (await admin_client.receive_json())["success"]
+    assert "snapshot" in (await admin_client.receive_json())["event"]
+    assert new_manager.subscriber_count == baseline + 1
+
+
+async def test_past_due_invalid(hass: HomeAssistant, manager: JobManager, admin_client: Client) -> None:
+    """A due time in the past is invalid for schedule and reschedule."""
+    response = await send(admin_client, "schedule", action=ACTION, due="2026-11-17T10:00:00+00:00")
+    assert response["error"]["code"] == "invalid"
+    job = await manager.async_add(make_job(DUE))
+    response = await send(admin_client, "reschedule", job_id=job.id, due="2026-11-17T10:00:00+00:00")
+    assert response["error"]["code"] == "invalid"
+    assert len(manager.pending()) == 1
 
 
 async def test_parse_preview_no_job(hass: HomeAssistant, manager: JobManager, admin_client: Client) -> None:

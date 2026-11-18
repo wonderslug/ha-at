@@ -25,11 +25,12 @@ from .voice.scheduling import ScheduleRefused, async_schedule_command
 
 if TYPE_CHECKING:
     from .core.manager import JobChange, JobManager
+    from .data import AtConfigEntry
 
 type Handler = Callable[[HomeAssistant, ActiveConnection, dict[str, Any], JobManager], Coroutine[Any, Any, None]]
 
 
-def _loaded_entry(hass: HomeAssistant) -> Any:
+def _loaded_entry(hass: HomeAssistant) -> AtConfigEntry | None:
     for entry in hass.config_entries.async_loaded_entries(DOMAIN):
         return entry
     return None
@@ -102,7 +103,11 @@ async def ws_subscribe(
     def forward(change: JobChange) -> None:
         connection.send_message(event_message(msg_id, {"change": {"kind": change.kind, "job": change.job.to_dict()}}))
 
-    connection.subscriptions[msg_id] = manager.subscribe(forward)
+    @callback
+    def stopped() -> None:
+        connection.send_message(event_message(msg_id, {"stopped": True}))
+
+    connection.subscriptions[msg_id] = manager.subscribe(forward, stopped)
     connection.send_result(msg_id)
     connection.send_message(
         event_message(
@@ -185,8 +190,8 @@ async def ws_schedule(
         return
     if "due" in msg:
         due = _parse_due(msg["due"])
-        if due is None:
-            connection.send_error(msg_id, "invalid", "due is not a valid date and time")
+        if due is None or due < dt_util.utcnow():
+            connection.send_error(msg_id, "invalid", "due must be a date and time in the future")
             return
     else:
         due = dt_util.utcnow() + timedelta(seconds=msg["delay_seconds"])
@@ -274,8 +279,8 @@ async def ws_reschedule(
     if job is None:
         return
     due = _parse_due(msg["due"])
-    if due is None:
-        connection.send_error(msg["id"], "invalid", "due is not a valid date and time")
+    if due is None or due < dt_util.utcnow():
+        connection.send_error(msg["id"], "invalid", "due must be a date and time in the future")
         return
     if job.raw_action and not connection.user.is_admin:
         _unauthorized(connection, msg)
@@ -300,11 +305,16 @@ async def ws_clear_history(
 async def ws_info(hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any], manager: JobManager) -> None:
     """Report what the panel needs to know about the caller and the setup."""
     entry = _loaded_entry(hass)
+    panel_admin_only = (
+        DEFAULT_PANEL_ADMIN_ONLY
+        if entry is None
+        else entry.options.get(CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY)
+    )
     connection.send_result(
         msg["id"],
         {
             "is_admin": connection.user.is_admin,
-            "panel_admin_only": entry.options.get(CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY),
+            "panel_admin_only": panel_admin_only,
             "language_supported": get_language_pack(hass.config.language) is not None,
         },
     )
