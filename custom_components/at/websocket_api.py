@@ -16,7 +16,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY, DOMAIN
-from .core.actions import InvalidAction, build_action_job, summarize_action, validate_picked_action
+from .core.actions import (
+    ActionNotAllowed,
+    InvalidAction,
+    build_action_job,
+    summarize_action,
+    validate_action_config,
+    validate_picked_action,
+)
 from .core.errors import JobNotFound, JobStateError
 from .core.models import Job, JobStatus, Via
 from .lang import get_language_pack
@@ -196,13 +203,22 @@ async def ws_schedule(
     else:
         due = dt_util.utcnow() + timedelta(seconds=msg["delay_seconds"])
 
-    action: list[dict[str, Any]] = msg["action"]
+    try:
+        action = validate_action_config(msg["action"])
+    except probatio.Invalid as err:
+        connection.send_error(msg_id, "invalid", str(err))
+        return
     try:
         validate_picked_action(action)
         raw_action = False
-    except InvalidAction:
+    except ActionNotAllowed:
         if not connection.user.is_admin:
             _unauthorized(connection, msg)
+            return
+        raw_action = True
+    except InvalidAction as err:
+        if not connection.user.is_admin:
+            connection.send_error(msg_id, "invalid", str(err))
             return
         raw_action = True
     pack = get_language_pack(hass.config.language) or EN

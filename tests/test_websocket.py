@@ -220,6 +220,38 @@ async def test_schedule_raw_action_admin_ok_sets_raw_flag(
     assert response["result"]["job"]["due"] == "2026-11-19T10:00:00+00:00"
 
 
+async def test_schedule_malformed_action_invalid_for_admin(
+    hass: HomeAssistant, manager: JobManager, admin_client: Client
+) -> None:
+    """An admin's action that is not a valid script sequence is rejected at creation."""
+    response = await send(admin_client, "schedule", action=[{"delay": "not a time"}], delay_seconds=60)
+    assert not response["success"]
+    assert response["error"]["code"] == "invalid"
+    assert not manager.pending()
+
+
+async def test_schedule_malformed_action_invalid_for_non_admin(
+    hass: HomeAssistant, manager: JobManager, user_client: Client
+) -> None:
+    """A non-admin's malformed action is invalid, not unauthorized."""
+    response = await send(user_client, "schedule", action=[{"delay": "not a time"}], delay_seconds=60)
+    assert not response["success"]
+    assert response["error"]["code"] == "invalid"
+    assert not manager.pending()
+
+
+async def test_schedule_misshapen_picked_action_non_admin_invalid(
+    hass: HomeAssistant, manager: JobManager, user_client: Client
+) -> None:
+    """A non-admin's picked action with a bad shape is invalid, not unauthorized."""
+    action = [{"action": "script.turn_on", "target": {"entity_id": "script.bedtime"}, "data": {"variables": "x"}}]
+    response = await send(user_client, "schedule", action=action, delay_seconds=60)
+    assert not response["success"]
+    assert response["error"]["code"] == "invalid"
+    assert response["error"]["message"] == "data.variables must be a mapping"
+    assert not manager.pending()
+
+
 async def test_schedule_invalid_combination(hass: HomeAssistant, manager: JobManager, admin_client: Client) -> None:
     """An action without a time is invalid."""
     response = await send(admin_client, "schedule", action=ACTION)
