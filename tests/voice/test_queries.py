@@ -128,6 +128,18 @@ def test_cancel_by_time_without_meridiem_matches_either_reading() -> None:
     assert found == [six_pm, six_am]
 
 
+def test_cancel_by_relative_time_matches_job_near_that_offset() -> None:
+    """An LLM agent may cancel "the job in 20 minutes"; it fits a job due about then, not the others."""
+    near, far = _job(NOW + timedelta(minutes=21)), _job(NOW + timedelta(hours=3))
+    query = CancelQuery(time=TimeSpec(relative=timedelta(minutes=20)))
+    assert match_for_cancel([far, near], query, NOW, TZ) == [near]
+    assert match_for_cancel([far], query, NOW, TZ) == []
+    edge = _job(NOW + timedelta(minutes=23))
+    assert match_for_cancel([edge], query, NOW, TZ) == []
+    soon = _job(NOW + timedelta(seconds=100))
+    assert match_for_cancel([soon], CancelQuery(time=TimeSpec(relative=timedelta(minutes=1))), NOW, TZ) == [soon]
+
+
 def test_cancel_by_time_with_day_matches_that_date() -> None:
     """A day word narrows the time to that local date."""
     tomorrow, thursday = _job(_at(1, 6)), _job(_at(2, 6))

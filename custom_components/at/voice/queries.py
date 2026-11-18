@@ -11,6 +11,7 @@ from custom_components.at.lang import LanguagePack, day_qualifier
 
 _LIST_LIMIT = 3
 _TONIGHT_ENDS = time(6, 0)
+_RELATIVE_MIN_TOLERANCE = timedelta(minutes=1)
 
 
 @dataclass
@@ -59,8 +60,12 @@ def _matches_time(local: datetime, spec: TimeSpec, local_now: datetime) -> bool:
     Say whether a job's local due time fits a spoken clock time.
 
     Without a meridiem either 12-hour reading of the hour fits; a day word or weekday also
-    pins the local date.
+    pins the local date. A relative time ("in 20 minutes") fits a job due about that far from
+    now, within a tenth of the offset and never less than a minute.
     """
+    if spec.relative is not None:
+        tolerance = max(_RELATIVE_MIN_TOLERANCE, spec.relative / 10)
+        return abs(local - (local_now + spec.relative)) <= tolerance
     if local.minute != spec.minute or local.hour not in candidate_hours(spec):
         return False
     today = local_now.date()
