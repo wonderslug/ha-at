@@ -134,7 +134,7 @@ async def test_at_cancel_intent_all_skips_service(hass: HomeAssistant, manager: 
 
     response = await handle(hass, INTENT_CANCEL, {"all": True})
 
-    assert speech(response) == "Cancelled 2 jobs. 1 jobs created by automations were left alone."
+    assert speech(response) == "Cancelled 2 jobs. 1 job created by automations was left alone."
     assert [j.id for j in manager.pending()] == [kept.id]
     assert manager.history()[0].result.cancelled_by == "voice"
 

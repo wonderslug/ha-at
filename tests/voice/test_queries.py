@@ -157,3 +157,10 @@ def test_cancel_speech_variants() -> None:
     assert cancel_none_speech(PACK) == "I couldn't find a scheduled job matching that."
     assert cancel_all_speech(PACK, 3, 0) == "Cancelled 3 jobs."
     assert cancel_all_speech(PACK, 3, 2) == "Cancelled 3 jobs. 2 jobs created by automations were left alone."
+
+
+def test_cancel_all_speech_singular() -> None:
+    """One job is "1 job", not "1 jobs"."""
+    assert cancel_all_speech(PACK, 1, 0) == "Cancelled 1 job."
+    assert cancel_all_speech(PACK, 1, 1) == "Cancelled 1 job. 1 job created by automations was left alone."
+    assert cancel_all_speech(PACK, 0, 2) == "Cancelled 0 jobs. 2 jobs created by automations were left alone."

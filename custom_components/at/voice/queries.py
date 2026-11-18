@@ -145,10 +145,15 @@ def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None
     )
 
 
+def _plural(key: str, count: int) -> str:
+    """Pick the response key for a count: ``<key>_one`` for exactly one, ``<key>`` otherwise."""
+    return f"{key}_one" if count == 1 else key
+
+
 def cancel_all_speech(pack: LanguagePack, cancelled: int, left_alone: int) -> str:
     """Say how many were cancelled and how many automation jobs were skipped."""
     responses = pack.responses
-    text = str(responses["cancel_all"]).format(count=cancelled)
+    text = str(responses[_plural("cancel_all", cancelled)]).format(count=cancelled)
     if left_alone > 0:
-        text += str(responses["cancel_all_left"]).format(count=left_alone)
+        text += str(responses[_plural("cancel_all_left", left_alone)]).format(count=left_alone)
     return text
