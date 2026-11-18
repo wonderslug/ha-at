@@ -8,6 +8,7 @@ https://github.com/PLACEHOLDER_OWNER/ha-at
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from homeassistant.const import Platform
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 
     from .data import AtConfigEntry
 
+PLATFORMS = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
@@ -81,6 +83,7 @@ async def async_setup_entry(
     manager = JobManager(hass, JobStore(hass), JobExecutor(hass), manager_options(entry))
     await manager.async_start()
     entry.runtime_data = AtRuntimeData(manager=manager)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_intents(hass)
     if (pack := get_language_pack(hass.config.language)) is None:
         LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
@@ -98,9 +101,11 @@ async def async_unload_entry(
     Unload a config entry.
 
     Returns:
-        True, since no platforms are forwarded yet.
+        True once the platforms and the manager are stopped; False if a platform fails to unload.
 
     """
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
     async_remove_intents(hass)
     await entry.runtime_data.manager.async_stop()
     return True

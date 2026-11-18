@@ -127,5 +127,15 @@
     "job_not_pending": {
       "message": "Job {job_id} is not waiting to run, so it can't be changed."
     }
+  },
+  "entity": {
+    "sensor": {
+      "next_job": {
+        "name": "Next job"
+      },
+      "pending_jobs": {
+        "name": "Pending jobs"
+      }
+    }
   }
 }

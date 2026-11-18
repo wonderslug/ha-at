@@ -1,4 +1,14 @@
 {
+  "entity": {
+    "sensor": {
+      "next_job": {
+        "default": "mdi:clock-outline"
+      },
+      "pending_jobs": {
+        "default": "mdi:format-list-numbered"
+      }
+    }
+  },
   "services": {
     "schedule": {
       "service": "mdi:clock-plus-outline"
