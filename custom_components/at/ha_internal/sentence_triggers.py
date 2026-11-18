@@ -22,13 +22,22 @@ from typing import TYPE_CHECKING, Any
 from hassil import Intents, recognize_best
 
 from custom_components.at.const import LOGGER
-from homeassistant.components.conversation.agent_manager import AgentManager, get_agent_manager
-from homeassistant.components.conversation.const import IntentSource
+
+# Semi-private modules of the conversation integration. A Home Assistant release that moves them
+# turns the sentences off (with a warning) instead of failing the whole integration.
+try:
+    from homeassistant.components.conversation.agent_manager import AgentManager, get_agent_manager
+    from homeassistant.components.conversation.const import IntentSource
+except ImportError:  # pragma: no cover - depends on the Home Assistant version
+    AgentManager = None
+    get_agent_manager = None
+    IntentSource = None
 
 if TYPE_CHECKING:
     from hassil.recognize import RecognizeResult
 
     from homeassistant.components.conversation import ConversationInput
+    from homeassistant.components.conversation.agent_manager import AgentManager as AgentManagerType
     from homeassistant.core import Context, HomeAssistant
 
 _LIST_REFERENCE = re.compile(r"\{([^{}:]+)(?::[^{}]*)?\}")
@@ -102,7 +111,7 @@ def _spell_out_lists(sentences: list[str], lists: Mapping[str, Any]) -> list[str
     return [_LIST_REFERENCE.sub(replace, sentence).replace(" [", "[ ][") for sentence in sentences]
 
 
-def _inject_lists(manager: AgentManager, sentences: list[str], lists: Mapping[str, Any]) -> bool:
+def _inject_lists(manager: AgentManagerType, sentences: list[str], lists: Mapping[str, Any]) -> bool:
     """
     Give a just-registered trigger real slot lists (private contract, spike item 1).
 
@@ -115,6 +124,8 @@ def _inject_lists(manager: AgentManager, sentences: list[str], lists: Mapping[st
         True when the lists were added, False when the stored trigger was not found.
 
     """
+    if IntentSource is None:
+        return False
     live: dict[Any, Any] = {}
     manager.subscribe_intents(live.update)()
     try:
@@ -149,9 +160,12 @@ def async_register_sentence_triggers(
     must answer, since None makes Home Assistant say "Done".
 
     Returns:
-        The callback that unregisters the trigger.
+        The callback that unregisters the trigger; a no-op when the agent manager is missing.
 
     """
+    if AgentManager is None or get_agent_manager is None or IntentSource is None:
+        LOGGER.warning("This Home Assistant version has no usable conversation agent manager; at's sentences are off")
+        return lambda: None
     wildcards = _wildcard_names(groups, lists)
     parser = Intents.from_dict(
         {
@@ -201,6 +215,7 @@ def async_register_sentence_triggers(
 def probe() -> dict[str, bool]:
     """Report whether the private Home Assistant hooks this adapter uses resolved."""
     return {
+        "get_agent_manager": callable(get_agent_manager),
         "intent_source_trigger": hasattr(IntentSource, "TRIGGER"),
         "register_trigger": hasattr(AgentManager, "register_trigger"),
         "subscribe_intents": hasattr(AgentManager, "subscribe_intents"),

@@ -246,6 +246,19 @@ async def test_no_target_without_ha_wording_helpers(
     assert_nothing_ran(hass, home)
 
 
+async def test_no_match_without_agent_manager(hass: HomeAssistant, home: Home, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If a Home Assistant release moves the agent manager, recognition refuses with no_match."""
+    monkeypatch.setattr(recognize_module, "get_agent_manager", None)
+    assert recognize_module.probe()["get_agent_manager"] is False
+
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, "turn on the kitchen light", home.office_device_id)
+
+    assert err.value.code == "no_match"
+    assert err.value.message == PACK.recognize_errors["no_match"]
+    assert_nothing_ran(hass, home)
+
+
 @pytest.mark.parametrize("text", ["what's the temperature", "set a timer for 5 minutes"])
 async def test_refused_intents(hass: HomeAssistant, home: Home, text: str) -> None:
     with pytest.raises(RecognizeError) as err:

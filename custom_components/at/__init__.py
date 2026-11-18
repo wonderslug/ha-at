@@ -85,15 +85,25 @@ async def async_setup_entry(
     """
     manager = JobManager(hass, JobStore(hass), JobExecutor(hass), manager_options(entry))
     await manager.async_start()
+    # Each step registers its own teardown as soon as it succeeds, so a step that raises later
+    # leaves nothing running: Home Assistant runs these callbacks when setup fails, too.
+    entry.async_on_unload(manager.async_stop)
     entry.runtime_data = AtRuntimeData(manager=manager)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_intents(hass)
+    entry.async_on_unload(lambda: async_remove_intents(hass))
     await async_register_panel(hass, entry)
+    entry.async_on_unload(lambda: async_remove_panel(hass))
     if (pack := get_language_pack(hass.config.language)) is None:
         LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
     else:
         defer_relative = entry.options.get(CONF_DEFER_RELATIVE, DEFAULT_DEFER_RELATIVE)
-        entry.async_on_unload(async_setup_triggers(hass, pack, defer_relative=defer_relative))
+        try:
+            entry.async_on_unload(async_setup_triggers(hass, pack, defer_relative=defer_relative))
+        except Exception as err:  # noqa: BLE001 - Home Assistant internals; without sentences, at still works
+            LOGGER.warning(
+                "Could not register the at voice sentences, so only the actions, panel and LLM tools work: %s", err
+            )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
@@ -105,15 +115,11 @@ async def async_unload_entry(
     Unload a config entry.
 
     Returns:
-        True once the platforms and the manager are stopped; False if a platform fails to unload.
+        True once the platforms are unloaded; False if a platform fails to unload.
 
     """
-    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        return False
-    async_remove_intents(hass)
-    async_remove_panel(hass)
-    await entry.runtime_data.manager.async_stop()
-    return True
+    # The intents, the panel and the manager are torn down by the entry's on-unload callbacks.
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(

@@ -14,9 +14,14 @@ from typing import TYPE_CHECKING, Any, Literal
 from custom_components.at.const import REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
 from custom_components.at.core.models import IntentSpec, Targets
 from homeassistant.components import conversation
-from homeassistant.components.conversation.agent_manager import get_agent_manager
 from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, intent, template
+
+# Semi-private: without it nothing can be recognized, so every command is refused with no_match.
+try:
+    from homeassistant.components.conversation.agent_manager import get_agent_manager
+except ImportError:  # pragma: no cover - depends on the Home Assistant version
+    get_agent_manager = None
 
 # Private helpers that pick HA's own error sentence. Only the wording depends on them, so a
 # Home Assistant release that renames them falls back to the language pack's wording.
@@ -217,7 +222,7 @@ async def async_recognize_command(
             must not store, ``no_target`` when no exposed entity matches the targets.
 
     """
-    agent = get_agent_manager(hass).default_agent
+    agent = None if get_agent_manager is None else get_agent_manager(hass).default_agent
     if agent is None:
         raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
 
