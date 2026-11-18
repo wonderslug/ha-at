@@ -8,6 +8,7 @@ LLM agents), a sidebar panel, a to-do entity, sensors, and actions. Jobs are per
 keep a history.
 
 **Architecture:**
+
 - A pure-Python core (time parser, job model, store, manager/scheduler, executor) sits
   behind a `JobManager` that every surface talks to: voice, services, WebSocket and panel,
   entities.
@@ -18,6 +19,7 @@ keep a history.
   `lang/en.py` behind a `LanguagePack`.
 
 **Tech Stack:**
+
 - Backend: Python 3.14, Home Assistant 2026.10+, and the jpawlowski ha-integration-blueprint
   (uv, Ruff, Pyright, pytest-homeassistant-custom-component, prek, Release Please).
 - Panel: TypeScript, Lit 3, Vite (library mode), Vitest.
@@ -28,6 +30,7 @@ numbers below (§) refer to it.
 ## Global Constraints
 
 **Platform and naming**
+
 - HA 2026.10+ and Python 3.14 (blueprint defaults). Domain `at`.
 - `manifest.json` `name` is the placeholder `"at (placeholder)"`. The author sets the real
   name later. Sidebar title and device name come from the same constant, `DISPLAY_NAME`.
@@ -35,6 +38,7 @@ numbers below (§) refer to it.
 - Don't copy code from scheduler-component, delayed_action, or any other existing project.
 
 **Voice and safety**
+
 - Never write into the user's `config/` directory. No `custom_sentences` files.
 - An LLM never decides the time. All time parsing goes through `core/timeparse.py`.
 - Voice may only reach entities exposed to Assist, both when a job is scheduled and when it
@@ -42,6 +46,7 @@ numbers below (§) refer to it.
 - English only ships. No English words in `core/`. All language text lives in `lang/en.py`.
 
 **Storage and options**
+
 - Store: key `at.jobs`, `version 1`, `minor_version 1`, with a migration hook in place.
 - Option defaults:
   - grace window 5 min
@@ -50,10 +55,12 @@ numbers below (§) refer to it.
   - "Let HA handle relative-time commands": off
 
 **Events**
+
 - `at_job_scheduled`, `at_job_executed`, `at_job_failed`, `at_job_cancelled`, `at_job_missed`.
 - Payload: `job_id`, `summary`, `due`, `status`, `via`.
 
 **Repo and commits**
+
 - The repo is local only, with placeholder GitHub owner, repo, `codeowners`,
   `documentation` and `issue_tracker`. Don't create a GitHub repo.
 - Commits use Conventional Commits (the blueprint's commitlint) and **no Claude/AI
@@ -64,7 +71,7 @@ numbers below (§) refer to it.
 ## Review Focus
 
 1. **Midnight and noon edges:** "at midnight" or "at 12am" said at 23:59 must resolve to
-   00:00 the *next* day, never a time in the past. "at 12pm" is noon. Test: Task 4,
+   00:00 the _next_ day, never a time in the past. "at 12pm" is noon. Test: Task 4,
    `test_midnight_and_noon_edges`.
 2. **Jobs left "running" by a crash or restart** must not stay `running` forever. At
    startup, mark them `failed` with the error "Interrupted by restart". Test: Task 6,
@@ -83,7 +90,7 @@ numbers below (§) refer to it.
 
 ## File Structure
 
-```
+```text
 custom_components/at/
   __init__.py              # async_setup (services, ws, intents), async_setup_entry (manager, triggers, panel, platforms)
   const.py                 # DOMAIN, DISPLAY_NAME, CONF_*, DEFAULT_*, EVENT_*, STORAGE_*, REFUSED_INTENT_TYPES
@@ -128,31 +135,34 @@ tests/
 ### Task 1: Create the repo from the blueprint and rename it to `at`
 
 **Files:**
+
 - Create: the whole blueprint tree in `/Users/brian/development/at`. Keep the existing
   `docs/superpowers/` and `.superpowers/`.
 - Modify: `.gitignore` (add `.superpowers/`), `custom_components/at/manifest.json`
 
 - [ ] **Step 1: Copy in the blueprint.** Clone `https://github.com/jpawlowski/ha-integration-blueprint`
-  into a scratch directory. Copy its contents (excluding `.git/`) into the project root
-  without overwriting `docs/superpowers/`. Then run `git init -b main`.
+      into a scratch directory. Copy its contents (excluding `.git/`) into the project root
+      without overwriting `docs/superpowers/`. Then run `git init -b main`.
 - [ ] **Step 2: Run the rename script.** Run
-  `./initialize.sh --domain at --title "at (placeholder)" --repo PLACEHOLDER_OWNER/ha-at --author PLACEHOLDER_AUTHOR --dry-run`,
-  read the diff it reports, then run it again without `--dry-run`.
-  Expected: `custom_components/at/` exists and `grep -r ha_integration_domain .` finds nothing.
+      `./initialize.sh --domain at --title "at (placeholder)" --repo PLACEHOLDER_OWNER/ha-at --author PLACEHOLDER_AUTHOR --dry-run`,
+      read the diff it reports, then run it again without `--dry-run`.
+      Expected: `custom_components/at/` exists and `grep -r ha_integration_domain .` finds nothing.
 - [ ] **Step 3: Set the manifest fields:**
   - `"name": "at (placeholder)"`, `"integration_type": "service"`, `"iot_class": "calculated"`, `"single_config_entry": true`
   - `"dependencies": ["conversation", "intent", "http", "frontend", "panel_custom"]`
   - `"after_dependencies": ["logbook", "todo"]`
   - `codeowners`, `documentation` and `issue_tracker` keep the placeholder values.
-  
+
   Add `.superpowers/` to `.gitignore`.
+
 - [ ] **Step 4: Bootstrap and check.** Run `script/setup/bootstrap`, then `script/check`.
-  Expected: the stock blueprint tests pass.
+      Expected: the stock blueprint tests pass.
 - [ ] **Step 5: Commit.** `git add -A && git commit -m "chore: initialize at integration from ha-integration-blueprint"`
 
 ### Task 2: Strip the polling scaffolding and add a single-instance config flow
 
 **Files:**
+
 - Delete: `custom_components/at/api/`, `coordinator/`, the `binary_sensor/`, `switch/`,
   `select/`, `number/`, `button/` and `fan/` platforms,
   `config_flow_handler/validators/credentials.py`, and the matching tests
@@ -162,6 +172,7 @@ tests/
 - Test: `tests/test_config_flow.py`, `tests/test_init.py`
 
 **Interfaces:**
+
 - Produces:
   - `const.py`: `DOMAIN = "at"`, `DISPLAY_NAME = "at (placeholder)"`, and
     `CONF_GRACE_MINUTES="grace_minutes"` (default 5), `CONF_HISTORY_DAYS="history_days"` (7),
@@ -179,12 +190,12 @@ tests/
     `single_instance_allowed`.
   - `test_setup_and_unload_entry`: setup returns True and unload returns True.
 - [ ] **Step 2: Run the tests.** `uv run pytest tests/test_config_flow.py tests/test_init.py -v`.
-  Expected: they fail, because the old credential flow is still there.
+      Expected: they fail, because the old credential flow is still there.
 - [ ] **Step 3: Replace the config flow with a single `async_step_user` confirm.** No
-  reauth or reconfigure. Remove the deleted modules' imports. Leave the options-flow stub
-  returning an empty form (Task 22 fills it in).
+      reauth or reconfigure. Remove the deleted modules' imports. Leave the options-flow stub
+      returning an empty form (Task 22 fills it in).
 - [ ] **Step 4: Run the full gate.** `script/check`. Expected: PASS, with no references to
-  `api` or `coordinator` left.
+      `api` or `coordinator` left.
 - [ ] **Step 5: Commit.** `git commit -am "refactor: strip polling scaffolding, single-instance config flow"`
 
 ---
@@ -194,44 +205,46 @@ tests/
 ### Task 3: Prove the HA internals that `at` depends on (spec §10)
 
 **Files:**
+
 - Create: `tests/spike/test_ha_internals.py`, `docs/development/SPIKE-FINDINGS.md`
 
 This task writes learning tests against the real HA in the test harness, using
 `async_setup_component(hass, "conversation", {})`, a few demo lights and a script,
 exposed to Assist with `async_expose_entity`. Each test asserts the behaviour `at` needs.
 For each item, record in `SPIKE-FINDINGS.md`:
+
 - the exact module, function and signatures used
 - whether it's public or private
 - the HA version it was tested on
 
 - [ ] **Step 1: `test_programmatic_sentence_trigger_wildcard_both_orders`.** Register,
-  without touching `config/`, the patterns `at {hour} {command}` and `{command} at {hour}`
-  (with `hour` as a 1–12 range list and `command` as a wildcard) on the default agent.
-  Converse "at 11 turn on the kitchen light" and "turn on the kitchen light at 11".
-  Assert the callback runs both times with `command == "turn on the kitchen light"`, and
-  that the light did **not** change.
+      without touching `config/`, the patterns `at {hour} {command}` and `{command} at {hour}`
+      (with `hour` as a 1–12 range list and `command` as a wildcard) on the default agent.
+      Converse "at 11 turn on the kitchen light" and "turn on the kitchen light at 11".
+      Assert the callback runs both times with `command == "turn on the kitchen light"`, and
+      that the light did **not** change.
 - [ ] **Step 2: `test_recognize_only_returns_intent_without_executing`.** Recognize
-  "turn on the kitchen light" with a `device_id` in an area. Assert:
+      "turn on the kitchen light" with a `device_id` in an area. Assert:
   - the intent type is `HassTurnOn` and the name slot matches
   - the light state is unchanged
   - "turn on the garage light" (not exposed) and "turn on the zzz light" both return a
     distinguishable no-match or no-target result
 - [ ] **Step 3: `test_run_stored_intent_later`.** Take the recognized intent type and
-  slots from Step 2, serialize them to JSON and back, and run them through HA's intent
-  handling with `assistant="conversation"`. Assert the light turns on. Then un-expose the
-  light and assert running it again fails.
+      slots from Step 2, serialize them to JSON and back, and run them through HA's intent
+      handling with `assistant="conversation"`. Assert the light turns on. Then un-expose the
+      light and assert running it again fails.
 - [ ] **Step 4: `test_custom_intent_offered_to_llm_api`.** Register a dummy intent handler
-  `AtSchedule` with a slot schema and description. Get the Assist LLM API tools and
-  assert a tool named `AtSchedule` is present.
+      `AtSchedule` with a slot schema and description. Get the Assist LLM API tools and
+      assert a tool named `AtSchedule` is present.
 - [ ] **Step 5: `test_sentence_trigger_fires_with_prefer_local_llm_pipeline`.** Set up a
-  pipeline with a stub non-default conversation agent and `prefer_local_intents=True`.
-  Run the text through the pipeline and assert the Step 1 trigger fires.
+      pipeline with a stub non-default conversation agent and `prefer_local_intents=True`.
+      Run the text through the pipeline and assert the Step 1 trigger fires.
 - [ ] **Step 6: `test_panel_custom_registers`.** Assert `panel_custom.async_register_panel`
-  from a custom integration adds the `at` panel to `hass.data["frontend_panels"]`. Record
-  in the findings that the frontend picker check (`ha-selector` loading) is manual and
-  belongs to Task 21.
+      from a custom integration adds the `at` panel to `hass.data["frontend_panels"]`. Record
+      in the findings that the frontend picker check (`ha-selector` loading) is manual and
+      belongs to Task 21.
 - [ ] **Step 7: Run the spike tests.** `uv run pytest tests/spike -v`. Record pass or fail
-  per item in `SPIKE-FINDINGS.md`.
+      per item in `SPIKE-FINDINGS.md`.
 - [ ] **Step 8: Go/no-go.**
   - If Step 1, 2 or 3 fails: **stop and report to the author** with what was learned.
   - If Step 4 fails: mark Task 15 deferred.
@@ -245,10 +258,12 @@ For each item, record in `SPIKE-FINDINGS.md`:
 ### Task 4: Language pack and time parser
 
 **Files:**
+
 - Create: `custom_components/at/lang/__init__.py`, `lang/en.py`, `core/__init__.py`, `core/timeparse.py`
 - Test: `tests/core/test_timeparse.py`
 
 **Interfaces:**
+
 - Produces:
   - `lang/__init__.py`:
     - `@dataclass(frozen=True) class LanguagePack`, with fields `code: str`,
@@ -273,7 +288,7 @@ For each item, record in `SPIKE-FINDINGS.md`:
     - `resolve(spec: TimeSpec, now: datetime, tz: ZoneInfo) -> ResolvedTime`
 
 - [ ] **Step 1: Write the failing tests.** Use `tz = ZoneInfo("America/Chicago")` unless
-  stated otherwise. `now` is 2026-11-17 22:22 local, a Tuesday.
+      stated otherwise. `now` is 2026-11-17 22:22 local, a Tuesday.
 
 ```python
 @pytest.mark.parametrize(("text", "expected_local", "rolled"), [
@@ -301,28 +316,29 @@ For each item, record in `SPIKE-FINDINGS.md`:
 def test_resolve_phrases(text, expected_local, rolled): ...
 ```
 
-  Assert `resolve(parse_time_text(text, EN), NOW, tz).due.astimezone(tz)` equals
-  `expected_local` and that `rolled_over == rolled`.
-  - `test_midnight_and_noon_edges`: at 23:59 local, "at midnight" and "at 12am" give
-    00:00 the next day (`rolled_over=False`), and "at 12pm" gives 12:00.
-  - `test_dst_spring_forward_nonexistent_moves_forward`: with
-    `now=2026-03-07 23:00 America/Chicago`, "tomorrow at 2:30am" gives 2026-03-08 03:00 local.
-  - `test_dst_fall_back_ambiguous_uses_first`: with `now=2026-10-31 23:00`, "tomorrow at
-    1:30am" gives 2026-11-01 06:30 UTC (CDT, the first occurrence).
-  - `test_relative_is_exact_duration_across_dst`: with `now=2026-11-01 00:30 local`,
-    "in 2 hours" gives `due - now == timedelta(hours=2)`.
-  - `test_berlin_timezone`: "tomorrow at 7" in Europe/Berlin gives 06:00 UTC in winter.
-  - `test_split_both_orders`: "at 11pm turn on the master bathroom light" and "turn on the
-    master bathroom light at 11pm" both give the command `"turn on the master bathroom light"`.
-  - `test_split_keeps_command_numbers`: "set the living room lights to 50 percent at 6pm"
-    gives the command `"set the living room lights to 50 percent"`, and "in 10 minutes turn
-    on lamp 2" gives `"turn on lamp 2"`.
-  - `test_unparseable_raises`: "at banana", "", "turn on the light" (no time) and "at 25pm"
-    all raise `TimeParseError`.
-  - `test_get_language_pack`: "en" and "en-GB" return the pack, and "de" returns `None`.
+Assert `resolve(parse_time_text(text, EN), NOW, tz).due.astimezone(tz)` equals
+`expected_local` and that `rolled_over == rolled`.
+
+- `test_midnight_and_noon_edges`: at 23:59 local, "at midnight" and "at 12am" give
+  00:00 the next day (`rolled_over=False`), and "at 12pm" gives 12:00.
+- `test_dst_spring_forward_nonexistent_moves_forward`: with
+  `now=2026-03-07 23:00 America/Chicago`, "tomorrow at 2:30am" gives 2026-03-08 03:00 local.
+- `test_dst_fall_back_ambiguous_uses_first`: with `now=2026-10-31 23:00`, "tomorrow at
+  1:30am" gives 2026-11-01 06:30 UTC (CDT, the first occurrence).
+- `test_relative_is_exact_duration_across_dst`: with `now=2026-11-01 00:30 local`,
+  "in 2 hours" gives `due - now == timedelta(hours=2)`.
+- `test_berlin_timezone`: "tomorrow at 7" in Europe/Berlin gives 06:00 UTC in winter.
+- `test_split_both_orders`: "at 11pm turn on the master bathroom light" and "turn on the
+  master bathroom light at 11pm" both give the command `"turn on the master bathroom light"`.
+- `test_split_keeps_command_numbers`: "set the living room lights to 50 percent at 6pm"
+  gives the command `"set the living room lights to 50 percent"`, and "in 10 minutes turn
+  on lamp 2" gives `"turn on lamp 2"`.
+- `test_unparseable_raises`: "at banana", "", "turn on the light" (no time) and "at 25pm"
+  all raise `TimeParseError`.
+- `test_get_language_pack`: "en" and "en-GB" return the pack, and "de" returns `None`.
 - [ ] **Step 2: Run the tests.** `uv run pytest tests/core/test_timeparse.py -v`. Expected: FAIL (import error).
 - [ ] **Step 3: Implement the parser.** Use regexes built from the pack, with no date
-  libraries. Resolution rules:
+      libraries. Resolution rules:
   - A clock time with no meridiem or period tries both AM and PM on the anchor day and the
     day after, and picks the earliest candidate that's after `now`.
   - `period` sets the meridiem ("night" and "evening" mean PM, "morning" AM, "afternoon" PM).
@@ -339,11 +355,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 5: Job model and store
 
 **Files:**
+
 - Create: `core/models.py`, `core/store.py`
 - Modify: `const.py` (add `STORAGE_KEY="at.jobs"`, `STORAGE_VERSION=1`, `STORAGE_MINOR_VERSION=1`)
 - Test: `tests/core/test_models.py`, `tests/core/test_store.py`
 
 **Interfaces:**
+
 - Produces (`core/models.py`):
   - `class JobStatus(StrEnum)`: `PENDING, RUNNING, DONE, FAILED, CANCELLED, MISSED`
   - `class JobKind(StrEnum)`: `INTENT, ACTION`
@@ -388,11 +406,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 6: JobManager (queue, timers, sweep, restart recovery, events)
 
 **Files:**
+
 - Create: `core/manager.py`, `core/events.py`, `core/errors.py`
 - Modify: `const.py` (`EVENT_JOB_*` constants, `SWEEP_INTERVAL = timedelta(minutes=1)`), `data.py`, `__init__.py`
 - Test: `tests/core/test_manager.py`
 
 **Interfaces:**
+
 - Consumes: Task 5's `Job`, `JobStore` and `prune_history`.
 - Produces:
   - `core/events.py`: `fire_job_event(hass, event_type: str, job: Job) -> None`, with the
@@ -422,7 +442,7 @@ def test_resolve_phrases(text, expected_local, rolled): ...
     entry options (with defaults), then calls `async_start`. Unload calls `async_stop`.
 
 - [ ] **Step 1: Write the failing tests.** Use a `FakeExecutor` that records calls and can
-  be set to raise, and the `freezer` fixture together with `async_fire_time_changed`.
+      be set to raise, and the `freezer` fixture together with `async_fire_time_changed`.
   - `test_add_fires_at_due_time`: add a job due in 10 min. At +9 min the executor has not
     been called. At +10 min it has been called once, the status is `DONE`, `finished_at`
     is set, and `at_job_scheduled` and `at_job_executed` fired with the payload keys.
@@ -467,11 +487,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 7: Executor and picked-action rules
 
 **Files:**
+
 - Create: `core/executor.py`, `core/actions.py`, `ha_internal/__init__.py`, `ha_internal/intents.py`
 - Modify: `__init__.py` (use the real `JobExecutor`), `lang/en.py` (summary verbs)
 - Test: `tests/core/test_executor.py`, `tests/core/test_actions.py`
 
 **Interfaces:**
+
 - Consumes: the `Job` model and the run-stored-intent findings from Task 3 in `SPIKE-FINDINGS.md`.
 - Produces:
   - `ha_internal/intents.py`: `async_run_intent(hass, spec: IntentSpec, context: Context) -> None`.
@@ -515,31 +537,33 @@ def test_resolve_phrases(text, expected_local, rolled): ...
     back to the entity id when an entity has no state.
 - [ ] **Step 2: Run the tests.** `uv run pytest tests/core/test_executor.py tests/core/test_actions.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the executor and action rules as specified above. Wrap every
-  `HomeAssistantError` or `ServiceNotFound` from script execution in `JobExecutionError`
-  with a readable message.
+      `HomeAssistantError` or `ServiceNotFound` from script execution in `JobExecutionError`
+      with a readable message.
 - [ ] **Step 4: Run the tests.** Same command. Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(core): job executor and picked-action allowlist"`
 
 ### Task 8: Logbook descriptions
 
 **Files:**
+
 - Create: `custom_components/at/logbook.py`
 - Test: `tests/test_logbook.py`
 
 - [ ] **Step 1: Write the failing test.** `test_logbook_describes_events`: for each of the
-  5 events, `async_describe_events` gives the name `DISPLAY_NAME` and a message from the
-  pack. Assert these exact strings:
+      5 events, `async_describe_events` gives the name `DISPLAY_NAME` and a message from the
+      pack. Assert these exact strings:
   - "scheduled Turn on Porch Light for 11:00 PM"
   - "ran Turn on Porch Light"
   - "failed Turn on Porch Light: boom"
   - "cancelled Turn on Porch Light"
   - "missed Turn on Porch Light (Home Assistant was down)"
-  
+
   Times use HA's time zone and a 12-hour clock.
+
 - [ ] **Step 2: Run it.** `uv run pytest tests/test_logbook.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement `async_describe_events(hass, async_describe_event)`.** Put the
-  message text in `lang/en.py`. Add an `error` field to the failed-event payload (in
-  `core/events.py`) so the failed message can be built.
+      message text in `lang/en.py`. Add an `error` field to the failed-event payload (in
+      `core/events.py`) so the failed message can be built.
 - [ ] **Step 4: Run it.** Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat: logbook entries for job events"`
 
@@ -550,11 +574,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 9: Recognize-only adapter
 
 **Files:**
+
 - Create: `ha_internal/recognize.py`
 - Modify: `const.py` (`REFUSED_INTENT_TYPES`)
 - Test: `tests/ha_internal/test_recognize.py`
 
 **Interfaces:**
+
 - Consumes: the recognize-only findings from Task 3.
 - Produces:
   - `@dataclass RecognizedCommand`: `intent: IntentSpec`, `targets: Targets`, `summary: str`
@@ -582,18 +608,20 @@ def test_resolve_phrases(text, expected_local, rolled): ...
   - `test_does_not_execute`: after all of the above, every light state is unchanged.
 - [ ] **Step 2: Run them.** `uv run pytest tests/ha_internal/test_recognize.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the adapter using the spike's API. All private HA imports stay
-  in this file.
+      in this file.
 - [ ] **Step 4: Run them.** Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat(voice): recognize-only command adapter"`
 
 ### Task 10: `schedule_command`, the shared path for scheduling from text
 
 **Files:**
+
 - Create: `voice/__init__.py`, `voice/scheduling.py`
 - Modify: `lang/en.py` (confirmation and refusal responses)
 - Test: `tests/voice/test_scheduling.py`
 
 **Interfaces:**
+
 - Consumes: Task 4 (`split_time_and_command`, `parse_time_text`, `resolve`), Task 6
   (`JobManager.async_add`), Task 9 (`async_recognize_command`).
 - Produces:
@@ -638,11 +666,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 11: Pure list and cancel selection
 
 **Files:**
+
 - Create: `voice/queries.py`
 - Modify: `lang/en.py` (list and cancel responses)
 - Test: `tests/voice/test_queries.py`
 
 **Interfaces:**
+
 - Produces:
   - `select_for_list(jobs: list[Job], scope: Literal["all","today","tonight","tomorrow"] | None, name: str | None, now: datetime, tz: ZoneInfo) -> list[Job]`.
     "tonight" means from now until 06:00 tomorrow, local.
@@ -678,11 +708,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 12: Intent handlers (AtSchedule, AtList, AtCancel)
 
 **Files:**
+
 - Create: `voice/intents.py`
 - Modify: `__init__.py` (register them in `async_setup_entry`, and remove them on unload)
 - Test: `tests/voice/test_intents.py`
 
 **Interfaces:**
+
 - Consumes: Tasks 10 and 11.
 - Produces:
   - Intent types `INTENT_SCHEDULE = "AtSchedule"`, `INTENT_LIST = "AtList"` and `INTENT_CANCEL = "AtCancel"`.
@@ -691,13 +723,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
     - AtList: `scope: str` and `name: str`, both optional
     - AtCancel: `time: str`, `name: str` and `all: bool`, all optional
   - Descriptions for LLMs. AtSchedule's, exact: `"Schedule a Home Assistant voice command
-    to run once at a later time. Pass the user's time phrase verbatim in 'time' (e.g. 'at
-    6am', 'in 20 minutes', 'tomorrow at 7') and the command as a plain sentence in
-    'command' (e.g. 'turn on the porch light'). Never run the command yourself."`
+to run once at a later time. Pass the user's time phrase verbatim in 'time' (e.g. 'at
+6am', 'in 20 minutes', 'tomorrow at 7') and the command as a plain sentence in
+'command' (e.g. 'turn on the porch light'). Never run the command yourself."`
   - The handlers read the manager from the single loaded entry.
   - `via` is `Via.LLM` when the call came through the LLM API tool, and `Via.VOICE`
-    otherwise. *(Builder's call: detect the LLM through `intent_obj.platform` or
-    `intent_obj.assistant`, whichever Task 3 showed to be reliable.)*
+    otherwise. _(Builder's call: detect the LLM through `intent_obj.platform` or
+    `intent_obj.assistant`, whichever Task 3 showed to be reliable.)_
   - The response is a speech `IntentResponse`. A `ScheduleRefused` becomes an error
     response carrying its speech.
 
@@ -717,11 +749,13 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 ### Task 13: Sentence triggers for the built-in agent
 
 **Files:**
+
 - Create: `ha_internal/sentence_triggers.py`, `voice/triggers.py`
 - Modify: `lang/en.py` (`sentences`), `__init__.py`
 - Test: `tests/voice/test_triggers.py`
 
 **Interfaces:**
+
 - Consumes: Task 3's trigger findings and Task 12's handlers.
 - Produces:
   - `ha_internal/sentence_triggers.py`:
@@ -739,7 +773,7 @@ def test_resolve_phrases(text, expected_local, rolled): ...
     onto their intent slots.
 
 - [ ] **Step 1: Write the failing tests.** Use `conversation.async_converse` against the
-  built-in agent, with an exposed `light.master_bathroom` and `script.bedtime`.
+      built-in agent, with an exposed `light.master_bathroom` and `script.bedtime`.
 
 ```python
 @pytest.mark.parametrize("sentence", [
@@ -756,31 +790,33 @@ def test_resolve_phrases(text, expected_local, rolled): ...
 def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one pending job, light unchanged
 ```
 
-  - `test_list_sentences`: "what's scheduled", "what's scheduled for tonight", "what's
-    scheduled for tomorrow", "what is scheduled" and "what's scheduled for the master
-    bathroom light" each give list speech. The last one lists only that light's jobs.
-  - `test_cancel_sentences`: "cancel the 6am job", "cancel the job at 6", "cancel the
-    master bathroom light", "cancel everything scheduled" and "cancel all jobs".
-  - `test_defer_relative_leaves_relative_to_ha`: with `defer_relative=True`, "turn on the
-    master bathroom light in 5 minutes" creates **no** `at` job, while "at 11pm …" still does.
-  - `test_plain_timer_not_captured`: "set a timer for 5 minutes" creates no `at` job.
-  - `test_unrecognized_command_refusal_speech`: "at 10 make the living room cozy" gives
-    the exact refusal text.
+- `test_list_sentences`: "what's scheduled", "what's scheduled for tonight", "what's
+  scheduled for tomorrow", "what is scheduled" and "what's scheduled for the master
+  bathroom light" each give list speech. The last one lists only that light's jobs.
+- `test_cancel_sentences`: "cancel the 6am job", "cancel the job at 6", "cancel the
+  master bathroom light", "cancel everything scheduled" and "cancel all jobs".
+- `test_defer_relative_leaves_relative_to_ha`: with `defer_relative=True`, "turn on the
+  master bathroom light in 5 minutes" creates **no** `at` job, while "at 11pm …" still does.
+- `test_plain_timer_not_captured`: "set a timer for 5 minutes" creates no `at` job.
+- `test_unrecognized_command_refusal_speech`: "at 10 make the living room cozy" gives
+  the exact refusal text.
 - [ ] **Step 2: Run them.** `uv run pytest tests/voice/test_triggers.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the adapter, the templates and the registration. Keep the
-  private imports in `ha_internal/sentence_triggers.py`.
+      private imports in `ha_internal/sentence_triggers.py`.
 - [ ] **Step 4: Run them.** Expected: PASS. Also run `uv run pytest tests/spike -v`, which
-  should still pass.
+      should still pass.
 - [ ] **Step 5: Commit.** `git commit -m "feat(voice): built-in agent sentence triggers for schedule, list and cancel"`
 
 ### Task 14: Actions (services)
 
 **Files:**
+
 - Create: `service_actions/schedule.py`, `list.py`, `cancel.py`, `run_now.py`, `clear_history.py`
 - Modify: `service_actions/__init__.py` (register in `async_setup`), `services.yaml`, `translations/en.json`
 - Test: `tests/test_services.py`
 
 **Interfaces:**
+
 - Consumes: Tasks 6, 7 and 10.
 - Produces the services, all with `SupportsResponse` as shown:
   - `at.schedule`
@@ -816,13 +852,14 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 15: LLM tool exposure (skip if the spike's Step 4 failed)
 
 **Files:**
+
 - Test: `tests/voice/test_llm_api.py`
 - Modify: `voice/intents.py` (only if the descriptions or slot schemas need adjusting)
 
 - [ ] **Step 1: Write the failing test.** `test_at_intents_exposed_as_llm_tools`: the
-  Assist LLM API tools include `AtSchedule`, `AtList` and `AtCancel` with their
-  descriptions. Calling the `AtSchedule` tool with `{"time": "in 20 minutes", "command": "turn on the porch light"}`
-  creates a job with `via == Via.LLM`, and the tool result includes the confirmation speech.
+      Assist LLM API tools include `AtSchedule`, `AtList` and `AtCancel` with their
+      descriptions. Calling the `AtSchedule` tool with `{"time": "in 20 minutes", "command": "turn on the porch light"}`
+      creates a job with `via == Via.LLM`, and the tool result includes the confirmation speech.
 - [ ] **Step 2: Run it.** `uv run pytest tests/voice/test_llm_api.py -v`.
 - [ ] **Step 3: Adjust** the slot schemas and descriptions until it passes.
 - [ ] **Step 4: Run it.** Expected: PASS.
@@ -835,11 +872,13 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 16: Sensors
 
 **Files:**
+
 - Create: `sensor/next_job.py`, `sensor/pending_jobs.py`
 - Modify: `sensor/__init__.py`, `translations/en.json`, `icons.json`, `__init__.py` (forward the `sensor` and `todo` platforms)
 - Test: `tests/test_sensor.py`
 
 **Interfaces:**
+
 - Consumes: `JobManager.subscribe` and `pending()`.
 - Produces:
   - `sensor.at_next_job` (translation key `next_job`): `device_class=TIMESTAMP`, with
@@ -848,8 +887,8 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
     a list of `{id, due, summary}`.
 
 - [ ] **Step 1: Write the failing tests.** `test_next_job_sensor_tracks_queue` covers
-  empty → unknown, then the earliest job after adding two, then the next one once the
-  earliest is cancelled. Also `test_pending_jobs_sensor_count_and_attributes`.
+      empty → unknown, then the earliest job after adding two, then the next one once the
+      earliest is cancelled. Also `test_pending_jobs_sensor_count_and_attributes`.
 - [ ] **Step 2: Run them.** `uv run pytest tests/test_sensor.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** them using `AtEntity`. Both subscribe in `async_added_to_hass`.
 - [ ] **Step 4: Run them.** Expected: PASS.
@@ -858,10 +897,12 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 17: To-do entity
 
 **Files:**
+
 - Create: `todo/__init__.py`
 - Test: `tests/test_todo.py`
 
 **Interfaces:**
+
 - Consumes: `JobManager` and `async_schedule_command`.
 - Produces `todo.at_scheduled` (translation key `scheduled`) with these features:
   `CREATE_TODO_ITEM | DELETE_TODO_ITEM | UPDATE_TODO_ITEM | SET_DUE_DATETIME_ON_ITEM | SET_DESCRIPTION_ON_ITEM`.
@@ -869,7 +910,7 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
     - Pending jobs come first, sorted by due, with `uid=job.id`, `status=NEEDS_ACTION`,
       `due=job.due` and `summary=job.summary`.
     - History jobs follow, newest first, with `status=COMPLETED` and `description` holding
-      the status and result ("Done", "Failed: <error>", "Missed", "Cancelled").
+      the status and result ("Done", "Failed: `<error>`", "Missed", "Cancelled").
   - **Create:** `async_schedule_command(command_text=item.summary, time_text=None, via=Via.TODO, ...)`.
     If the summary has no time phrase and `item.due` is set, use `item.due` as an absolute
     time. A `ScheduleRefused` is re-raised as `HomeAssistantError(speech)`.
@@ -902,34 +943,36 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 18: WebSocket API
 
 **Files:**
+
 - Create: `custom_components/at/websocket_api.py`
 - Modify: `__init__.py` (register in `async_setup`)
 - Test: `tests/test_websocket.py`
 
 **Interfaces:**
+
 - Consumes: `JobManager`, `async_schedule_command`, `validate_picked_action` and `summarize_action`.
 - Produces these commands. Job objects on the wire are `Job.to_dict()`.
 
-| type | params | result |
-|---|---|---|
-| `at/subscribe` | – | an event `{"snapshot": {pending, history}}`, then `{"change": {kind, job}}` |
-| `at/parse` | `text` | `{ok: true, summary, due}` or `{ok: false, message}`. Never creates a job. |
-| `at/schedule` | `text`, **or** `action` + one of `due` (ISO) / `delay_seconds` | `{job}` |
-| `at/cancel` | `job_ids: list` | `{cancelled: [ids]}` |
-| `at/run_now` | `job_id` | `{job}` |
-| `at/reschedule` | `job_id`, `due` | `{job}` (a new copy) |
-| `at/clear_history` | – | `{removed}` |
-| `at/info` | – | `{is_admin, panel_admin_only, language_supported}` |
+| type               | params                                                         | result                                                                      |
+| ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `at/subscribe`     | –                                                              | an event `{"snapshot": {pending, history}}`, then `{"change": {kind, job}}` |
+| `at/parse`         | `text`                                                         | `{ok: true, summary, due}` or `{ok: false, message}`. Never creates a job.  |
+| `at/schedule`      | `text`, **or** `action` + one of `due` (ISO) / `delay_seconds` | `{job}`                                                                     |
+| `at/cancel`        | `job_ids: list`                                                | `{cancelled: [ids]}`                                                        |
+| `at/run_now`       | `job_id`                                                       | `{job}`                                                                     |
+| `at/reschedule`    | `job_id`, `due`                                                | `{job}` (a new copy)                                                        |
+| `at/clear_history` | –                                                              | `{removed}`                                                                 |
+| `at/info`          | –                                                              | `{is_admin, panel_admin_only, language_supported}`                          |
 
-  - **Who can schedule an `action`:**
-    - Admins can send any action. If the action passes `validate_picked_action`, it's
-      saved with `raw_action=False`; otherwise it's saved with `raw_action=True`.
-    - For non-admins, the action must pass `validate_picked_action`, otherwise the command
-      returns `unauthorized`.
-  - `at/run_now` and `at/reschedule` of a `raw_action` job require an admin.
+- **Who can schedule an `action`:**
+  - Admins can send any action. If the action passes `validate_picked_action`, it's
+    saved with `raw_action=False`; otherwise it's saved with `raw_action=True`.
+  - For non-admins, the action must pass `validate_picked_action`, otherwise the command
+    returns `unauthorized`.
+- `at/run_now` and `at/reschedule` of a `raw_action` job require an admin.
 
 - [ ] **Step 1: Write the failing tests,** using the `hass_ws_client` and `hass_admin_user`
-  or `hass_read_only_user` fixtures.
+      or `hass_read_only_user` fixtures.
   - `test_subscribe_snapshot_then_changes`.
   - `test_parse_preview_no_job`.
   - `test_parse_refusal_message`.
@@ -943,14 +986,15 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
   - `test_info_flags`.
 - [ ] **Step 2: Run them.** `uv run pytest tests/test_websocket.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the commands with `@websocket_api.websocket_command` and
-  `@websocket_api.async_response`. The subscribe command unsubscribes when the
-  connection closes.
+      `@websocket_api.async_response`. The subscribe command unsubscribes when the
+      connection closes.
 - [ ] **Step 4: Run them.** Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat: websocket API for the panel"`
 
 ### Task 19: Frontend toolchain, panel shell and registration
 
 **Files:**
+
 - Create: `frontend/package.json`, `tsconfig.json`, `vite.config.ts`, `src/at-panel.ts`,
   `src/api.ts`, `src/types.ts`, `src/format.ts`, `test/format.test.ts`,
   `custom_components/at/panel.py`, `custom_components/at/frontend/at-panel.js` (built output)
@@ -961,6 +1005,7 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 - Test: `frontend/test/format.test.ts`, `tests/test_panel.py`
 
 **Interfaces:**
+
 - Produces:
   - `src/types.ts`: a `Job` TypeScript interface mirroring `Job.to_dict()`.
   - `src/api.ts`: `subscribeJobs(hass, cb)`, `parse(hass, text)`, `schedule(hass, payload)`,
@@ -989,27 +1034,30 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
   - Pytest `test_panel_require_admin_option`.
 - [ ] **Step 2: Run them.** `npm --prefix frontend test` and `uv run pytest tests/test_panel.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the toolchain (Vite library mode, a single ES module output at
-  `../custom_components/at/frontend/at-panel.js`, with Lit bundled in), `format.ts`, the
-  `api.ts` wrappers, the panel shell and `panel.py`.
+      `../custom_components/at/frontend/at-panel.js`, with Lit bundled in), `format.ts`, the
+      `api.ts` wrappers, the panel shell and `panel.py`.
 - [ ] **Step 4: Build and test.** Run `script/build-frontend`, then both test commands. Expected: PASS.
 - [ ] **Step 5: Manual check.** Run `script/develop` and open the sidebar entry. The header
-  renders and follows HA's light and dark themes.
+      renders and follows HA's light and dark themes.
 - [ ] **Step 6: Commit.** `git commit -m "feat(panel): frontend toolchain, panel shell and registration"`
 
 ### Task 20: Upcoming and History tabs
 
 **Files:**
+
 - Create: `frontend/src/components/upcoming-table.ts`, `history-table.ts`, `job-details.ts`
 - Modify: `frontend/src/at-panel.ts`, `frontend/test/` (add `panel-state.test.ts`)
 - Test: `frontend/test/panel-state.test.ts`
 
 **Interfaces:**
+
 - Produces `src/state.ts`:
   - `applyChange(state: {pending: Job[], history: Job[]}, change: {kind, job}): {pending, history}`,
     a pure function that moves jobs between lists by status and keeps the sort orders
     (pending by due ascending, history by `finished_at` descending)
 
 **What the panel shows (spec §7.5)**
+
 - **Upcoming** columns: When, which is `formatCountdown` when non-empty, otherwise
   `formatWhen`, ticking every second; Job; Source (🎙 device name, 🖱 user name, or ⚙
   automation); and the actions ▶ (run now) and ✕ (cancel).
@@ -1026,10 +1074,10 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
     top), cancelled, and removed (deleted history).
 - [ ] **Step 2: Run them.** `npm --prefix frontend test`. Expected: FAIL.
 - [ ] **Step 3: Implement** `state.ts` and the components. Use HA theme CSS variables,
-  and HA elements only if they're already loaded (`customElements.get`). Otherwise use
-  plain Lit markup.
+      and HA elements only if they're already loaded (`customElements.get`). Otherwise use
+      plain Lit markup.
 - [ ] **Step 4: Build and test.** `script/build-frontend && npm --prefix frontend test`.
-  Expected: PASS.
+      Expected: PASS.
 - [ ] **Step 5: Manual check** in `script/develop`:
   - Schedule a job via Developer Tools → Actions. It appears without a reload, and the
     countdown ticks.
@@ -1040,17 +1088,20 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 21: Add job dialog
 
 **Files:**
+
 - Create: `frontend/src/components/add-job-dialog.ts`
 - Modify: `frontend/src/at-panel.ts`
 - Test: `frontend/test/add-job.test.ts`
 
 **Interfaces:**
+
 - Produces `src/add-job.ts`:
   - `buildPickedAction(p: {targetEntityIds: string[], verb: "turn_on"|"turn_off"|"toggle"} | {script: string, variables?: Record<string, unknown>} | {automation: string}): object[]`.
     It must produce exactly the shapes `validate_picked_action` accepts (Task 7).
   - `quickDue(chip: "+15m"|"+1h", now: Date): {delay_seconds: number}`.
 
 **Dialog modes**
+
 - **Type it:** a text field, with `parse` debounced at 300 ms. It shows the preview
   "Turn on Porch Light · today 11:00 PM ✓" or the refusal message. Submitting calls
   `schedule({text})`.
@@ -1085,6 +1136,7 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
 ### Task 22: Options flow
 
 **Files:**
+
 - Modify: `config_flow_handler/options_flow.py`, `config_flow_handler/schemas/options.py`,
   `translations/en.json`, `__init__.py` (an update listener that reloads the entry)
 - Test: `tests/test_config_flow.py`
@@ -1097,21 +1149,22 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
   - `test_options_validation`: grace from 0 to 1440, days from 1 to 365, max from 1 to 10000.
 - [ ] **Step 2: Run them.** `uv run pytest tests/test_config_flow.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement** the options schema with `NumberSelector` and `BooleanSelector`,
-  and the reload-on-update listener.
+      and the reload-on-update listener.
 - [ ] **Step 4: Run them.** Expected: PASS.
 - [ ] **Step 5: Commit.** `git commit -m "feat: options flow for grace window, history, panel access and relative-time handoff"`
 
 ### Task 23: Diagnostics, docs, HACS metadata and the release gate
 
 **Files:**
+
 - Modify: `diagnostics.py`, `hacs.json`, `README.template.md` / `README.md`, `docs/user/`,
   `info.md` (if the blueprint has one), `translations/en.json` (completeness)
 - Test: `tests/test_diagnostics.py`
 
 - [ ] **Step 1: Write the failing test.** `test_diagnostics_contents`: the output contains
-  the options, the counts by status, the language support flag, and the `ha_internal`
-  probe results. Each probe reports whether its adapter imported cleanly. It must not
-  contain `user_id` values; those are redacted.
+      the options, the counts by status, the language support flag, and the `ha_internal`
+      probe results. Each probe reports whether its adapter imported cleanly. It must not
+      contain `user_id` values; those are redacted.
 - [ ] **Step 2: Run it.** `uv run pytest tests/test_diagnostics.py -v`. Expected: FAIL.
 - [ ] **Step 3: Implement diagnostics, then write the user docs:**
   - installation
@@ -1123,5 +1176,5 @@ def test_schedule_sentences(sentence): ...  # response starts with "OK, ", one p
   - LLM agents (plus the prefer-local note if the spike's Step 5 failed)
   - known limits: English only; commands must be ones the built-in agent understands
 - [ ] **Step 4: Full gate.** Run `script/build-frontend && script/check && npm --prefix frontend test`.
-  Expected: all PASS, with no Pyright errors and no Ruff findings.
+      Expected: all PASS, with no Pyright errors and no Ruff findings.
 - [ ] **Step 5: Commit.** `git commit -m "docs: user docs, diagnostics and HACS metadata"`
