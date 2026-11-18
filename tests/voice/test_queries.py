@@ -101,11 +101,42 @@ def test_cancel_ambiguous_returns_multiple() -> None:
     a, b = _job(_at(0, 23), names=names), _job(_at(1, 6), names=names)
     found = match_for_cancel([a, b], CancelQuery(name="master bathroom"), NOW, TZ)
     assert sorted(j.id for j in found) == sorted([a.id, b.id])
-    assert ambiguous_speech(PACK, found, "master bathroom", TZ) == (
-        "There are 2 jobs for Master Bathroom Light, at 6 AM and 11 PM. Say 'cancel the 6 AM job'."
+    assert ambiguous_speech(PACK, found, "master bathroom", NOW, TZ) == (
+        "There are 2 jobs for Master Bathroom Light, at 11 PM today and 6 AM tomorrow. Say 'cancel the 11 PM job'."
     )
     other = _job(_at(0, 22), names=["Lamp"])
-    assert "master bathroom" in ambiguous_speech(PACK, [a, other], "master bathroom", TZ)
+    assert ambiguous_speech(PACK, [a, other], "master bathroom", NOW, TZ) == (
+        "There are 2 jobs for master bathroom, at 10 PM and 11 PM. Say 'cancel the 10 PM job'."
+    )
+
+
+def test_ambiguous_same_time_names_the_day_to_say() -> None:
+    """Two jobs at the same time on different days: the advice says which day."""
+    a, b = _job(_at(1, 6)), _job(_at(2, 6))
+    assert ambiguous_speech(PACK, [b, a], None, NOW, TZ) == (
+        "There are 2 jobs for Porch Light, at 6 AM tomorrow and 6 AM on Thursday. Say 'cancel the 6 AM job tomorrow'."
+    )
+
+
+def test_cancel_by_time_without_meridiem_matches_either_reading() -> None:
+    """At 11:00, "the job at 6" is the 6 AM job tomorrow as well as one at 6 PM."""
+    morning = NOW.replace(hour=11)
+    six_am = _job(_at(1, 6))
+    assert match_for_cancel([six_am], CancelQuery(time=TimeSpec(hour=6)), morning, TZ) == [six_am]
+    six_pm = _job(_at(0, 18))
+    found = match_for_cancel([six_am, six_pm], CancelQuery(time=TimeSpec(hour=6)), morning, TZ)
+    assert found == [six_pm, six_am]
+
+
+def test_cancel_by_time_with_day_matches_that_date() -> None:
+    """A day word narrows the time to that local date."""
+    tomorrow, thursday = _job(_at(1, 6)), _job(_at(2, 6))
+    jobs = [tomorrow, thursday]
+    assert match_for_cancel(jobs, CancelQuery(time=TimeSpec(hour=6, meridiem="am", day="tomorrow")), NOW, TZ) == [
+        tomorrow
+    ]
+    assert match_for_cancel(jobs, CancelQuery(time=TimeSpec(hour=6, weekday=3)), NOW, TZ) == [thursday]
+    assert match_for_cancel(jobs, CancelQuery(time=TimeSpec(hour=6, day="today")), NOW, TZ) == []
 
 
 def test_cancel_without_criteria_matches_nothing() -> None:

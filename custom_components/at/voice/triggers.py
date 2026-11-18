@@ -44,11 +44,16 @@ async def _async_handle(hass: HomeAssistant, intent_type: str, slots: dict[str, 
 def _cancel_time(pack: LanguagePack, wildcards: dict[str, str]) -> str | None:
     if "hour" not in wildcards:
         return None
-    return pack.sentence_clock.format(
+    clock = pack.sentence_clock.format(
         hour=int(wildcards["hour"]),
         minute=int(wildcards.get("minute", "0")),
         meridiem=wildcards.get("meridiem", ""),
     ).strip()
+    if "day" in wildcards:
+        return f"{clock} {wildcards['day']}"
+    if "weekday" in wildcards:
+        return f"{clock} {pack.sentence_weekday.format(weekday=wildcards['weekday'])}"
+    return clock
 
 
 def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relative: bool) -> Callable[[], None]:

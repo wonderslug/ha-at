@@ -70,6 +70,7 @@ _RELATIVE = [
 ]
 _WHAT = "(what's|what is) scheduled"
 _JOB_CLOCK = "{hour}[:{minute}] [{meridiem}]"
+_JOB_DAY = "[({day}|on {weekday})]"
 
 
 def _either_side(phrases: list[str]) -> list[str]:
@@ -175,8 +176,8 @@ EN = LanguagePack(
         "list": [_WHAT, f"{_WHAT} for {{scope}}", f"{_WHAT} for [the] {{name}}"],
         "cancel": [
             "cancel {all}",
-            f"cancel [the] {_JOB_CLOCK} job",
-            f"cancel [the] job at {_JOB_CLOCK}",
+            f"cancel [the] {_JOB_CLOCK} job {_JOB_DAY}",
+            f"cancel [the] job at {_JOB_CLOCK} {_JOB_DAY}",
             "cancel [the] {name} {thing}",
         ],
     },
@@ -227,6 +228,7 @@ EN = LanguagePack(
         ),
     },
     sentence_clock="at {hour}:{minute:02d} {meridiem}",
+    sentence_weekday="on {weekday}",
     summary_verbs={
         "turn_on": "Turn on {name}",
         "turn_off": "Turn off {name}",
@@ -290,6 +292,7 @@ EN = LanguagePack(
     responses={
         "absolute": "OK, at {time}{day} I'll {summary}.",
         "relative": "OK, in {duration}, at {time}, I'll {summary}.",
+        "today": " today",
         "tomorrow": " tomorrow",
         "weekday": " on {weekday}",
         "date": " on {month} {day}",
@@ -315,7 +318,8 @@ EN = LanguagePack(
         "list_separator": "; ",
         "cancel_one": "Cancelled: {item}.",
         "cancel_none": "I couldn't find a scheduled job matching that.",
-        "cancel_ambiguous": "There are {count} jobs for {name}, at {times}. Say 'cancel the {first} job'.",
+        "cancel_ambiguous": "There are {count} jobs for {name}, at {times}. Say 'cancel the {first}'.",
+        "cancel_job": "{time} job{day}",
         "cancel_all": "Cancelled {count} jobs.",
         "cancel_all_left": " {count} jobs created by automations were left alone.",
         "bad_time": "Sorry, I didn't understand when.",

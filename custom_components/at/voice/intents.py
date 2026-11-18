@@ -225,7 +225,7 @@ class AtCancelHandler(_AtHandler):
         if not matches:
             return _speak(intent_obj, cancel_none_speech(pack))
         if len(matches) > 1:
-            return _speak(intent_obj, ambiguous_speech(pack, matches, query.name, tz))
+            return _speak(intent_obj, ambiguous_speech(pack, matches, query.name, now, tz))
         job: Job = matches[0]
         await manager.async_cancel(job.id, by)
         return _speak(intent_obj, cancel_one_speech(pack, job, now, tz))

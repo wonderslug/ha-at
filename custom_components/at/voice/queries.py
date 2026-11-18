@@ -6,7 +6,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from custom_components.at.core.models import Job, JobStatus, Via
-from custom_components.at.core.timeparse import TimeSpec, resolve
+from custom_components.at.core.timeparse import TimeSpec, candidate_hours
 from custom_components.at.lang import LanguagePack, day_qualifier
 
 _LIST_LIMIT = 3
@@ -54,6 +54,25 @@ def select_for_list(
     return selected
 
 
+def _matches_time(local: datetime, spec: TimeSpec, local_now: datetime) -> bool:
+    """
+    Say whether a job's local due time fits a spoken clock time.
+
+    Without a meridiem either 12-hour reading of the hour fits; a day word or weekday also
+    pins the local date.
+    """
+    if local.minute != spec.minute or local.hour not in candidate_hours(spec):
+        return False
+    today = local_now.date()
+    if spec.weekday is not None:
+        return local.weekday() == spec.weekday
+    if spec.day == "today":
+        return local.date() == today
+    if spec.day == "tomorrow":
+        return local.date() == today + timedelta(days=1)
+    return True
+
+
 def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: ZoneInfo) -> list[Job]:
     """Pick the pending jobs a cancel request refers to; several means it is ambiguous."""
     selected = _pending(jobs)
@@ -62,10 +81,7 @@ def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: Zon
     if query.time is None and not query.name:
         return []
     if query.time is not None:
-        wanted = resolve(query.time, now, tz).due.astimezone(tz)
-        selected = [
-            j for j in selected if (local := j.due.astimezone(tz)).hour == wanted.hour and local.minute == wanted.minute
-        ]
+        selected = [j for j in selected if _matches_time(j.due.astimezone(tz), query.time, now.astimezone(tz))]
     if query.name:
         selected = [j for j in selected if _matches_name(j, query.name)]
     return selected
@@ -102,15 +118,30 @@ def cancel_none_speech(pack: LanguagePack) -> str:
     return str(pack.responses["cancel_none"])
 
 
-def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None, tz: ZoneInfo) -> str:
-    """Ask which of several matching jobs to cancel, by time."""
+def _spoken_day(pack: LanguagePack, local_due: datetime, local_now: datetime) -> str:
+    """Say the day of a time, saying "today" too, for telling jobs on different days apart."""
+    return day_qualifier(pack, local_due, local_now) or str(pack.responses["today"])
+
+
+def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None, now: datetime, tz: ZoneInfo) -> str:
+    """Ask which of several matching jobs to cancel, by time, and by day when they fall on different days."""
     responses = pack.responses
-    ordered = sorted(jobs, key=lambda j: j.due.astimezone(tz).time())
+    local_now = now.astimezone(tz)
+    ordered = sorted(jobs, key=lambda j: j.due)
+    locals_ = [j.due.astimezone(tz) for j in ordered]
     shared = set.intersection(*(set(j.targets.names) for j in ordered)) if ordered else set()
     name = next((n for n in ordered[0].targets.names if n in shared), None) if shared else None
-    times = [str(responses["spoken_time"](j.due.astimezone(tz))) for j in ordered]
+    spoken = [str(responses["spoken_time"](local)) for local in locals_]
+    several_days = len({local.date() for local in locals_}) > 1
+    times = [
+        time + (_spoken_day(pack, local, local_now) if several_days else "")
+        for time, local in zip(spoken, locals_, strict=True)
+    ]
+    # The suggested phrase names the day only when another job shares the first job's time.
+    first_day = _spoken_day(pack, locals_[0], local_now) if spoken.count(spoken[0]) > 1 else ""
+    first_job = str(responses["cancel_job"]).format(time=spoken[0], day=first_day)
     return str(responses["cancel_ambiguous"]).format(
-        count=len(ordered), name=name or query_name or "", times=pack.joiner.join(times), first=times[0]
+        count=len(ordered), name=name or query_name or "", times=pack.joiner.join(times), first=first_job
     )
 
 

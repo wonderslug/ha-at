@@ -197,7 +197,8 @@ def _wall_to_aware(d: date, hour: int, minute: int, tz: ZoneInfo) -> datetime:
     return naive.replace(tzinfo=tz, fold=0)  # pragma: no cover
 
 
-def _candidate_hours(spec: TimeSpec) -> list[int]:
+def candidate_hours(spec: TimeSpec) -> list[int]:
+    """Return the 24-hour readings of a clock time: one with a meridiem or period, otherwise both."""
     hour = spec.hour
     if hour is None:
         msg = "no time of day"
@@ -214,7 +215,7 @@ def resolve(spec: TimeSpec, now: datetime, tz: ZoneInfo) -> ResolvedTime:
     if spec.relative is not None:
         return ResolvedTime(due=now.astimezone(UTC) + spec.relative, rolled_over=False, relative=True)
 
-    hours = _candidate_hours(spec)
+    hours = candidate_hours(spec)
     local_now = now.astimezone(tz)
     today = local_now.date()
 

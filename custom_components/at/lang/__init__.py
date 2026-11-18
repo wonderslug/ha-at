@@ -32,6 +32,7 @@ class LanguagePack:
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use
     sentence_clock: str = ""  # a time phrase built from matched {hour}, {minute} and {meridiem}
+    sentence_weekday: str = "{weekday}"  # a matched {weekday} as the time parser reads it, "on {weekday}"
     summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
     domain_summary_verbs: Mapping[str, str] = field(default_factory=dict)  # "intent:domain" -> template with {name}
     generic_action_summary: str = "Run action"

@@ -195,6 +195,29 @@ async def test_cancel_sentences(
     assert [job.summary for job in manager.pending()] == left
 
 
+@pytest.mark.parametrize("advice", ["cancel the 6 AM job tomorrow", "cancel the job at 6 tomorrow"])
+async def test_cancel_same_time_on_two_days(
+    hass: HomeAssistant, home: Assist, manager: JobManager, advice: str
+) -> None:
+    """The ambiguity reply names the days, and following its advice cancels exactly one job."""
+    for scheduled in (
+        "turn on the master bathroom light at 6am",
+        "turn on the master bathroom light on thursday at 6am",
+    ):
+        assert (await say(hass, home, scheduled)).startswith("OK, ")
+    thursday = manager.pending()[1]
+
+    speech = await say(hass, home, "cancel the 6am job")
+    assert speech == (
+        "There are 2 jobs for master bathroom light, at 6 AM tomorrow and 6 AM on Thursday. "
+        "Say 'cancel the 6 AM job tomorrow'."
+    )
+
+    speech = await say(hass, home, advice)
+    assert speech.startswith("Cancelled: turn on Master Bathroom Light at 6 AM tomorrow"), speech
+    assert manager.pending() == [thursday]
+
+
 async def test_cancel_timer_is_left_to_assist(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
     speech = await say(hass, home, "cancel the timer")
 
