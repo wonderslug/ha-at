@@ -31,6 +31,7 @@ class LanguagePack:
     summary_verbs: Mapping[str, str] = field(default_factory=dict)  # service or verb -> template with {name}
     generic_action_summary: str = "Run action"
     responses: Any = None
+    logbook: Mapping[str, str] = field(default_factory=dict)  # event key -> template
 
 
 def get_language_pack(language: str) -> LanguagePack | None:

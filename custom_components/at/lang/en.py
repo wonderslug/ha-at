@@ -1,6 +1,14 @@
 """English language pack."""
 
+from datetime import datetime
+
 from . import LanguagePack
+
+
+def format_clock(dt: datetime) -> str:
+    """Format a datetime as a 12-hour clock time such as ``11:00 PM`` or ``6:30 AM``."""
+    return f"{dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+
 
 _NUMBERS = {
     "a": 1,
@@ -115,4 +123,12 @@ EN = LanguagePack(
         "automation.trigger": "Trigger {name}",
     },
     generic_action_summary="Run action",
+    logbook={
+        "scheduled": "scheduled {summary} for {time}",
+        "executed": "ran {summary}",
+        "failed": "failed {summary}: {error}",
+        "failed_no_error": "failed {summary}",
+        "cancelled": "cancelled {summary}",
+        "missed": "missed {summary} (Home Assistant was down)",
+    },
 )

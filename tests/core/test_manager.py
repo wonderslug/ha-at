@@ -137,6 +137,8 @@ async def test_executor_error_marks_failed(
     assert stored.result.error == "boom"
     assert stored.finished_at is not None
     assert len(failed) == 1
+    assert set(failed[0].data) == PAYLOAD_KEYS | {"error"}
+    assert failed[0].data["error"] == "boom"
 
 
 async def test_cancel_pending(
