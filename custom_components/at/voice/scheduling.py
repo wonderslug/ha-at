@@ -15,15 +15,13 @@ from custom_components.at.core.timeparse import (
     split_time_and_command,
 )
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
-from custom_components.at.lang import LanguagePack, get_language_pack
+from custom_components.at.lang import LanguagePack, day_qualifier, get_language_pack
 
 # Imported directly so the refusal is reachable when no language pack exists
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
-
-_WEEK_DAYS = 7
 
 
 @dataclass
@@ -43,19 +41,6 @@ class ScheduleRefused(HomeAssistantError):
         self.speech = speech
 
 
-def _day_qualifier(pack: LanguagePack, local_due: datetime, local_now: datetime) -> str:
-    """Say which day, in local time: nothing for today, then tomorrow, a weekday, or a date."""
-    responses = pack.responses
-    days = (local_due.date() - local_now.date()).days
-    if days <= 0:
-        return ""
-    if days == 1:
-        return str(responses["tomorrow"])
-    if days < _WEEK_DAYS:
-        return str(responses["weekday"]).format(weekday=responses["weekday_names"][local_due.weekday()])
-    return str(responses["date"]).format(month=responses["month_names"][local_due.month - 1], day=local_due.day)
-
-
 def _confirmation(
     pack: LanguagePack, summary: str, due: datetime, relative: timedelta | None, tz: ZoneInfo, now: datetime
 ) -> str:
@@ -66,7 +51,7 @@ def _confirmation(
     if relative is not None:
         return str(responses["relative"]).format(duration=responses["duration"](relative), time=time, summary=spoken)
     return str(responses["absolute"]).format(
-        time=time, day=_day_qualifier(pack, local_due, now.astimezone(tz)), summary=spoken
+        time=time, day=day_qualifier(pack, local_due, now.astimezone(tz)), summary=spoken
     )
 
 

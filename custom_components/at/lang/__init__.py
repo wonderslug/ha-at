@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 
@@ -47,3 +48,19 @@ def get_language_pack(language: str) -> LanguagePack | None:
 
         return EN
     return None
+
+
+_WEEK_DAYS = 7
+
+
+def day_qualifier(pack: LanguagePack, local_due: datetime, local_now: datetime) -> str:
+    """Say which day, in local time: nothing for today, then tomorrow, a weekday, or a date."""
+    responses = pack.responses
+    days = (local_due.date() - local_now.date()).days
+    if days <= 0:
+        return ""
+    if days == 1:
+        return str(responses["tomorrow"])
+    if days < _WEEK_DAYS:
+        return str(responses["weekday"]).format(weekday=responses["weekday_names"][local_due.weekday()])
+    return str(responses["date"]).format(month=responses["month_names"][local_due.month - 1], day=local_due.day)
