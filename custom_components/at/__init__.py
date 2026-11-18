@@ -31,6 +31,7 @@ from .lang import get_language_pack
 from .service_actions import async_setup_services
 from .voice.intents import async_register_intents, async_remove_intents
 from .voice.triggers import async_setup_triggers
+from .websocket_api import async_register_commands
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -59,13 +60,14 @@ def manager_options(entry: AtConfigEntry) -> ManagerOptions:
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """
-    Register the service actions.
+    Register the service actions and websocket commands.
 
     Returns:
-        True once the actions are registered.
+        True once they are registered.
 
     """
     async_setup_services(hass)
+    async_register_commands(hass)
     return True
 
 

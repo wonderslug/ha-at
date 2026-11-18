@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from custom_components.at.const import DOMAIN
-from custom_components.at.core.actions import summarize_action, targets_from_action
-from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Via, new_job_id
+from custom_components.at.core.actions import build_action_job, summarize_action
+from custom_components.at.core.models import Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve
 from custom_components.at.lang import get_language_pack
 from custom_components.at.lang.en import EN
@@ -66,22 +66,14 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
         action: list[dict[str, Any]] = data["action"]
         pack = get_language_pack(hass.config.language)
         summary = name or (summarize_action(hass, action, pack or EN))
-        now = dt_util.utcnow()
-        job = Job(
-            id=new_job_id(),
-            kind=JobKind.ACTION,
-            status=JobStatus.PENDING,
+        job = build_action_job(
+            hass,
+            action,
             due=_action_due(hass, data),
-            created_at=now,
-            finished_at=None,
             summary=summary,
-            original_text=None,
-            intent=None,
-            action=action,
             raw_action=True,
-            targets=targets_from_action(hass, action),
-            source=Source(via=Via.SERVICE, user_id=user_id),
-            result=Result(),
+            via=Via.SERVICE,
+            user_id=user_id,
         )
         job = await manager.async_add(job)
     else:

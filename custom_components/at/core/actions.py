@@ -4,10 +4,13 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util import dt as dt_util
 
-from .models import Targets
+from .models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from custom_components.at.lang import LanguagePack
     from homeassistant.core import HomeAssistant
 
@@ -137,3 +140,33 @@ def targets_from_action(hass: HomeAssistant, action: list[dict[str, Any]]) -> Ta
         targets.area_ids.extend(_target_ids(step, "area_id"))
         targets.floor_ids.extend(_target_ids(step, "floor_id"))
     return targets
+
+
+def build_action_job(
+    hass: HomeAssistant,
+    action: list[dict[str, Any]],
+    *,
+    due: datetime,
+    summary: str,
+    raw_action: bool,
+    via: Via,
+    user_id: str | None,
+) -> Job:
+    """Build a pending ACTION job for an action list; the caller queues it."""
+    now = dt_util.utcnow()
+    return Job(
+        id=new_job_id(),
+        kind=JobKind.ACTION,
+        status=JobStatus.PENDING,
+        due=due,
+        created_at=now,
+        finished_at=None,
+        summary=summary,
+        original_text=None,
+        intent=None,
+        action=action,
+        raw_action=raw_action,
+        targets=targets_from_action(hass, action),
+        source=Source(via=via, user_id=user_id),
+        result=Result(),
+    )
