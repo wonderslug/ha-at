@@ -49,9 +49,13 @@ CANCEL_DESCRIPTION = (
 )
 
 
-def _error(intent_obj: intent.Intent, speech: str) -> intent.IntentResponse:
+def _error(
+    intent_obj: intent.Intent,
+    speech: str,
+    code: intent.IntentResponseErrorCode = intent.IntentResponseErrorCode.FAILED_TO_HANDLE,
+) -> intent.IntentResponse:
     response = intent_obj.create_response()
-    response.async_set_error(intent.IntentResponseErrorCode.FAILED_TO_HANDLE, speech)
+    response.async_set_error(code, speech)
     return response
 
 
@@ -108,7 +112,13 @@ class _AtHandler(intent.IntentHandler):
         try:
             return await self._async_run(intent_obj, pack, manager)
         except ScheduleRefused as err:
-            return _error(intent_obj, err.speech)
+            # NO_INTENT_MATCH tells a sentence trigger to hand the whole sentence back to Assist.
+            code = (
+                intent.IntentResponseErrorCode.NO_INTENT_MATCH
+                if err.unrecognized
+                else intent.IntentResponseErrorCode.FAILED_TO_HANDLE
+            )
+            return _error(intent_obj, err.speech, code)
 
     async def _async_run(
         self, intent_obj: intent.Intent, pack: LanguagePack, manager: JobManager

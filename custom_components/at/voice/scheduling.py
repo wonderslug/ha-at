@@ -33,12 +33,18 @@ class ScheduleOutcome:
 
 
 class ScheduleRefused(HomeAssistantError):
-    """The command can't be scheduled; ``speech`` says why."""
+    """
+    The command can't be scheduled; ``speech`` says why.
 
-    def __init__(self, speech: str) -> None:
+    ``unrecognized`` is True when Assist has no command to store (no intent, or a refused
+    one), as opposed to a bad time or a command whose target doesn't exist.
+    """
+
+    def __init__(self, speech: str, *, unrecognized: bool = False) -> None:
         """Keep the sentence to say back."""
         super().__init__(speech)
         self.speech = speech
+        self.unrecognized = unrecognized
 
 
 def _confirmation(
@@ -112,7 +118,7 @@ async def async_schedule_command(
             pack=pack,
         )
     except RecognizeError as err:
-        raise ScheduleRefused(err.message) from err
+        raise ScheduleRefused(err.message, unrecognized=err.code in ("no_match", "refused")) from err
 
     job = Job(
         id=new_job_id(),

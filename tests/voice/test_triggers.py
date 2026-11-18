@@ -1,6 +1,7 @@
 """Sentence triggers on the built-in agent: schedule, list and cancel by voice."""
 
 import logging
+from typing import Any, override
 from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
@@ -11,11 +12,21 @@ from custom_components.at.const import CONF_DEFER_RELATIVE
 from custom_components.at.core.manager import JobManager
 from custom_components.at.lang.en import EN
 from homeassistant.components import conversation
+from homeassistant.components.assist_pipeline import (
+    PipelineEvent,
+    PipelineEventType,
+    async_get_pipelines,
+    async_update_pipeline,
+)
+from homeassistant.components.assist_pipeline.models import PipelineStage
+from homeassistant.components.assist_pipeline.pipeline import async_get_pipeline
+from homeassistant.components.assist_pipeline.run import PipelineInput, PipelineRun
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
-from homeassistant.const import ATTR_FRIENDLY_NAME
+from homeassistant.const import ATTR_FRIENDLY_NAME, MATCH_ALL
 from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import chat_session, entity_registry as er, intent
+from homeassistant.setup import async_setup_component
 from tests.assist import ASSISTANT, LANGUAGE, Assist  # noqa: TID251  (plain module; see tests/assist.py)
 
 pytestmark = [
@@ -290,6 +301,8 @@ async def test_public_fallback_when_lists_cannot_be_injected(
     assert (await say(hass, home, "at 6:30 tonight turn on the master bathroom light")).startswith("OK, at 6:30 PM")
     await say(hass, home, "turn on the master bathroom light at home")
     assert len(manager.pending()) == 2
+    # The literal fallback is looser than at's own parse; what only it accepts gets an answer, not "Done".
+    assert await say(hass, home, "cancelthe bedtime script") == UNRECOGNIZED
     assert (await say(hass, home, "cancel all jobs")) == "Cancelled 2 jobs."
 
 
@@ -300,3 +313,124 @@ def test_sentences_pass_the_trigger_schema_checks(group: str) -> None:
     assert sentences
     assert has_no_punctuation(sentences) == sentences
     assert is_valid_sentence(sentences) == sentences
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        pytest.param("At 11 p.m., turn on the master bathroom light.", id="absolute"),
+        pytest.param("Run the bedtime script in 30 minutes.", id="relative"),
+    ],
+)
+async def test_speech_to_text_punctuation(
+    hass: HomeAssistant, home: Assist, manager: JobManager, script_calls: list[ServiceCall], sentence: str
+) -> None:
+    speech = await say(hass, home, sentence)
+
+    assert speech.startswith("OK, "), speech
+    assert len(manager.pending()) == 1
+    assert bathroom_light_untouched(hass, home)
+    assert script_calls == []
+
+
+async def test_unknown_command_with_time_still_refused(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
+    assert await say(hass, home, "make the living room cozy at 10") == UNRECOGNIZED
+    assert manager.pending() == []
+
+
+async def test_full_sentence_handed_to_assist_intent(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
+    """A refused command part ("broadcast dinner is") goes back whole: HA broadcasts "dinner is at 6"."""
+    assert await async_setup_component(hass, "assist_satellite", {})
+    broadcasts: list[dict] = []
+    original = intent.async_handle
+
+    async def spy(
+        hass: HomeAssistant, platform: str, intent_type: str, slots: dict, *args: Any, **kwargs: Any
+    ) -> intent.IntentResponse:
+        if intent_type == "HassBroadcast":
+            broadcasts.append(slots)
+        return await original(hass, platform, intent_type, slots, *args, **kwargs)
+
+    with patch("homeassistant.helpers.intent.async_handle", spy):
+        speech = await say(hass, home, "broadcast dinner is at 6")
+
+    assert speech != UNRECOGNIZED
+    assert manager.pending() == []
+    assert [slots["message"]["value"] for slots in broadcasts] == ["dinner is at 6"]
+
+
+class StubLlmAgent(conversation.AbstractConversationAgent):
+    """A non-default agent standing in for an LLM; it records what reaches it."""
+
+    def __init__(self) -> None:
+        """Start with no calls."""
+        self.texts: list[str] = []
+
+    @property
+    @override
+    def supported_languages(self) -> list[str] | str:
+        """Accept every language."""
+        return MATCH_ALL
+
+    @override
+    async def async_process(self, user_input: conversation.ConversationInput) -> conversation.ConversationResult:
+        """Answer every sentence with the same speech."""
+        self.texts.append(user_input.text)
+        response = intent.IntentResponse(language=user_input.language)
+        response.async_set_speech("stub agent")
+        return conversation.ConversationResult(response=response, conversation_id=user_input.conversation_id)
+
+
+@pytest.fixture
+async def llm_pipeline(hass: HomeAssistant, manager: JobManager) -> StubLlmAgent:
+    """Make a stub LLM the pipeline's agent, with prefer-local on."""
+    assert await async_setup_component(hass, "assist_pipeline", {})
+    stub_agent = StubLlmAgent()
+    agent_entry = MockConfigEntry(domain="test", title="Stub LLM")
+    agent_entry.add_to_hass(hass)
+    conversation.async_set_agent(hass, agent_entry, stub_agent)
+    (pipeline,) = async_get_pipelines(hass)
+    await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
+    return stub_agent
+
+
+async def run_pipeline(hass: HomeAssistant, home: Assist, text: str) -> str:
+    (pipeline,) = async_get_pipelines(hass)
+    events: list[PipelineEvent] = []
+    with chat_session.async_get_chat_session(hass) as session:
+        await PipelineInput(
+            session=session,
+            intent_input=text,
+            device_id=home.device_id,
+            run=PipelineRun(
+                hass,
+                context=Context(),
+                pipeline=async_get_pipeline(hass, pipeline.id),
+                start_stage=PipelineStage.INTENT,
+                end_stage=PipelineStage.INTENT,
+                event_callback=events.append,
+            ),
+        ).execute(validate=True)
+    (intent_end,) = [event for event in events if event.type is PipelineEventType.INTENT_END]
+    assert intent_end.data is not None
+    return intent_end.data["intent_output"]["response"]["speech"]["plain"]["speech"]
+
+
+async def test_unknown_command_goes_to_llm_agent_once(
+    hass: HomeAssistant, home: Assist, manager: JobManager, llm_pipeline: StubLlmAgent
+) -> None:
+    speech = await run_pipeline(hass, home, "remind me at 5")
+
+    assert speech == "stub agent"
+    assert llm_pipeline.texts == ["remind me at 5"]
+    assert manager.pending() == []
+
+
+async def test_known_command_scheduled_without_llm(
+    hass: HomeAssistant, home: Assist, manager: JobManager, llm_pipeline: StubLlmAgent
+) -> None:
+    speech = await run_pipeline(hass, home, "at 11pm turn on the master bathroom light")
+
+    assert speech.startswith("OK, at 11 PM")
+    assert llm_pipeline.texts == []
+    assert len(manager.pending()) == 1

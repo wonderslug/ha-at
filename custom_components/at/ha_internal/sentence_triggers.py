@@ -46,6 +46,8 @@ class TriggerInput:
     device_id: str | None
     satellite_id: str | None
     context: Context
+    agent_id: str | None = None
+    conversation_id: str | None = None
     spans: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     def sentence_without(self, name: str) -> str:
@@ -137,12 +139,15 @@ def async_register_sentence_triggers(
     *,
     lists: Mapping[str, Any],
     language: str,
+    unparsed: TriggerCallback,
 ) -> Callable[[], None]:
     """
     Register groups of sentences as one trigger; each sentence answers through its group's callback.
 
     ``{name}`` references to ``lists`` are range or value lists; any other reference is a
     wildcard. When a sentence fits several groups equally well, the earlier group wins.
+    ``unparsed`` answers a sentence Home Assistant matched but ``at`` can't parse again; it
+    must answer, since None makes Home Assistant say "Done".
 
     Returns:
         The callback that unregisters the trigger.
@@ -160,25 +165,26 @@ def async_register_sentence_triggers(
         }
     )
 
-    async def on_trigger(user_input: ConversationInput, _result: RecognizeResult) -> str | None:
+    async def on_trigger(user_input: ConversationInput, _result: RecognizeResult) -> str:
+        given = TriggerInput(
+            sentence=user_input.text,
+            wildcards={},
+            language=user_input.language,
+            device_id=user_input.device_id,
+            satellite_id=user_input.satellite_id,
+            context=user_input.context,
+            agent_id=user_input.agent_id,
+            conversation_id=user_input.conversation_id,
+        )
         match = recognize_best(user_input.text, parser)
         if match is None:
-            LOGGER.warning("Sentence trigger matched but at could not parse %r", user_input.text)
-            return None
-        group = groups[int(match.intent.name.removeprefix(_GROUP_PREFIX))]
-        return await group.callback(
-            TriggerInput(
-                sentence=user_input.text,
-                wildcards={name: _value_text(entity.value) for name, entity in match.entities.items()},
-                language=user_input.language,
-                device_id=user_input.device_id,
-                satellite_id=user_input.satellite_id,
-                context=user_input.context,
-                spans={
-                    name: entity.text_span for name, entity in match.entities.items() if entity.text_span is not None
-                },
-            )
-        )
+            LOGGER.debug("Sentence trigger matched but at could not parse %r", user_input.text)
+            return await unparsed(given)
+        given.wildcards = {name: _value_text(entity.value) for name, entity in match.entities.items()}
+        given.spans = {
+            name: entity.text_span for name, entity in match.entities.items() if entity.text_span is not None
+        }
+        return await groups[int(match.intent.name.removeprefix(_GROUP_PREFIX))].callback(given)
 
     manager = get_agent_manager(hass)
     sentences = [sentence for group in groups for sentence in group.sentences]
@@ -191,23 +197,3 @@ def async_register_sentence_triggers(
         "Home Assistant's trigger storage has changed; using public-only sentence triggers, which are slower to match"
     )
     return manager.register_trigger(sentences=_spell_out_lists(sentences, lists), trigger_callback=on_trigger)
-
-
-def async_register_sentence_trigger(
-    hass: HomeAssistant,
-    sentences: list[str],
-    callback: TriggerCallback,
-    *,
-    lists: Mapping[str, Any] | None = None,
-    language: str,
-) -> Callable[[], None]:
-    """
-    Register one group of sentences.
-
-    Returns:
-        The callback that unregisters the trigger.
-
-    """
-    return async_register_sentence_triggers(
-        hass, [SentenceGroup(sentences, callback)], lists=lists or {}, language=language
-    )
