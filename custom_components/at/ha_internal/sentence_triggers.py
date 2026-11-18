@@ -22,14 +22,13 @@ from typing import TYPE_CHECKING, Any
 from hassil import Intents, recognize_best
 
 from custom_components.at.const import LOGGER
-from homeassistant.components.conversation.agent_manager import get_agent_manager
+from homeassistant.components.conversation.agent_manager import AgentManager, get_agent_manager
 from homeassistant.components.conversation.const import IntentSource
 
 if TYPE_CHECKING:
     from hassil.recognize import RecognizeResult
 
     from homeassistant.components.conversation import ConversationInput
-    from homeassistant.components.conversation.agent_manager import AgentManager
     from homeassistant.core import Context, HomeAssistant
 
 _LIST_REFERENCE = re.compile(r"\{([^{}:]+)(?::[^{}]*)?\}")
@@ -197,3 +196,12 @@ def async_register_sentence_triggers(
         "Home Assistant's trigger storage has changed; using public-only sentence triggers, which are slower to match"
     )
     return manager.register_trigger(sentences=_spell_out_lists(sentences, lists), trigger_callback=on_trigger)
+
+
+def probe() -> dict[str, bool]:
+    """Report whether the private Home Assistant hooks this adapter uses resolved."""
+    return {
+        "intent_source_trigger": hasattr(IntentSource, "TRIGGER"),
+        "register_trigger": hasattr(AgentManager, "register_trigger"),
+        "subscribe_intents": hasattr(AgentManager, "subscribe_intents"),
+    }

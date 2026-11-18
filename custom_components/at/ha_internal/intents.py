@@ -74,3 +74,12 @@ async def async_run_intent(hass: HomeAssistant, spec: IntentSpec, context: Conte
     if response.response_type is intent.IntentResponseType.ERROR:
         msg = f"{spec.type} for {target} failed: {response.error_code}"
         raise JobExecutionError(msg)
+
+
+def probe() -> dict[str, bool]:
+    """Report whether the Home Assistant hooks this adapter uses resolved."""
+    return {
+        "async_handle": hasattr(intent, "async_handle"),
+        "match_failed_error": hasattr(intent, "MatchFailedError"),
+        "unknown_intent": hasattr(intent, "UnknownIntent"),
+    }

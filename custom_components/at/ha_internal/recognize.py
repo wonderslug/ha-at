@@ -277,3 +277,12 @@ async def async_recognize_command(
         targets=targets,
         summary=_summary(pack, intent_type, name, targets.entity_ids),
     )
+
+
+def probe() -> dict[str, bool]:
+    """Report whether the private Home Assistant hooks this adapter uses resolved."""
+    return {
+        "get_match_error_response": _get_match_error_response is not None,
+        "get_unmatched_response": _get_unmatched_response is not None,
+        "get_agent_manager": callable(get_agent_manager),
+    }

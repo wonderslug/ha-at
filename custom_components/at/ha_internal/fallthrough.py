@@ -117,3 +117,13 @@ async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None
     if given.agent_id is not None and given.agent_id != conversation.HOME_ASSISTANT_AGENT:
         return await _isolated(_async_forward(hass, given))
     return await _isolated(_async_default_intents(hass, given))
+
+
+def probe() -> dict[str, bool]:
+    """Report whether the private Home Assistant hooks this adapter uses resolved."""
+    return {
+        "current_chat_log": current_chat_log is not None,
+        "current_session": hasattr(chat_session, "current_session"),
+        "async_handle_intents": hasattr(conversation, "async_handle_intents"),
+        "async_get_chat_log": hasattr(conversation, "async_get_chat_log"),
+    }

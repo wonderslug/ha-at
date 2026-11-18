@@ -1,159 +1,78 @@
 # Examples
 
-This page provides ready-to-use examples for automations, dashboards, and blueprints
-with the at (placeholder) custom integration.
+Replace entity IDs with your own.
 
-Replace entity IDs like `sensor.device_name_*` with your actual entity IDs after
-setting up the integration.
-
-## Automations
-
-### Notify when a sensor exceeds a threshold
+## Notify when a job fails
 
 ```yaml
 automation:
-  - alias: "Alert when sensor is high"
-    trigger:
-      - trigger: numeric_state
-        entity_id: sensor.device_name_air_quality
-        above: 100
-    action:
+  - alias: Tell me when a scheduled job fails
+    triggers:
+      - trigger: event
+        event_type: at_job_failed
+    actions:
       - action: notify.notify
         data:
-          title: "Air quality alert"
-          message: "Sensor value exceeded 100!"
+          message: "{{ trigger.event.data.summary }} failed: {{ trigger.event.data.error }}"
 ```
 
-### Turn on a switch when connectivity is lost
+## Notify when a job is missed
 
 ```yaml
 automation:
-  - alias: "React to connectivity loss"
-    trigger:
-      - trigger: state
-        entity_id: binary_sensor.device_name_connectivity
-        to: "off"
-        for:
-          minutes: 5
-    action:
-      - action: switch.turn_off
-        target:
-          entity_id: switch.device_name_switch
-```
-
-### Call a service action on schedule
-
-```yaml
-automation:
-  - alias: "Refresh the data every morning"
-    trigger:
-      - trigger: time
-        at: "03:00:00"
-    action:
-      - action: at.refresh_data
+  - alias: Tell me when a job was missed
+    triggers:
+      - trigger: event
+        event_type: at_job_missed
+    actions:
+      - action: notify.notify
         data:
-          config_entry_id: 01JG3T2Q6Z9K4V8P0N5R7X2M1A
+          message: "Missed: {{ trigger.event.data.summary }}"
 ```
 
-### Use a blueprint for threshold alerts
-
-Save this as a blueprint file and import it in Home Assistant:
+## Turn off the lights 30 minutes after a door opens
 
 ```yaml
-blueprint:
-  name: at (placeholder) — Threshold Alert
-  description: Send a notification when a sensor exceeds a configurable threshold.
-  domain: automation
-  input:
-    sensor_entity:
-      name: Sensor
-      selector:
-        entity:
-          domain: sensor
-          integration: at
-    threshold:
-      name: Threshold value
-      selector:
-        number:
-          min: 0
-          max: 1000
-    notify_target:
-      name: Notification service
-      default: notify.notify
-      selector:
-        text:
-
-trigger:
-  - trigger: numeric_state
-    entity_id: !input sensor_entity
-    above: !input threshold
-
-action:
-  - action: !input notify_target
-    data:
-      message: >-
-        {{ state_attr(trigger.entity_id, 'friendly_name') }}
-        exceeded {{ threshold }} (current value: {{ trigger.to_state.state }}).
+automation:
+  - alias: Porch light off later
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.front_door
+        to: "on"
+    actions:
+      - action: at.schedule
+        data:
+          action:
+            - action: light.turn_off
+              target:
+                entity_id: light.porch
+          delay: "00:30:00"
+          name: Porch light off
 ```
 
-## Dashboard Cards
+## Cancel everything when you leave
 
-### Sensor value card
+`at.cancel` with `all: true` cancels every pending job, including ones created by automations.
 
 ```yaml
-type: sensor
-entity: sensor.device_name_air_quality
-name: Air Quality
-graph: line
+automation:
+  - alias: Clear scheduled jobs when away
+    triggers:
+      - trigger: state
+        entity_id: group.family
+        to: not_home
+    actions:
+      - action: at.cancel
+        data:
+          all: true
 ```
 
-### Device summary — entities card
+## Show the next job on a dashboard
 
 ```yaml
 type: entities
-title: My Device
 entities:
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_connectivity
-    name: Connected
-  - entity: binary_sensor.device_name_filter
-    name: Filter Status
-  - entity: switch.device_name_switch
-    name: Power
-  - entity: select.device_name_fan_speed
-    name: Fan Speed
-  - entity: number.device_name_threshold
-    name: Threshold
+  - entity: sensor.at_next_job
+  - entity: sensor.at_pending_jobs
+  - entity: todo.at_scheduled
 ```
-
-### Status badge — multiple entities
-
-```yaml
-type: glance
-title: Device Status
-entities:
-  - entity: binary_sensor.device_name_connectivity
-    name: Online
-  - entity: sensor.device_name_air_quality
-    name: Air Quality
-  - entity: binary_sensor.device_name_filter
-    name: Filter
-show_state: true
-```
-
-### History graph
-
-```yaml
-type: history-graph
-title: Air Quality (last 24 h)
-entities:
-  - entity: sensor.device_name_air_quality
-hours_to_show: 24
-```
-
-## Related Documentation
-
-- [Configuration Reference](./CONFIGURATION.md) - All configuration options
-- [Getting Started](./GETTING_STARTED.md) - Installation and initial setup
-- [GitHub Issues](https://github.com/PLACEHOLDER_OWNER/ha-at/issues) - Report problems
