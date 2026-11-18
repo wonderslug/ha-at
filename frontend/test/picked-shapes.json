@@ -1,0 +1,20 @@
+[
+  {"input": {"targetEntityIds": ["light.porch"], "verb": "turn_on"},
+   "expected": [{"action": "homeassistant.turn_on", "target": {"entity_id": ["light.porch"]}}]},
+  {"input": {"targetEntityIds": ["light.a", "fan.b"], "verb": "turn_on"},
+   "expected": [{"action": "homeassistant.turn_on", "target": {"entity_id": ["light.a", "fan.b"]}}]},
+  {"input": {"targetEntityIds": ["light.porch"], "verb": "turn_off"},
+   "expected": [{"action": "homeassistant.turn_off", "target": {"entity_id": ["light.porch"]}}]},
+  {"input": {"targetEntityIds": ["light.a", "fan.b"], "verb": "turn_off"},
+   "expected": [{"action": "homeassistant.turn_off", "target": {"entity_id": ["light.a", "fan.b"]}}]},
+  {"input": {"targetEntityIds": ["light.porch"], "verb": "toggle"},
+   "expected": [{"action": "homeassistant.toggle", "target": {"entity_id": ["light.porch"]}}]},
+  {"input": {"targetEntityIds": ["light.a", "fan.b"], "verb": "toggle"},
+   "expected": [{"action": "homeassistant.toggle", "target": {"entity_id": ["light.a", "fan.b"]}}]},
+  {"input": {"script": "script.movie"},
+   "expected": [{"action": "script.turn_on", "target": {"entity_id": "script.movie"}}]},
+  {"input": {"script": "script.movie", "variables": {"level": 3}},
+   "expected": [{"action": "script.turn_on", "target": {"entity_id": "script.movie"}, "data": {"variables": {"level": 3}}}]},
+  {"input": {"automation": "automation.night"},
+   "expected": [{"action": "automation.trigger", "target": {"entity_id": "automation.night"}}]}
+]

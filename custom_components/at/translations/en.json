@@ -1,0 +1,163 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Set up at, a one-shot scheduler. No further configuration is needed."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single instance of at is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "at options",
+        "description": "Tune how scheduled jobs are kept and how voice commands are handled. Changes reload the integration.",
+        "data": {
+          "grace_minutes": "Grace window",
+          "history_days": "History age",
+          "history_max": "History size",
+          "panel_admin_only": "Panel for admins only",
+          "defer_relative_to_ha": "Leave relative times to Home Assistant"
+        },
+        "data_description": {
+          "grace_minutes": "How many minutes late a job may still run after a restart. Later jobs are marked missed. 0 to 1440.",
+          "history_days": "How many days finished jobs stay in the history. 1 to 365.",
+          "history_max": "The most finished jobs kept in the history. 1 to 10000.",
+          "panel_admin_only": "Show the at sidebar panel only to administrators.",
+          "defer_relative_to_ha": "Let Home Assistant handle phrases like \"in 5 minutes\" with its own timers instead of scheduling them here."
+        }
+      }
+    }
+  },
+  "services": {
+    "schedule": {
+      "name": "Schedule",
+      "description": "Schedules a command or an action to run once at a later time. Give either a command or an action, and one of at, delay or when.",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "A sentence to run later, such as \"turn on the porch light\"."
+        },
+        "action": {
+          "name": "Action",
+          "description": "An action to run later. Only administrators can schedule an action."
+        },
+        "at": {
+          "name": "At",
+          "description": "The date and time to run it."
+        },
+        "delay": {
+          "name": "Delay",
+          "description": "How long from now to wait."
+        },
+        "when": {
+          "name": "When",
+          "description": "A time phrase such as \"tomorrow at 7 am\"."
+        },
+        "name": {
+          "name": "Name",
+          "description": "A name to show instead of the generated summary."
+        }
+      }
+    },
+    "list": {
+      "name": "List",
+      "description": "Returns the scheduled jobs and the finished ones.",
+      "fields": {
+        "status": {
+          "name": "Status",
+          "description": "Only include jobs in these states."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Only include jobs due at or after this time."
+        },
+        "end": {
+          "name": "End",
+          "description": "Only include jobs due at or before this time."
+        }
+      }
+    },
+    "cancel": {
+      "name": "Cancel",
+      "description": "Cancels scheduled jobs by ID, or all of them.",
+      "fields": {
+        "job_id": {
+          "name": "Job ID",
+          "description": "The ID of the job, or several IDs."
+        },
+        "all": {
+          "name": "All",
+          "description": "Cancel every scheduled job, including ones created by actions and automations."
+        }
+      }
+    },
+    "run_now": {
+      "name": "Run now",
+      "description": "Runs a scheduled job right away instead of at its due time.",
+      "fields": {
+        "job_id": {
+          "name": "Job ID",
+          "description": "The ID of the job to run."
+        }
+      }
+    },
+    "clear_history": {
+      "name": "Clear history",
+      "description": "Deletes every finished job from the history.",
+      "fields": {}
+    }
+  },
+  "selector": {
+    "job_status": {
+      "options": {
+        "pending": "Pending",
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "missed": "Missed"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "at is not set up. Add the integration first."
+    },
+    "schedule_refused": {
+      "message": "{speech}"
+    },
+    "bad_time": {
+      "message": "\"{when}\" is not a time I understand."
+    },
+    "unsupported_language": {
+      "message": "Time phrases are only available in English for now. Use at or delay instead."
+    },
+    "job_not_found": {
+      "message": "No scheduled job has the ID {job_id}."
+    },
+    "job_not_pending": {
+      "message": "Job {job_id} is not waiting to run, so it can't be changed."
+    },
+    "summary_not_editable": {
+      "message": "Cancel and re-add to change a job."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_job": {
+        "name": "Next job"
+      },
+      "pending_jobs": {
+        "name": "Pending jobs"
+      }
+    },
+    "todo": {
+      "scheduled": {
+        "name": "Scheduled"
+      }
+    }
+  }
+}

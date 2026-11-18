@@ -1,0 +1,30 @@
+"""Options flow for at: grace window, history, panel access and relative-time handoff."""
+
+from typing import Any
+
+from homeassistant import config_entries
+
+from .schemas import options_schema
+
+
+class AtOptionsFlow(config_entries.OptionsFlowWithReload):
+    """Options flow; the entry reloads when the options change."""
+
+    async def async_step_init(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """
+        Show and process the options form.
+
+        Returns:
+            The form, or the stored options.
+
+        """
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(step_id="init", data_schema=options_schema(self.config_entry.options))
+
+
+__all__ = ["AtOptionsFlow"]

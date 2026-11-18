@@ -1,0 +1,26 @@
+{
+  "domain": "at",
+  "name": "at (placeholder)",
+  "after_dependencies": [
+    "logbook",
+    "todo"
+  ],
+  "codeowners": [
+    "@wonderslug"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "conversation",
+    "intent",
+    "http",
+    "frontend",
+    "panel_custom"
+  ],
+  "documentation": "https://github.com/wonderslug/ha-at",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/wonderslug/ha-at/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

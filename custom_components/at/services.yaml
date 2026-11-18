@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=../../schemas/yaml/services_schema.yaml
+schedule:
+  fields:
+    command:
+      required: false
+      example: "turn on the porch light"
+      selector:
+        text:
+    action:
+      required: false
+      selector:
+        action:
+    at:
+      required: false
+      example: "2026-11-19 07:00:00"
+      selector:
+        datetime:
+    delay:
+      required: false
+      selector:
+        duration:
+    when:
+      required: false
+      example: "tomorrow at 7 am"
+      selector:
+        text:
+    name:
+      required: false
+      example: "Morning porch light"
+      selector:
+        text:
+list:
+  fields:
+    status:
+      required: false
+      example: '["pending", "done"]'
+      selector:
+        select:
+          multiple: true
+          translation_key: job_status
+          options:
+            - pending
+            - running
+            - done
+            - failed
+            - cancelled
+            - missed
+    start:
+      required: false
+      selector:
+        datetime:
+    end:
+      required: false
+      selector:
+        datetime:
+cancel:
+  fields:
+    job_id:
+      required: false
+      example: "3fa9c1d2"
+      selector:
+        text:
+          multiple: true
+    all:
+      required: false
+      default: false
+      selector:
+        boolean:
+run_now:
+  fields:
+    job_id:
+      required: true
+      example: "3fa9c1d2"
+      selector:
+        text:
+clear_history:
