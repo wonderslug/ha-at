@@ -8,7 +8,7 @@ from custom_components.at.const import DOMAIN
 from custom_components.at.ha_internal.intents import async_run_intent
 from homeassistant.core import Context
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, script
+from homeassistant.helpers import config_validation as cv, entity_registry as er, script
 
 from .actions import entity_ids_in
 from .errors import JobExecutionError
@@ -54,7 +54,8 @@ class JobExecutor:
         action = job.action or []
         for entity_id in entity_ids_in(action):
             if self._hass.states.get(entity_id) is None:
-                msg = f"{entity_id} no longer exists"
+                registered = er.async_get(self._hass).async_get(entity_id) is not None
+                msg = f"{entity_id} is unavailable" if registered else f"{entity_id} no longer exists"
                 raise JobExecutionError(msg)
         try:
             sequence = cv.SCRIPT_SCHEMA(action)

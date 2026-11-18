@@ -1,29 +1,18 @@
 """Shared fixtures for the at tests."""
 
 from collections.abc import Generator
-from dataclasses import dataclass
 import logging
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.at.const import DISPLAY_NAME, DOMAIN
-from homeassistant.components import conversation
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.setup import async_setup_component
-
-ASSISTANT = conversation.DOMAIN
-
-
-@dataclass
-class Assist:
-    """What the voice tests share: a satellite in the office and two lights."""
-
-    device_id: str
-    turn_on_calls: list[ServiceCall]
+from tests.assist import ASSISTANT, Assist  # noqa: TID251  (ruff bans importing tests; this is a plain module)
 
 
 @pytest.fixture(autouse=True)

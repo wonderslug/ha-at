@@ -58,7 +58,11 @@ async def async_run_intent(hass: HomeAssistant, spec: IntentSpec, context: Conte
         )
     except intent.MatchFailedError as err:
         reason = err.result.no_match_reason
-        detail = "is not exposed to voice assistants" if reason is intent.MatchFailedReason.ASSISTANT else "not found"
+        detail = (
+            "is not exposed to voice assistants"
+            if reason is intent.MatchFailedReason.ASSISTANT
+            else f"not found ({reason.name if reason else 'no match'})"
+        )
         msg = f"{spec.type}: {target} {detail}"
         raise JobExecutionError(msg) from err
     except intent.UnknownIntent as err:

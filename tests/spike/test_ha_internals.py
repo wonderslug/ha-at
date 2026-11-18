@@ -42,7 +42,7 @@ from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant
 from homeassistant.helpers import chat_session, config_validation as cv, intent, llm
 from homeassistant.loader import async_get_integration
 from homeassistant.setup import async_setup_component
-from tests.conftest import Assist  # noqa: TID251  (shared fixture's result type)
+from tests.assist import ASSISTANT, LANGUAGE, Assist  # noqa: TID251  (plain module; see tests/assist.py)
 
 # Home Assistant's http component stores plain string keys on its aiohttp app, which the
 # project-wide "warnings are errors" filter would turn into a failed http setup.
@@ -53,8 +53,6 @@ pytestmark = [
 
 AT_SENTENCES = ["at {hour} {command}", "{command} at {hour}"]
 AT_LISTS = {"hour": {"range": {"from": 1, "to": 12}}}
-ASSISTANT = conversation.DOMAIN
-LANGUAGE = "en"
 TriggerCallback = Callable[[conversation.ConversationInput, RecognizeResult], Any]
 
 

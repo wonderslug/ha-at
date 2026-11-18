@@ -12,8 +12,9 @@ from custom_components.at.core.models import IntentSpec, Job, JobKind, JobStatus
 from homeassistant.auth.models import User
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
-from tests.conftest import Assist  # noqa: TID251  (shared fixture's result type)
+from tests.assist import Assist  # noqa: TID251  (plain module; see tests/assist.py)
 
 NOW = datetime(2026, 11, 17, 12, 0, tzinfo=UTC)
 
@@ -114,6 +115,20 @@ async def test_deleted_target_fails_cleanly(hass: HomeAssistant) -> None:
     action = [{"action": "script.turn_on", "target": {"entity_id": "script.gone"}}]
     with pytest.raises(JobExecutionError, match=r"script\.gone"):
         await JobExecutor(hass).async_execute(make_job(action=action))
+
+
+async def test_registry_entity_without_state_is_unavailable(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> None:
+    """An entity that is registered but has no state is unavailable, not gone."""
+    entity_registry.async_get_or_create("light", "test", "porch", suggested_object_id="porch")
+    calls = async_mock_service(hass, "light", "turn_on")
+    executor = JobExecutor(hass)
+    with pytest.raises(JobExecutionError, match=r"light\.porch is unavailable"):
+        await executor.async_execute(make_job(action=turn_on("light.porch")))
+    with pytest.raises(JobExecutionError, match=r"light\.nowhere no longer exists"):
+        await executor.async_execute(make_job(action=turn_on("light.nowhere")))
+    assert calls == []
 
 
 async def test_missing_service_fails_cleanly(hass: HomeAssistant) -> None:

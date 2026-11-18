@@ -20,8 +20,43 @@ class InvalidAction(HomeAssistantError):
     """The action is not one `at` allows a picked action to be."""
 
 
-def _fail(message: str) -> InvalidAction:
-    return InvalidAction(message)
+_TARGET_KEYS = frozenset({"entity_id", "area_id", "device_id", "floor_id", "label_id"})
+_BROAD = frozenset({"all", "none"})
+
+
+def _is_template(value: Any) -> bool:
+    return isinstance(value, str) and ("{{" in value or "{%" in value)
+
+
+def _check_target(name: str, target: Any) -> None:
+    """Allow only a dict of known keys holding explicit ids (no ``all``, no templates)."""
+    if not isinstance(target, dict) or not target:
+        msg = f"{name} needs a target"
+        raise InvalidAction(msg)
+    if extra := set(target) - _TARGET_KEYS:
+        msg = f"{name} target does not allow {', '.join(sorted(map(str, extra)))}"
+        raise InvalidAction(msg)
+    for value in target.values():
+        values = value if isinstance(value, list) else [value]
+        if not values or not all(isinstance(item, str) and item for item in values):
+            msg = f"{name} target ids must be strings"
+            raise InvalidAction(msg)
+        if any(item.strip().lower() in _BROAD or _is_template(item) for item in values):
+            msg = f"{name} target must name specific ids"
+            raise InvalidAction(msg)
+
+
+def _check_data(data: Any) -> None:
+    if not isinstance(data, dict) or set(data) - {"variables"}:
+        msg = "script.turn_on only allows data.variables"
+        raise InvalidAction(msg)
+    variables = data.get("variables", {})
+    if not isinstance(variables, dict):
+        msg = "data.variables must be a mapping"
+        raise InvalidAction(msg)
+    if any(_is_template(value) for value in variables.values()):
+        msg = "data.variables must not contain templates"
+        raise InvalidAction(msg)
 
 
 def validate_picked_action(action: list[dict[str, Any]]) -> None:
@@ -34,27 +69,27 @@ def validate_picked_action(action: list[dict[str, Any]]) -> None:
     """
     if len(action) != 1:
         msg = "an action must have exactly one step"
-        raise _fail(msg)
+        raise InvalidAction(msg)
     step = action[0]
+    if not isinstance(step, dict):
+        msg = "the step must be a mapping"
+        raise InvalidAction(msg)
     name = step.get("action")
     if not isinstance(name, str) or "." not in name:
         msg = "the step must call a service"
-        raise _fail(msg)
+        raise InvalidAction(msg)
     service = name.partition(".")[2]
     toggle = service in _TOGGLES and name != _SCRIPT_RUN
     if not (toggle or name in (_SCRIPT_RUN, _AUTOMATION_TRIGGER)):
         msg = f"{name} is not an allowed action"
-        raise _fail(msg)
+        raise InvalidAction(msg)
     allowed_keys = {"action", "target"} | ({"data"} if name == _SCRIPT_RUN else set())
     if extra := set(step) - allowed_keys:
         msg = f"{name} does not allow {', '.join(sorted(extra))}"
-        raise _fail(msg)
-    if not step.get("target"):
-        msg = f"{name} needs a target"
-        raise _fail(msg)
-    if "data" in step and (not isinstance(step["data"], dict) or set(step["data"]) - {"variables"}):
-        msg = "script.turn_on only allows data.variables"
-        raise _fail(msg)
+        raise InvalidAction(msg)
+    _check_target(name, step.get("target"))
+    if "data" in step:
+        _check_data(step["data"])
 
 
 def _target_ids(step: dict[str, Any], key: str) -> list[str]:
