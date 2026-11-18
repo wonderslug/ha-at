@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 from custom_components.at.core.models import Job, JobStatus
+from homeassistant.util import dt as dt_util
 
 from .common import async_get_manager
 
@@ -22,8 +23,9 @@ async def async_handle_list(hass: HomeAssistant, call: ServiceCall) -> ServiceRe
     """
     manager = async_get_manager(hass)
     statuses = {JobStatus(s) for s in call.data.get("status", [])}
-    start = call.data.get("start")
-    end = call.data.get("end")
+    # The datetime selector sends naive values; as_utc reads those as Home Assistant local time.
+    start = dt_util.as_utc(call.data["start"]) if "start" in call.data else None
+    end = dt_util.as_utc(call.data["end"]) if "end" in call.data else None
 
     def keep(job: Job) -> bool:
         return (

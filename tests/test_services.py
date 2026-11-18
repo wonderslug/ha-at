@@ -309,3 +309,12 @@ async def test_schedule_templated_action_persists_and_runs(
     assert [c.data["color_name"] for c in calls] == ["red"]
     assert manager.get(response["job_id"]).status is JobStatus.DONE
 
+
+async def test_list_naive_bounds_are_local(hass: HomeAssistant, manager: JobManager) -> None:
+    """Naive start and end, as the UI's datetime selector sends them, are read as local time."""
+    now = datetime(2026, 11, 18, 4, 22, tzinfo=UTC)
+    soon = await manager.async_add(make_job(now + timedelta(hours=1)))
+    await manager.async_add(make_job(now + timedelta(days=2)))
+
+    response = await call(hass, "list", {"start": "2026-11-17 22:00:00", "end": "2026-11-17 23:59:00"})
+    assert [j["id"] for j in response["pending"]] == [soon.id]
