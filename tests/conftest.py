@@ -37,7 +37,11 @@ def mark_manifest_dependencies_loaded(request: pytest.FixtureRequest) -> None:
 
 @pytest.fixture(autouse=True)
 def mock_panel(request: pytest.FixtureRequest) -> Generator[None]:
-    """Skip the sidebar panel unless a test opts into the real frontend with @pytest.mark.real_dependencies."""
+    """
+    Skip the sidebar panel unless a test opts into the real frontend with @pytest.mark.real_dependencies.
+
+    Tests marked real_dependencies also get the real panel registration, so they must set up http themselves.
+    """
     if request.node.get_closest_marker("real_dependencies"):
         yield
         return

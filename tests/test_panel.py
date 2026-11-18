@@ -1,6 +1,7 @@
 """Tests for the sidebar panel registration."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -29,22 +30,31 @@ async def _setup(hass: HomeAssistant, options: dict) -> MockConfigEntry:
 
 async def test_panel_registered_and_removed(hass: HomeAssistant) -> None:
     """The panel is in the sidebar after setup, open to everyone, and gone after unload."""
-    entry = await _setup(hass, {})
-    panel = hass.data[DATA_PANELS][DOMAIN]
-    response = panel.to_response()
-    assert panel.require_admin is False
-    assert response["config"]["_panel_custom"]["name"] == "at-panel"
-    assert response["config"]["_panel_custom"]["module_url"].startswith("/at_static/at-panel.js?v=")
-    assert panel.sidebar_icon == "mdi:clock-start"
+    with patch(
+        "homeassistant.components.http.HomeAssistantHTTP.async_register_static_paths", autospec=True
+    ) as register_static:
+        entry = await _setup(hass, {})
+        panel = hass.data[DATA_PANELS][DOMAIN]
+        response = panel.to_response()
+        assert panel.require_admin is False
+        assert response["config"]["_panel_custom"]["name"] == "at-panel"
+        assert response["config"]["_panel_custom"]["module_url"].startswith("/at_static/at-panel.js?v=")
+        assert panel.sidebar_icon == "mdi:clock-start"
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
-    assert DOMAIN not in hass.data[DATA_PANELS]
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+        assert DOMAIN not in hass.data[DATA_PANELS]
 
-    # Reloading registers the panel again without a second static path.
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert DOMAIN in hass.data[DATA_PANELS]
+        # Reloading registers the panel again, but the static path only once.
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert DOMAIN in hass.data[DATA_PANELS]
+        at_calls = [
+            call
+            for call in register_static.call_args_list
+            if any(config.url_path == "/at_static" for config in call.args[1])
+        ]
+        assert len(at_calls) == 1
 
 
 @pytest.mark.parametrize(("admin_only", "expected"), [(True, True), (False, False)])

@@ -1,7 +1,7 @@
 /** Types mirroring the Python `Job.to_dict()` and the websocket API of the `at` integration. */
 
-export type JobStatus = string;
-export type JobKind = string;
+export type JobStatus = "pending" | "running" | "done" | "failed" | "cancelled" | "missed";
+export type JobKind = "intent" | "action";
 
 export interface JobIntent {
   type: string;
