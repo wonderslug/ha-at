@@ -2,7 +2,7 @@
 
 from typing import override
 
-from custom_components.at.const import DOMAIN
+from custom_components.at.const import DOMAIN, LOGGER
 from custom_components.at.core.models import Via
 from custom_components.at.voice.intents import AtCancelHandler, AtListHandler, AtScheduleHandler
 from homeassistant.components.llm import LLMTools
@@ -28,7 +28,12 @@ class AtTool(llm.IntentTool):
     async def async_call(
         self, hass: HomeAssistant, tool_input: llm.ToolInput, llm_context: llm.LLMContext
     ) -> llm.ToolResult:
-        """Run the handler with the model's arguments as slots."""
+        """
+        Run the handler with the model's arguments as slots.
+
+        The LLM path has no satellite or conversation agent, so those stay unset on the intent.
+        These tools are offered to every LLM API, not only Assist.
+        """
         slots = {
             key: {"value": value}
             for key, value in tool_input.tool_args.items()
@@ -45,7 +50,14 @@ class AtTool(llm.IntentTool):
             assistant=llm_context.assistant,
             device_id=llm_context.device_id,
         )
-        response = await self._handler.async_handle(intent_obj)
+        LOGGER.info("Triggering intent handler %s", self._handler)
+        try:
+            response = await self._handler.async_handle(intent_obj)
+        except intent.IntentError:
+            raise
+        except Exception as err:
+            LOGGER.exception("Error handling %s", self.intent_type)
+            raise intent.IntentUnexpectedError(f"Error handling {self.intent_type}") from err
         return llm.ToolResult(data=llm.IntentResponseDict(response))
 
 

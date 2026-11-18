@@ -103,6 +103,10 @@ class _AtHandler(intent.IntentHandler):
 
     async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
         """Resolve the language and manager, then hand over to the handler's own work."""
+        try:
+            self.async_validate_slots(intent_obj.slots)
+        except probatio.Invalid as err:
+            raise intent.InvalidSlotInfo(f"Received invalid slot info for {self.intent_type}") from err
         pack = get_language_pack(intent_obj.language)
         if pack is None:
             return _error(intent_obj, UNSUPPORTED_LANGUAGE)
@@ -194,7 +198,7 @@ class AtCancelHandler(_AtHandler):
         return {
             probatio.Optional("time"): str,
             probatio.Optional("name"): str,
-            probatio.Optional("all"): probatio.Boolean(),
+            probatio.Optional("all"): bool,
         }
 
     async def _async_run(

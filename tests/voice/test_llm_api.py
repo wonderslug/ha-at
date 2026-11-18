@@ -9,7 +9,7 @@ from custom_components.at.voice.intents import AtCancelHandler, AtListHandler, A
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import entity_registry as er, llm
+from homeassistant.helpers import entity_registry as er, intent, llm
 from tests.assist import ASSISTANT, LANGUAGE, Assist  # noqa: TID251  (plain module; see tests/assist.py)
 
 pytestmark = [
@@ -90,3 +90,29 @@ async def test_list_tool_returns_speech(api: llm.APIInstance) -> None:
     )
     result = await api.async_call_tool(llm.ToolInput(tool_name="at__AtList", tool_args={}))
     assert "porch" in result.data["speech"]["plain"]["speech"].lower()
+
+
+async def test_tool_parameters_accept_schedule_args(api: llm.APIInstance) -> None:
+    """The tool's schema accepts the arguments the description promises."""
+    tool = next(tool for tool in api.tools if tool.name == "at__AtSchedule")
+    tool.parameters({"time": "in 20 minutes", "command": "turn on the porch light"})
+
+
+async def test_list_tool_rejects_bogus_scope(api: llm.APIInstance, config_entry: MockConfigEntry) -> None:
+    """An out-of-range scope is refused and nothing changes."""
+    with pytest.raises(intent.InvalidSlotInfo):
+        await api.async_call_tool(llm.ToolInput(tool_name="at__AtList", tool_args={"scope": "bogus"}))
+    assert config_entry.runtime_data.manager.pending() == []
+
+
+async def test_cancel_tool_rejects_non_bool_all(api: llm.APIInstance, config_entry: MockConfigEntry) -> None:
+    """all must be a real boolean; a string cancels nothing."""
+    await api.async_call_tool(
+        llm.ToolInput(
+            tool_name="at__AtSchedule",
+            tool_args={"time": "in 20 minutes", "command": "turn on the porch light"},
+        )
+    )
+    with pytest.raises(intent.InvalidSlotInfo):
+        await api.async_call_tool(llm.ToolInput(tool_name="at__AtCancel", tool_args={"all": "yes"}))
+    assert len(config_entry.runtime_data.manager.pending()) == 1
