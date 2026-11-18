@@ -1,6 +1,12 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { HomeAssistant, PanelInfo } from "./types";
+import * as api from "./api";
+import "./components/history-table";
+import "./components/job-details";
+import "./components/upcoming-table";
+import { nextRetryDelay } from "./reconnect";
+import { applyChange, normalize, type PanelState } from "./state";
+import type { AtInfo, HomeAssistant, Job, PanelInfo } from "./types";
 
 type Tab = "upcoming" | "history";
 
@@ -15,6 +21,134 @@ export class AtPanel extends LitElement {
 
   @state() private tab: Tab = "upcoming";
   @state() private menuOpen = false;
+  @state() private data: PanelState = { pending: [], running: [], history: [] };
+  @state() private now = Date.now();
+  @state() private reconnecting = true;
+  @state() private error = "";
+  @state() private confirmCancelAll = false;
+  @state() private details?: Job;
+  @state() private atInfo?: AtInfo;
+
+  private tick?: number;
+  private unsub?: () => Promise<void>;
+  private retryTimer?: number;
+  private attempt = 0;
+  private subscribed = false;
+  private gone = false;
+
+  override connectedCallback() {
+    super.connectedCallback();
+    this.gone = false;
+    this.tick = window.setInterval(() => (this.now = Date.now()), 1000);
+    if (this.hass) void this.start();
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.gone = true;
+    window.clearInterval(this.tick);
+    window.clearTimeout(this.retryTimer);
+    this.subscribed = false;
+    void this.unsub?.().catch(() => undefined);
+    this.unsub = undefined;
+  }
+
+  protected override updated(changed: Map<string, unknown>) {
+    if (changed.has("hass") && this.hass && !this.subscribed && !this.gone) {
+      void this.start();
+    }
+  }
+
+  private async start() {
+    if (!this.hass || this.subscribed) return;
+    this.subscribed = true;
+    api.info(this.hass).then((i) => (this.atInfo = i), () => undefined);
+    await this.subscribe();
+  }
+
+  private async subscribe() {
+    if (!this.hass || this.gone) return;
+    try {
+      const unsub = await api.subscribeJobs(this.hass, (event) => this.onEvent(event));
+      if (this.gone) {
+        void unsub().catch(() => undefined);
+        return;
+      }
+      this.unsub = unsub;
+    } catch {
+      this.scheduleRetry();
+    }
+  }
+
+  private onEvent(event: import("./types").SubscribeEvent) {
+    if ("snapshot" in event) {
+      this.data = normalize(event.snapshot);
+      this.reconnecting = false;
+      this.attempt = 0;
+    } else if ("change" in event) {
+      this.data = applyChange(this.data, event.change);
+    } else if ("stopped" in event) {
+      const unsub = this.unsub;
+      this.unsub = undefined;
+      void unsub?.().catch(() => undefined);
+      this.scheduleRetry();
+    }
+  }
+
+  private scheduleRetry() {
+    this.reconnecting = true;
+    const delay = nextRetryDelay(this.attempt++);
+    if (delay === null || this.gone) return;
+    window.clearTimeout(this.retryTimer);
+    this.retryTimer = window.setTimeout(() => void this.subscribe(), delay);
+  }
+
+  private async call<T>(fn: () => Promise<T>) {
+    try {
+      await fn();
+    } catch (err) {
+      const message = (err as { message?: string })?.message;
+      this.error = message || "Request failed";
+    }
+  }
+
+  private onRun = (e: CustomEvent<{ job: Job }>) => {
+    const hass = this.hass;
+    if (hass) void this.call(() => api.runNow(hass, e.detail.job.id));
+  };
+  private onCancel = (e: CustomEvent<{ job: Job }>) => {
+    const hass = this.hass;
+    if (hass) void this.call(() => api.cancel(hass, [e.detail.job.id]));
+  };
+  private onReschedule = (e: CustomEvent<{ job: Job; due: string }>) => {
+    const hass = this.hass;
+    if (hass) void this.call(() => api.reschedule(hass, e.detail.job.id, e.detail.due));
+  };
+  private onOpen = (e: CustomEvent<{ job: Job }>) => (this.details = e.detail.job);
+
+  private cancelAll() {
+    const hass = this.hass;
+    if (!hass) return;
+    if (!this.confirmCancelAll) {
+      this.confirmCancelAll = true;
+      return;
+    }
+    this.confirmCancelAll = false;
+    this.menuOpen = false;
+    const ids = this.data.pending.map((j) => j.id);
+    if (ids.length) void this.call(() => api.cancel(hass, ids));
+  }
+
+  private clearHistory() {
+    const hass = this.hass;
+    this.menuOpen = false;
+    if (hass) void this.call(() => api.clearHistory(hass));
+  }
+
+  private toggleMenu() {
+    this.menuOpen = !this.menuOpen;
+    this.confirmCancelAll = false;
+  }
 
   private get title_(): string {
     const title = this.panel?.config?.title;
@@ -39,11 +173,29 @@ export class AtPanel extends LitElement {
         <div class="tabs" role="tablist">${this.tabButton("upcoming", "Upcoming")} ${this.tabButton("history", "History")}</div>
         <button class="add">+ Add job</button>
         <div class="menu-wrap">
-          <button class="menu" aria-label="More options" @click=${() => (this.menuOpen = !this.menuOpen)}>⋮</button>
-          ${this.menuOpen ? html`<div class="menu-pop" role="menu"></div>` : nothing}
+          <button class="menu" aria-label="More options" @click=${() => this.toggleMenu()}>⋮</button>
+          ${this.menuOpen ? html`<div class="menu-pop" role="menu">
+                <button role="menuitem" @click=${() => this.cancelAll()}>${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</button>
+                <button role="menuitem" @click=${() => this.clearHistory()}>Clear history</button>
+              </div>` : nothing}
         </div>
       </header>
-      <main></main>
+      ${this.reconnecting ? html`<div class="notice">Reconnecting…</div>` : nothing}
+      ${this.error
+        ? html`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => (this.error = "")}>✕</button></div>`
+        : nothing}
+      <main @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
+        ${this.tab === "upcoming"
+          ? html`<at-upcoming-table
+              .hass=${this.hass}
+              .pending=${this.data.pending}
+              .running=${this.data.running}
+              .now=${this.now}
+              .isAdmin=${this.atInfo?.is_admin ?? false}
+            ></at-upcoming-table>`
+          : html`<at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now}></at-history-table>`}
+      </main>
+      <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => (this.details = undefined)}></at-job-details>
     `;
   }
 
@@ -112,6 +264,30 @@ export class AtPanel extends LitElement {
     }
     main {
       padding: 16px;
+    }
+    .menu-pop button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+    }
+    .notice {
+      margin: 8px 16px 0;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--secondary-text-color);
+    }
+    .error {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 16px 0;
+      padding: 8px 12px;
+      border-radius: 4px;
+      color: #fff;
+      background: var(--error-color, #db4437);
+    }
+    .error button {
+      color: inherit;
     }
     @media (max-width: 600px) {
       header {

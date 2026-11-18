@@ -84,6 +84,8 @@ export interface HomeAssistant {
   locale?: { language: string };
   config: { time_zone: string };
   themes?: { darkMode?: boolean };
+  user?: { id: string; name: string };
+  devices?: Record<string, { name?: string | null; name_by_user?: string | null }>;
 }
 
 export interface PanelInfo {
