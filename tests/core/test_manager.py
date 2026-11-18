@@ -1,14 +1,17 @@
 """Tests for the job manager."""
 
+import asyncio
 from collections.abc import AsyncGenerator, Callable, Coroutine
 import dataclasses
 from datetime import timedelta
 from typing import Any
+from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events, async_fire_time_changed
 
+from custom_components.at.const import SWEEP_INTERVAL
 from custom_components.at.core.errors import JobExecutionError, JobStateError
 from custom_components.at.core.manager import JobChange, JobManager, ManagerOptions
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
@@ -25,9 +28,15 @@ class FakeExecutor:
     def __init__(self) -> None:
         self.calls: list[str] = []
         self.error: str | None = None
+        self.crash: Exception | None = None
+        self.block: asyncio.Event | None = None
 
     async def async_execute(self, job: Job) -> None:
         self.calls.append(job.id)
+        if self.block is not None:
+            await self.block.wait()
+        if self.crash is not None:
+            raise self.crash
         if self.error is not None:
             raise JobExecutionError(self.error)
 
@@ -85,7 +94,7 @@ async def make_manager(
 async def _advance(hass: HomeAssistant, freezer: FrozenDateTimeFactory, delta: timedelta) -> None:
     freezer.tick(delta)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def test_add_fires_at_due_time(
@@ -141,7 +150,7 @@ async def test_cancel_pending(
     assert result.status is JobStatus.CANCELLED
     assert result.result.cancelled_by == "user-1"
     assert result.finished_at is not None
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert len(cancelled) == 1
 
     await _advance(hass, freezer, timedelta(minutes=11))
@@ -174,7 +183,7 @@ async def test_run_now(
     job = await manager.async_add(_job())
 
     await manager.async_run_now(job.id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert executor.calls == [job.id]
     assert manager.get(job.id).status is JobStatus.DONE
 
@@ -213,7 +222,7 @@ async def test_sweep_fires_overdue_after_clock_jump(
 
     freezer.move_to(dt_util.utcnow() + timedelta(minutes=10))
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     await _advance(hass, freezer, timedelta(minutes=1))
 
     assert executor.calls == [job.id]
@@ -247,7 +256,7 @@ async def test_restart_within_grace_runs_now(
     executed = async_capture_events(hass, "at_job_executed")
 
     manager = await make_manager(grace=timedelta(minutes=5))
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert executor.calls == [job.id]
     assert manager.get(job.id).status is JobStatus.DONE
@@ -263,7 +272,7 @@ async def test_restart_beyond_grace_marks_missed(
     missed = async_capture_events(hass, "at_job_missed")
 
     manager = await make_manager(grace=timedelta(minutes=5))
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     assert executor.calls == []
     stored = manager.get(job.id)
@@ -284,7 +293,7 @@ async def test_running_job_at_startup_becomes_failed(
     await _seed(hass, job)
 
     manager = await make_manager()
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     stored = manager.get(job.id)
     assert stored.status is JobStatus.FAILED
@@ -335,3 +344,93 @@ async def test_subscribe_receives_changes(hass: HomeAssistant, make_manager: Mak
     unsub()
     await manager.async_add(_job())
     assert len(changes) == 2
+
+
+async def test_sweep_alone_launches_overdue_job_once(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, make_manager: MakeManager, executor: FakeExecutor
+) -> None:
+    """With no per-job timer at all, the sweep is what runs the job."""
+    with patch(
+        "custom_components.at.core.manager.async_track_point_in_utc_time",
+        return_value=lambda: None,
+    ) as track:
+        manager = await make_manager()
+        job = await manager.async_add(_job(timedelta(seconds=30)))
+        assert track.call_count == 1
+
+        await _advance(hass, freezer, timedelta(seconds=30))
+        assert executor.calls == []
+
+        await _advance(hass, freezer, SWEEP_INTERVAL)
+        assert executor.calls == [job.id]
+        assert manager.get(job.id).status is JobStatus.DONE
+
+        await _advance(hass, freezer, SWEEP_INTERVAL)
+        assert executor.calls == [job.id]
+
+
+async def test_unexpected_executor_error_marks_failed(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, make_manager: MakeManager, executor: FakeExecutor
+) -> None:
+    failed = async_capture_events(hass, "at_job_failed")
+    executor.crash = RuntimeError("kaboom")
+    manager = await make_manager()
+    job = await manager.async_add(_job())
+
+    await _advance(hass, freezer, timedelta(minutes=10))
+    stored = manager.get(job.id)
+    assert stored.status is JobStatus.FAILED
+    assert stored.result.error == "kaboom"
+    assert stored.finished_at is not None
+    assert len(failed) == 1
+    assert failed[0].data["job_id"] == job.id
+
+
+async def test_failed_running_save_still_marks_failed(
+    hass: HomeAssistant, make_manager: MakeManager, executor: FakeExecutor
+) -> None:
+    manager = await make_manager()
+    job = await manager.async_add(_job())
+    failed = async_capture_events(hass, "at_job_failed")
+
+    with patch.object(JobStore, "async_save", side_effect=[OSError("disk full"), None]):
+        await manager.async_run_now(job.id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert executor.calls == []
+    stored = manager.get(job.id)
+    assert stored.status is JobStatus.FAILED
+    assert stored.result.error == "disk full"
+    assert stored.finished_at is not None
+    assert len(failed) == 1
+
+
+async def test_running_job_rejects_changes_and_survives_stop_as_running(
+    hass: HomeAssistant, make_manager: MakeManager, executor: FakeExecutor
+) -> None:
+    executor.block = asyncio.Event()
+    manager = await make_manager()
+    job = await manager.async_add(_job())
+
+    await manager.async_run_now(job.id)
+    await hass.async_block_till_done()
+    assert executor.calls == [job.id]
+    assert [j.id for j in manager.running()] == [job.id]
+    assert manager.pending() == []
+
+    with pytest.raises(JobStateError):
+        await manager.async_run_now(job.id)
+    with pytest.raises(JobStateError):
+        await manager.async_cancel(job.id, by="user-1")
+
+    await manager.async_stop()
+    stored = {j.id: j for j in await JobStore(hass).async_load()}
+    assert stored[job.id].status is JobStatus.RUNNING
+
+    executor.block = None
+    restarted = await make_manager()
+    recovered = restarted.get(job.id)
+    assert recovered.status is JobStatus.FAILED
+    assert recovered.result.error == "Interrupted by restart"
+    assert recovered.finished_at is not None
+    assert executor.calls == [job.id]

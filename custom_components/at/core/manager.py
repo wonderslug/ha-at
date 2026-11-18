@@ -80,6 +80,7 @@ class JobManager:
         self._jobs: dict[str, Job] = {}
         self._timers: dict[str, CALLBACK_TYPE] = {}
         self._in_flight: set[str] = set()
+        self._settling: set[str] = set()
         self._tasks: set[asyncio.Task[None]] = set()
         self._subscribers: list[Callable[[JobChange], None]] = []
         self._unsub_sweep: CALLBACK_TYPE | None = None
@@ -141,9 +142,15 @@ class JobManager:
             raise JobNotFound(f"No job with id {job_id}") from None
 
     def pending(self) -> list[Job]:
-        """Return queued and running jobs, soonest first."""
-        active = (JobStatus.PENDING, JobStatus.RUNNING)
-        return sorted((j for j in self._jobs.values() if j.status in active), key=lambda j: j.due)
+        """Return pending jobs, soonest first."""
+        return self._by_status(JobStatus.PENDING)
+
+    def running(self) -> list[Job]:
+        """Return jobs that are running now, soonest due first."""
+        return self._by_status(JobStatus.RUNNING)
+
+    def _by_status(self, status: JobStatus) -> list[Job]:
+        return sorted((j for j in self._jobs.values() if j.status is status), key=lambda j: j.due)
 
     def history(self) -> list[Job]:
         """Return finished jobs, newest first."""
@@ -159,10 +166,7 @@ class JobManager:
         job.status = JobStatus.PENDING
         job.finished_at = None
         self._jobs[job.id] = job
-        self._schedule(job)
-        await self._async_save()
-        fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)
-        self._notify("added", job)
+        await self._async_announce(job, "added")
         return job
 
     async def async_cancel(self, job_id: str, by: str) -> Job:
@@ -184,10 +188,8 @@ class JobManager:
         """Move a pending job to a new due time."""
         job = self._require_pending(job_id)
         job.due = due
-        self._schedule(job)
-        await self._async_save()
-        fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)
-        self._notify("updated", job)
+        self._cancel_timer(job.id)
+        await self._async_announce(job, "updated")
         return job
 
     async def async_run_now(self, job_id: str) -> Job:
@@ -250,6 +252,17 @@ class JobManager:
 
     # Internals
 
+    async def _async_announce(self, job: Job, kind: Literal["added", "updated"]) -> None:
+        """Save, fire the scheduled event and notify, and only then arm the timer."""
+        self._settling.add(job.id)
+        try:
+            await self._async_save()
+        finally:
+            self._settling.discard(job.id)
+        fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)
+        self._notify(kind, job)
+        self._schedule(job)
+
     def _require_pending(self, job_id: str) -> Job:
         job = self.get(job_id)
         if job.status is not JobStatus.PENDING or job_id in self._in_flight:
@@ -288,7 +301,7 @@ class JobManager:
     def _launch(self, job_id: str) -> None:
         """Start a pending job in the background, at most once."""
         job = self._jobs.get(job_id)
-        if job is None or job.status is not JobStatus.PENDING or job_id in self._in_flight:
+        if job is None or job.status is not JobStatus.PENDING or job_id in self._in_flight or job_id in self._settling:
             return
         self._in_flight.add(job_id)
         self._cancel_timer(job_id)
@@ -300,13 +313,13 @@ class JobManager:
 
     async def _async_run(self, job: Job) -> None:
         try:
-            await self._async_save()
             try:
+                await self._async_save()
                 await self._executor.async_execute(job)
             except JobExecutionError as err:
                 job.status = JobStatus.FAILED
                 job.result.error = str(err)
-            except Exception as err:  # noqa: BLE001 - Any executor bug must still finish the job.
+            except Exception as err:  # noqa: BLE001 - A save or executor bug must still finish the job.
                 LOGGER.exception("Job %s raised an unexpected error", job.id)
                 job.status = JobStatus.FAILED
                 job.result.error = str(err) or type(err).__name__
