@@ -330,4 +330,11 @@ EN = LanguagePack(
         "cancelled": "cancelled {summary}",
         "missed": "missed {summary} (Home Assistant was down)",
     },
+    todo={
+        "done": "Done",
+        "failed": "Failed: {error}",
+        "failed_no_error": "Failed",
+        "missed": "Missed",
+        "cancelled": "Cancelled",
+    },
 )

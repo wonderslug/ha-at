@@ -126,6 +126,9 @@
     },
     "job_not_pending": {
       "message": "Job {job_id} is not waiting to run, so it can't be changed."
+    },
+    "summary_not_editable": {
+      "message": "Cancel and re-add to change a job."
     }
   },
   "entity": {
@@ -135,6 +138,11 @@
       },
       "pending_jobs": {
         "name": "Pending jobs"
+      }
+    },
+    "todo": {
+      "scheduled": {
+        "name": "Scheduled"
       }
     }
   }

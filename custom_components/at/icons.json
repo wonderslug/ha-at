@@ -7,6 +7,11 @@
       "pending_jobs": {
         "default": "mdi:format-list-numbered"
       }
+    },
+    "todo": {
+      "scheduled": {
+        "default": "mdi:clock-check-outline"
+      }
     }
   },
   "services": {

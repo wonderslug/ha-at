@@ -41,6 +41,7 @@ class LanguagePack:
     recognize_errors: Mapping[str, str] = field(default_factory=dict)  # no_match|refused|no_target[_domain]
     responses: Any = None
     logbook: Mapping[str, str] = field(default_factory=dict)  # event key -> template
+    todo: Mapping[str, str] = field(default_factory=dict)  # done|failed|missed|cancelled -> description
 
 
 def get_language_pack(language: str) -> LanguagePack | None:

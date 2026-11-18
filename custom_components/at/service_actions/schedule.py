@@ -62,7 +62,7 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
     name: str | None = data.get("name")
 
     if "action" in data:
-        await async_require_admin(hass, call)
+        await async_require_admin(hass, call.context)
         action: list[dict[str, Any]] = data["action"]
         pack = get_language_pack(hass.config.language)
         summary = name or (summarize_action(hass, action, pack or EN))

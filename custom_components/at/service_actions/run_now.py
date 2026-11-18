@@ -15,7 +15,7 @@ async def async_handle_run_now(hass: HomeAssistant, call: ServiceCall) -> None:
     manager = async_get_manager(hass)
     job = async_get_job(manager, call.data["job_id"], pending=True)
     if job.raw_action:
-        await async_require_admin(hass, call)
+        await async_require_admin(hass, call.context)
     try:
         await manager.async_run_now(job.id)
     except JobStateError as err:

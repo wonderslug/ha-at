@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
     from .data import AtConfigEntry
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.TODO]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 

@@ -9,7 +9,7 @@ from homeassistant.exceptions import ServiceValidationError, Unauthorized
 
 if TYPE_CHECKING:
     from custom_components.at.core.manager import JobManager
-    from homeassistant.core import HomeAssistant, ServiceCall
+    from homeassistant.core import Context, HomeAssistant
 
 
 def async_get_manager(hass: HomeAssistant) -> JobManager:
@@ -25,7 +25,7 @@ def async_get_manager(hass: HomeAssistant) -> JobManager:
     raise ServiceValidationError(translation_domain=DOMAIN, translation_key="not_loaded")
 
 
-async def async_require_admin(hass: HomeAssistant, call: ServiceCall) -> None:
+async def async_require_admin(hass: HomeAssistant, context: Context | None) -> None:
     """
     Reject a call made by a user who is not an administrator.
 
@@ -35,11 +35,11 @@ async def async_require_admin(hass: HomeAssistant, call: ServiceCall) -> None:
         Unauthorized: the calling user is not an administrator.
 
     """
-    if call.context.user_id is None:
+    if context is None or context.user_id is None:
         return
-    user = await hass.auth.async_get_user(call.context.user_id)
+    user = await hass.auth.async_get_user(context.user_id)
     if user is None or not user.is_admin:
-        raise Unauthorized(context=call.context)
+        raise Unauthorized(context=context)
 
 
 def async_get_job(manager: JobManager, job_id: str, *, pending: bool = False) -> Job:
