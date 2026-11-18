@@ -4,10 +4,11 @@ from datetime import UTC, datetime, timedelta
 
 from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser, async_mock_service
 
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
+from homeassistant.auth.const import GROUP_ID_USER
 from homeassistant.auth.models import User
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
@@ -189,6 +190,24 @@ async def test_complete_raw_action_needs_admin(
     assert manager.get(job.id).status is JobStatus.PENDING
     await todo_call(hass, "update_item", {"item": job.id, "status": "completed"}, hass_admin_user)
     assert manager.get(job.id).status is not JobStatus.PENDING
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        pytest.param({"due_datetime": "2026-11-19 08:00:00-06:00"}, id="due"),
+        pytest.param({"due_datetime": "2026-11-19 08:00:00-06:00", "status": "completed"}, id="due_and_status"),
+    ],
+)
+async def test_change_raw_action_due_needs_admin(hass: HomeAssistant, manager: JobManager, change: dict) -> None:
+    """A non-admin can't move a raw action job, and nothing changes before the check."""
+    user = MockUser(groups=[await hass.auth.async_get_group(GROUP_ID_USER)]).add_to_hass(hass)
+    job = await manager.async_add(make_job(datetime.now(UTC) + timedelta(hours=1), raw_action=True))
+    due = job.due
+    with pytest.raises(Unauthorized):
+        await todo_call(hass, "update_item", {"item": job.id, **change}, user)
+    assert manager.get(job.id).due == due
+    assert manager.get(job.id).status is JobStatus.PENDING
 
 
 async def test_summary_edit_rejected(hass: HomeAssistant, manager: JobManager) -> None:

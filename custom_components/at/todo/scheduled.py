@@ -120,12 +120,14 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
             if isinstance(item.due, datetime) and item.due != job.due:
                 raise job_not_pending(uid)
             return
+        move = isinstance(item.due, datetime) and item.due != job.due
+        run = item.status == TodoItemStatus.COMPLETED
+        if job.raw_action and (move or run):
+            await async_require_admin(self.hass, self._context)
         try:
-            if isinstance(item.due, datetime) and item.due != job.due:
+            if move and isinstance(item.due, datetime):
                 await self._manager.async_set_due(uid, item.due)
-            if item.status == TodoItemStatus.COMPLETED:
-                if job.raw_action:
-                    await async_require_admin(self.hass, self._context)
+            if run:
                 await self._manager.async_run_now(uid)
         except JobStateError as err:
             raise job_not_pending(uid) from err
