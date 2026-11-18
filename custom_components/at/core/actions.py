@@ -1,5 +1,6 @@
 """Picked-action rules: what a stored action may contain, and how to describe it."""
 
+import copy
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.exceptions import HomeAssistantError
@@ -25,6 +26,25 @@ class InvalidAction(HomeAssistantError):
 
 _TARGET_KEYS = frozenset({"entity_id", "area_id", "device_id", "floor_id", "label_id"})
 _BROAD = frozenset({"all", "none"})
+
+
+def validate_action_config(action: Any) -> list[dict[str, Any]]:
+    """
+    Check an action with Home Assistant's script schema without keeping the validated form.
+
+    The schema turns templates into ``Template`` objects and delays into ``timedelta``, which cannot be
+    stored; the job keeps the JSON-safe input instead and the executor validates it again when it runs.
+
+    Returns:
+        A copy of the action as given, as a list of steps.
+
+    Raises:
+        probatio.Invalid: The action is not a valid script sequence.
+
+    """
+    steps = cv.ensure_list(action)
+    cv.SCRIPT_SCHEMA(copy.deepcopy(steps))
+    return copy.deepcopy(steps)
 
 
 def _is_template(value: Any) -> bool:

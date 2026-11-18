@@ -176,7 +176,12 @@ class JobManager:
         job.status = JobStatus.PENDING
         job.finished_at = None
         self._jobs[job.id] = job
-        await self._async_announce(job, "added")
+
+        def _undo() -> None:
+            if self._jobs.get(job.id) is job:
+                del self._jobs[job.id]
+
+        await self._async_announce(job, "added", _undo)
         return job
 
     async def async_cancel(self, job_id: str, by: str) -> Job:
@@ -197,9 +202,15 @@ class JobManager:
     async def async_set_due(self, job_id: str, due: datetime) -> Job:
         """Move a pending job to a new due time."""
         job = self._require_pending(job_id)
+        old_due = job.due
+
+        def _undo() -> None:
+            job.due = old_due
+            self._schedule(job)
+
         job.due = due
         self._cancel_timer(job.id)
-        await self._async_announce(job, "updated")
+        await self._async_announce(job, "updated", _undo)
         return job
 
     async def async_run_now(self, job_id: str) -> Job:
@@ -272,11 +283,18 @@ class JobManager:
 
     # Internals
 
-    async def _async_announce(self, job: Job, kind: Literal["added", "updated"]) -> None:
-        """Save, fire the scheduled event and notify, and only then arm the timer."""
+    async def _async_announce(self, job: Job, kind: Literal["added", "updated"], undo: Callable[[], None]) -> None:
+        """
+        Save, fire the scheduled event and notify, and only then arm the timer.
+
+        If the save fails, ``undo`` reverts the in-memory change before the error propagates.
+        """
         self._settling.add(job.id)
         try:
             await self._async_save()
+        except BaseException:
+            undo()
+            raise
         finally:
             self._settling.discard(job.id)
         fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)

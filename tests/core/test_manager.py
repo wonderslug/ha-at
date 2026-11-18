@@ -436,3 +436,20 @@ async def test_running_job_rejects_changes_and_survives_stop_as_running(
     assert recovered.result.error == "Interrupted by restart"
     assert recovered.finished_at is not None
     assert executor.calls == [job.id]
+
+
+async def test_add_rolls_back_when_save_fails(hass: HomeAssistant, make_manager: MakeManager) -> None:
+    """A failed save leaves the job set as it was, and later adds still work."""
+    manager = await make_manager()
+    events = async_capture_events(hass, "at_job_scheduled")
+    failed = _job()
+    with (
+        patch.object(JobStore, "async_save", side_effect=TypeError("not JSON serializable")),
+        pytest.raises(TypeError),
+    ):
+        await manager.async_add(failed)
+    assert manager.pending() == []
+    assert events == []
+
+    added = await manager.async_add(_job())
+    assert [job.id for job in manager.pending()] == [added.id]

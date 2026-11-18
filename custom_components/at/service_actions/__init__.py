@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import probatio
 
 from custom_components.at.const import DOMAIN
+from custom_components.at.core.actions import validate_action_config
 from custom_components.at.core.models import JobStatus
 from homeassistant.core import SupportsResponse, callback
 from homeassistant.helpers import config_validation as cv
@@ -42,7 +43,7 @@ SCHEDULE_SCHEMA = probatio.All(
     probatio.Schema(
         {
             probatio.Exclusive("command", "what"): cv.string,
-            probatio.Exclusive("action", "what"): cv.SCRIPT_SCHEMA,
+            probatio.Exclusive("action", "what"): validate_action_config,
             probatio.Exclusive("at", "when"): cv.datetime,
             probatio.Exclusive("delay", "when"): cv.positive_time_period,
             probatio.Exclusive("when", "when"): cv.string,

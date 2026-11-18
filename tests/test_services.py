@@ -5,9 +5,9 @@ from datetime import UTC, datetime, timedelta
 from freezegun.api import FrozenDateTimeFactory
 import probatio
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
-from custom_components.at.const import DOMAIN
+from custom_components.at.const import DOMAIN, STORAGE_KEY
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
 from homeassistant.auth.models import User
@@ -274,3 +274,38 @@ async def test_finished_job_is_translated(hass: HomeAssistant, manager: JobManag
     with pytest.raises(ServiceValidationError) as err:
         await call(hass, service, {"job_id": job.id})
     assert err.value.translation_key == "job_not_pending"
+
+
+TEMPLATED_ACTION = [
+    {"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"color_name": "{{ 'red' }}"}},
+    {"delay": {"seconds": 1}},
+]
+
+
+async def test_schedule_templated_action_persists_and_runs(
+    hass: HomeAssistant,
+    manager: JobManager,
+    config_entry: MockConfigEntry,
+    hass_storage: dict,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A template and a delay step are stored as given, survive a reload, and run."""
+    response = await call(hass, "schedule", {"action": TEMPLATED_ACTION, "delay": {"minutes": 1}})
+    stored = hass_storage[STORAGE_KEY]["data"]["jobs"]
+    assert [job["action"] for job in stored] == [TEMPLATED_ACTION]
+
+    assert await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    manager = config_entry.runtime_data.manager
+    assert manager.get(response["job_id"]).action == TEMPLATED_ACTION
+
+    calls = async_mock_service(hass, "light", "turn_on")
+    freezer.tick(timedelta(minutes=1, seconds=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(seconds=2))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert [c.data["color_name"] for c in calls] == ["red"]
+    assert manager.get(response["job_id"]).status is JobStatus.DONE
+
