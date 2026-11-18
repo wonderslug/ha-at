@@ -25,7 +25,7 @@ from .core.actions import (
     validate_picked_action,
 )
 from .core.errors import JobNotFound, JobStateError
-from .core.models import Job, JobStatus, Via
+from .core.models import Job, JobStatus, Source, Via
 from .core.timeparse import wall_time_to_utc
 from .lang import get_language_pack
 from .lang.en import EN
@@ -302,7 +302,7 @@ async def ws_reschedule(
     if job.raw_action and not connection.user.is_admin:
         _unauthorized(connection, msg)
         return
-    copy = await manager.async_reschedule(job.id, due)
+    copy = await manager.async_reschedule(job.id, due, Source(via=Via.PANEL, user_id=connection.user.id))
     connection.send_result(msg["id"], {"job": copy.to_dict()})
 
 

@@ -22,7 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from .errors import JobExecutionError, JobNotFound, JobStateError
 from .events import fire_job_event
-from .models import Job, JobStatus, Result, new_job_id
+from .models import Job, JobStatus, Result, Source, new_job_id
 from .store import HISTORY_STATUSES, prune_history
 
 if TYPE_CHECKING:
@@ -219,23 +219,27 @@ class JobManager:
         self._launch(job_id)
         return self._jobs[job_id]
 
-    async def async_reschedule(self, job_id: str, due: datetime) -> Job:
-        """Queue a copy of any job with a new id and due time."""
-        source = self.get(job_id)
+    async def async_reschedule(self, job_id: str, due: datetime, source: Source | None = None) -> Job:
+        """
+        Queue a copy of any job with a new id and due time.
+
+        ``source`` says who made the copy; without it the copy keeps the original's.
+        """
+        original = self.get(job_id)
         clone = Job(
             id=new_job_id(),
-            kind=source.kind,
+            kind=original.kind,
             status=JobStatus.PENDING,
             due=due,
             created_at=dt_util.utcnow(),
             finished_at=None,
-            summary=source.summary,
-            original_text=source.original_text,
-            intent=copy.deepcopy(source.intent),
-            action=copy.deepcopy(source.action),
-            raw_action=source.raw_action,
-            targets=copy.deepcopy(source.targets),
-            source=copy.deepcopy(source.source),
+            summary=original.summary,
+            original_text=original.original_text,
+            intent=copy.deepcopy(original.intent),
+            action=copy.deepcopy(original.action),
+            raw_action=original.raw_action,
+            targets=copy.deepcopy(original.targets),
+            source=copy.deepcopy(source or original.source),
             result=Result(),
         )
         return await self.async_add(clone)

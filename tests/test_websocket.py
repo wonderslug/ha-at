@@ -295,14 +295,20 @@ async def test_run_now_picked_action(hass: HomeAssistant, manager: JobManager, u
     assert response["result"]["job"]["id"] == job.id
 
 
-async def test_reschedule_copy(hass: HomeAssistant, manager: JobManager, user_client: Client) -> None:
-    """Rescheduling queues a new copy."""
+async def test_reschedule_copy(
+    hass: HomeAssistant, manager: JobManager, user_client: Client, hass_read_only_user: User
+) -> None:
+    """Rescheduling queues a new copy, created through the panel by the user who asked."""
     job = await manager.async_add(make_job(DUE))
+    job.source.user_id = "someone-else"
     response = await send(user_client, "reschedule", job_id=job.id, due="2026-11-20T10:00:00+00:00")
     assert response["success"], response
     copy = response["result"]["job"]
     assert copy["id"] != job.id
     assert copy["due"] == "2026-11-20T10:00:00+00:00"
+    assert copy["source"]["via"] == str(Via.PANEL)
+    assert copy["source"]["user_id"] == hass_read_only_user.id
+    assert manager.get(job.id).source.user_id == "someone-else"
     assert len(manager.pending()) == 2
 
 
