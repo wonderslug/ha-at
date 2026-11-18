@@ -1,1 +1,19 @@
-{}
+{
+  "services": {
+    "schedule": {
+      "service": "mdi:clock-plus-outline"
+    },
+    "list": {
+      "service": "mdi:format-list-bulleted"
+    },
+    "cancel": {
+      "service": "mdi:clock-remove-outline"
+    },
+    "run_now": {
+      "service": "mdi:play-circle-outline"
+    },
+    "clear_history": {
+      "service": "mdi:delete-sweep-outline"
+    }
+  }
+}
