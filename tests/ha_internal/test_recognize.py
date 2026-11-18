@@ -111,6 +111,23 @@ async def test_recognizes_turn_on_by_name(hass: HomeAssistant, home: Home) -> No
     assert_nothing_ran(hass, home)
 
 
+@pytest.mark.parametrize("text", ["run the bedtime script", "run bedtime"])
+async def test_script_summary_says_run(
+    hass: HomeAssistant, home: Home, entity_registry: er.EntityRegistry, text: str
+) -> None:
+    entry = entity_registry.async_get_or_create(
+        "script", "test", "bedtime", suggested_object_id="bedtime", original_name="Bedtime"
+    )
+    hass.states.async_set(entry.entity_id, "off", {ATTR_FRIENDLY_NAME: "Bedtime"})
+    async_expose_entity(hass, ASSISTANT, entry.entity_id, True)
+    await hass.async_block_till_done()
+
+    command = await recognize(hass, text, home.office_device_id)
+
+    assert command.targets.entity_ids == ["script.bedtime"]
+    assert command.summary == "Run Bedtime"
+
+
 async def test_recognizes_area_and_floor(hass: HomeAssistant, home: Home) -> None:
     command = await recognize(hass, "turn off the downstairs lights", home.office_device_id)
 

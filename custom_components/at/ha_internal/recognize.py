@@ -151,8 +151,10 @@ def _target_name(
     return pack.place_target.format(place=place, things=things).strip() if things else place
 
 
-def _summary(pack: LanguagePack, intent_type: str, name: str | None) -> str:
-    verb = pack.summary_verbs.get(intent_type)
+def _summary(pack: LanguagePack, intent_type: str, name: str | None, entity_ids: list[str]) -> str:
+    domains = {entity_id.partition(".")[0] for entity_id in entity_ids}
+    verb = pack.domain_summary_verbs.get(f"{intent_type}:{domains.pop()}") if len(domains) == 1 else None
+    verb = verb or pack.summary_verbs.get(intent_type)
     return verb.format(name=name) if verb and name else pack.generic_action_summary
 
 
@@ -273,5 +275,5 @@ async def async_recognize_command(
             type=intent_type, slots=slots, language=language, device_id=device_id, satellite_id=satellite_id
         ),
         targets=targets,
-        summary=_summary(pack, intent_type, name),
+        summary=_summary(pack, intent_type, name, targets.entity_ids),
     )

@@ -164,6 +164,11 @@ EN = LanguagePack(
         "HassLawnMowerStartMowing": "Start {name}",
         "HassLawnMowerDock": "Dock {name}",
     },
+    # A turn-on of scripts or scenes reads better as running or activating them
+    domain_summary_verbs={
+        "HassTurnOn:script": "Run {name}",
+        "HassTurnOn:scene": "Activate {name}",
+    },
     generic_action_summary="Run action",
     joiner=" and ",
     domain_words={

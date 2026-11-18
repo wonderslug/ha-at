@@ -16,6 +16,8 @@ from custom_components.at.core.timeparse import (
 )
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
 from custom_components.at.lang import LanguagePack, get_language_pack
+
+# Imported directly so the refusal is reachable when no language pack exists
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError

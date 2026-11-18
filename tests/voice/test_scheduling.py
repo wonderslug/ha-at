@@ -88,6 +88,21 @@ async def test_schedules_relative_and_confirms(hass: HomeAssistant, manager: Mag
     assert outcome.speech == "OK, in 20 minutes, at 10:42 PM, I'll turn on Master Bathroom Light."
 
 
+async def test_schedules_relative_script_and_confirms(
+    hass: HomeAssistant, manager: MagicMock, home: Assist, entity_registry: er.EntityRegistry
+) -> None:
+    entry = entity_registry.async_get_or_create(
+        "script", "test", "bedtime", suggested_object_id="bedtime", original_name="Bedtime"
+    )
+    hass.states.async_set(entry.entity_id, "off", {ATTR_FRIENDLY_NAME: "Bedtime"})
+    async_expose_entity(hass, ASSISTANT, entry.entity_id, True)
+    await hass.async_block_till_done()
+
+    outcome = await schedule(hass, manager, home, "run the bedtime script", "in 20 minutes")
+
+    assert outcome.speech == "OK, in 20 minutes, at 10:42 PM, I'll run Bedtime."
+
+
 async def test_time_split_from_command_text(hass: HomeAssistant, manager: MagicMock, home: Assist) -> None:
     outcome = await schedule(hass, manager, home, "turn on the porch light at 11pm", None)
 
@@ -111,6 +126,16 @@ async def test_day_qualifiers(hass: HomeAssistant, manager: MagicMock, home: Ass
         due=due.replace(month=12, day=3, hour=0, minute=0),
     )
     assert later.speech == "OK, at 12 AM on December 3 I'll turn on Porch Light."
+
+    morning = await schedule(
+        hass, manager, home, "turn on the porch light", None, due=due.replace(month=12, day=3, hour=8)
+    )
+    assert morning.speech == "OK, at 8 AM on December 3 I'll turn on Porch Light."
+
+    noon = await schedule(
+        hass, manager, home, "turn on the porch light", None, due=due.replace(month=11, day=18, hour=12)
+    )
+    assert noon.speech == "OK, at 12 PM tomorrow I'll turn on Porch Light."
 
 
 async def test_due_given_skips_time_parsing(hass: HomeAssistant, manager: MagicMock, home: Assist) -> None:
