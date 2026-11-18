@@ -12,8 +12,22 @@
   "options": {
     "step": {
       "init": {
-        "title": "Integration options",
-        "description": "There are no options yet."
+        "title": "at options",
+        "description": "Tune how scheduled jobs are kept and how voice commands are handled. Changes reload the integration.",
+        "data": {
+          "grace_minutes": "Grace window",
+          "history_days": "History age",
+          "history_max": "History size",
+          "panel_admin_only": "Panel for admins only",
+          "defer_relative_to_ha": "Leave relative times to Home Assistant"
+        },
+        "data_description": {
+          "grace_minutes": "How many minutes late a job may still run after a restart. Later jobs are marked missed. 0 to 1440.",
+          "history_days": "How many days finished jobs stay in the history. 1 to 365.",
+          "history_max": "The most finished jobs kept in the history. 1 to 10000.",
+          "panel_admin_only": "Show the at sidebar panel only to administrators.",
+          "defer_relative_to_ha": "Let Home Assistant handle phrases like \"in 5 minutes\" with its own timers instead of scheduling them here."
+        }
       }
     }
   },
