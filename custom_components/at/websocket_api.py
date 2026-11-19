@@ -302,7 +302,7 @@ async def ws_reschedule(
     if job.raw_action and not connection.user.is_admin:
         _unauthorized(connection, msg)
         return
-    copy = await manager.async_reschedule(job.id, due, Source(via=Via.PANEL, user_id=connection.user.id))
+    copy = await manager.async_reschedule(job.id, due, Source(via=Via.RESCHEDULE, user_id=connection.user.id))
     connection.send_result(msg["id"], {"job": copy.to_dict()})
 
 

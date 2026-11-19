@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { historyDetail } from "../src/source";
+import { historyDetail, sourceLabel } from "../src/source";
 import type { HomeAssistant, Job, JobStatus } from "../src/types";
 
-function job(status: JobStatus, result: Partial<Job["result"]> = {}): Job {
+function job(status: JobStatus, result: Partial<Job["result"]> = {}, source: Partial<Job["source"]> = {}): Job {
   return {
     id: "j",
     kind: "action",
@@ -16,13 +16,24 @@ function job(status: JobStatus, result: Partial<Job["result"]> = {}): Job {
     action: [],
     raw_action: false,
     targets: { entity_ids: [], area_ids: [], floor_ids: [], names: [] },
-    source: { via: "panel", user_id: null, device_id: null, agent_id: null },
-    result: { error: null, cancelled_by: null, cancelled_user_id: null, cancelled_origin: null, ...result },
+    source: { via: "panel", user_id: null, device_id: null, agent_id: null, origin: null, ...source },
+    result: {
+      error: null,
+      cancelled_by: null,
+      cancelled_user_id: null,
+      cancelled_origin: null,
+      cancelled_device_id: null,
+      ...result,
+    },
   };
 }
 
 const hass = {
   user: { id: "me", name: "Me" },
+  devices: {
+    "sat-1": { name: "Satellite1", name_by_user: "Kitchen satellite" },
+    phone: { name: "Brian's phone", name_by_user: null },
+  },
   states: {
     "person.brian": { state: "home", attributes: { friendly_name: "Brian", user_id: "u-brian" } },
     "automation.bedtime": { state: "on", attributes: { friendly_name: "Bedtime" } },
@@ -47,11 +58,22 @@ describe("historyDetail", () => {
   });
 
   it("names where and who for each channel", () => {
-    expect(cancelled("panel", "u-brian")).toBe("Cancelled from the panel by Brian");
-    expect(cancelled("voice", "u-brian")).toBe("Cancelled with voice by Brian");
-    expect(cancelled("llm", "u-brian")).toBe("Cancelled with voice by Brian");
+    expect(cancelled("panel", "u-brian")).toBe("Cancelled in the panel by Brian");
+    expect(cancelled("voice", "u-brian")).toBe("Cancelled from Assist by Brian");
+    expect(cancelled("llm", "u-brian")).toBe("Cancelled from Assist by Brian");
     expect(cancelled("todo", "u-brian")).toBe("Cancelled from the to-do list by Brian");
     expect(cancelled("service", "u-brian")).toBe("Cancelled by an action by Brian");
+    expect(cancelled("service", null)).toBe("Cancelled by an action");
+  });
+
+  it("names the satellite an Assist cancel came from", () => {
+    const viaDevice = (device: string, user: string | null = null) =>
+      historyDetail(
+        job("cancelled", { cancelled_by: "voice", cancelled_user_id: user, cancelled_device_id: device }),
+        hass,
+      );
+    expect(viaDevice("sat-1", "u-brian")).toBe("Cancelled from Assist · Kitchen satellite by Brian");
+    expect(viaDevice("deleted")).toBe("Cancelled from Assist");
   });
 
   it("names the automation or script it came from", () => {
@@ -61,12 +83,45 @@ describe("historyDetail", () => {
   });
 
   it("falls back to the current user, then to no name", () => {
-    expect(cancelled("panel", "me")).toBe("Cancelled from the panel by Me");
-    expect(cancelled("panel", "u-unknown")).toBe("Cancelled from the panel");
+    expect(cancelled("panel", "me")).toBe("Cancelled in the panel by Me");
+    expect(cancelled("panel", "u-unknown")).toBe("Cancelled in the panel");
   });
 
   it("handles jobs cancelled before who was recorded", () => {
-    expect(cancelled("panel")).toBe("Cancelled from the panel");
+    expect(cancelled("panel")).toBe("Cancelled in the panel");
     expect(cancelled(null)).toBe("Cancelled");
+  });
+});
+
+describe("sourceLabel", () => {
+  const src = (source: Partial<Job["source"]>) => sourceLabel(job("pending", {}, source), hass);
+
+  it("calls every Assist path Assist", () => {
+    expect(src({ via: "voice", device_id: "sat-1" })).toBe("Assist · Kitchen satellite");
+    expect(src({ via: "voice", device_id: "sat-1", user_id: "u-brian" })).toBe("Assist · Kitchen satellite · Brian");
+    expect(src({ via: "voice", user_id: "u-brian" })).toBe("Assist · Brian");
+    expect(src({ via: "voice", device_id: "phone", user_id: "u-brian" })).toBe("Assist · Brian's phone · Brian");
+    expect(src({ via: "llm", user_id: "u-brian" })).toBe("Assist · Brian");
+    expect(src({ via: "voice" })).toBe("Assist");
+  });
+
+  it("names the panel action and the to-do list", () => {
+    expect(src({ via: "panel", user_id: "u-brian" })).toBe("Add job · Brian");
+    expect(src({ via: "reschedule", user_id: "u-brian" })).toBe("Reschedule · Brian");
+    expect(src({ via: "todo", user_id: "u-brian" })).toBe("To-do list · Brian");
+  });
+
+  it("names the automation or script behind an action", () => {
+    expect(src({ via: "service", origin: "automation.bedtime" })).toBe("Automation · Bedtime");
+    expect(src({ via: "service", origin: "script.tidy_up", user_id: "u-brian" })).toBe("Script · Tidy up · Brian");
+    expect(src({ via: "service", origin: "automation.gone" })).toBe("Automation · automation.gone");
+    expect(src({ via: "service", user_id: "u-brian" })).toBe("Action · Brian");
+    expect(src({ via: "service" })).toBe("Action");
+  });
+
+  it("leaves out what it cannot resolve", () => {
+    expect(src({ via: "voice", device_id: "deleted" })).toBe("Assist");
+    expect(src({ via: "panel", user_id: "stranger" })).toBe("Add job");
+    expect(src({ via: "panel", user_id: "me" })).toBe("Add job · Me");
   });
 });

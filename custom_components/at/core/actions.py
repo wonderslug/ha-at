@@ -165,6 +165,7 @@ def build_action_job(
     raw_action: bool,
     via: Via,
     user_id: str | None,
+    origin: str | None = None,
 ) -> Job:
     """Build a pending ACTION job for an action list; the caller queues it."""
     now = dt_util.utcnow()
@@ -181,6 +182,6 @@ def build_action_job(
         action=action,
         raw_action=raw_action,
         targets=targets_from_action(hass, action),
-        source=Source(via=via, user_id=user_id),
+        source=Source(via=via, user_id=user_id, origin=origin),
         result=Result(),
     )

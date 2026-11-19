@@ -1,40 +1,57 @@
 import type { HomeAssistant, Job } from "./types";
 
-/** Human label for where a job came from. */
-export function sourceLabel(job: Job, hass: HomeAssistant | undefined): string {
-  const { via, device_id, user_id } = job.source;
-  if (via === "voice" || via === "llm") {
-    const device = device_id ? hass?.devices?.[device_id] : undefined;
-    return `🎙 ${device?.name_by_user ?? device?.name ?? "Voice"}`;
-  }
-  if (via === "panel" || via === "todo") {
-    const name = user_id && hass?.user?.id === user_id ? hass.user.name : "User";
-    return `🖱 ${name}`;
-  }
-  return "⚙ Automation";
-}
+const WHERE: Record<string, string> = {
+  voice: "Assist",
+  llm: "Assist",
+  panel: "Add job",
+  reschedule: "Reschedule",
+  todo: "To-do list",
+};
 
 const CANCEL_WHERE: Record<string, string> = {
-  panel: "from the panel",
-  voice: "with voice",
-  llm: "with voice",
+  voice: "from Assist",
+  llm: "from Assist",
+  panel: "in the panel",
   todo: "from the to-do list",
   service: "by an action",
 };
 
+const isAssist = (via: string | null | undefined) => via === "voice" || via === "llm";
+
 /** A user's name as Activity shows it: their person's name, else the signed-in user's own name. */
-function userName(userId: string, hass: HomeAssistant | undefined): string | undefined {
+function userName(userId: string | null | undefined, hass: HomeAssistant | undefined): string | undefined {
+  if (!userId) return undefined;
   const person = Object.entries(hass?.states ?? {}).find(([id, s]) => id.startsWith("person.") && s.attributes.user_id === userId);
   if (person) return person[1].attributes.friendly_name ?? person[0];
   return hass?.user?.id === userId ? hass.user.name : undefined;
 }
 
+function deviceName(deviceId: string | null | undefined, hass: HomeAssistant | undefined): string | undefined {
+  const device = deviceId ? hass?.devices?.[deviceId] : undefined;
+  return device?.name_by_user ?? device?.name ?? undefined;
+}
+
+function originName(entityId: string, hass: HomeAssistant | undefined): string {
+  return hass?.states?.[entityId]?.attributes.friendly_name ?? entityId;
+}
+
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Where a job came from, who made it and through what, as "Assist · Kitchen satellite · Brian". */
+export function sourceLabel(job: Job, hass: HomeAssistant | undefined): string {
+  const { via, device_id, user_id, origin } = job.source;
+  const where = origin ? [capitalised(origin.split(".")[0]), originName(origin, hass)] : [WHERE[via] ?? "Action"];
+  const device = isAssist(via) ? deviceName(device_id, hass) : undefined;
+  return [...where, device, userName(user_id, hass)].filter(Boolean).join(" · ");
+}
+
 function cancelDetail(result: Job["result"], hass: HomeAssistant | undefined): string {
   const origin = result.cancelled_origin;
+  const device = isAssist(result.cancelled_by) ? deviceName(result.cancelled_device_id, hass) : undefined;
   const where = origin
-    ? `by ${origin.split(".")[0]} ${hass?.states?.[origin]?.attributes.friendly_name ?? origin}`
-    : CANCEL_WHERE[result.cancelled_by ?? ""];
-  const who = result.cancelled_user_id ? userName(result.cancelled_user_id, hass) : undefined;
+    ? `by ${origin.split(".")[0]} ${originName(origin, hass)}`
+    : [CANCEL_WHERE[result.cancelled_by ?? ""], device].filter(Boolean).join(" · ");
+  const who = userName(result.cancelled_user_id, hass);
   return ["Cancelled", where, who && `by ${who}`].filter(Boolean).join(" ");
 }
 
