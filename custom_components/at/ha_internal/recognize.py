@@ -9,10 +9,12 @@ recognizer needs lives in this module.
 """
 
 from dataclasses import dataclass
+import re
 from typing import TYPE_CHECKING, Any, Literal
 
-from custom_components.at.const import REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
+from custom_components.at.const import INTENT_AUTOMATION_RUN, REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
 from custom_components.at.core.models import IntentSpec, Targets
+from custom_components.at.voice.automation import match_automations
 from homeassistant.components import conversation
 from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, intent, template
@@ -201,6 +203,30 @@ async def _unmatched_error(
     )
 
 
+def _automation_command(
+    hass: HomeAssistant, pack: LanguagePack, text: str, language: str, device_id: str | None, satellite_id: str | None
+) -> RecognizedCommand | None:
+    """Recognize "run <automation>", which Home Assistant's own sentences don't cover."""
+    if not pack.run_pattern or (found := re.fullmatch(pack.run_pattern, text.strip(), re.IGNORECASE)) is None:
+        return None
+    spoken = found["name"]
+    match = match_automations(hass, spoken)
+    if not match.is_match:
+        return None
+    names = pack.joiner.join(state.name for state in match.states)
+    return RecognizedCommand(
+        intent=IntentSpec(
+            type=INTENT_AUTOMATION_RUN,
+            slots={"name": {"value": spoken, "text": spoken}},
+            language=language,
+            device_id=device_id,
+            satellite_id=satellite_id,
+        ),
+        targets=Targets(entity_ids=[state.entity_id for state in match.states], names=[spoken]),
+        summary=pack.summary_verbs["automation.trigger"].format(name=names),
+    )
+
+
 async def async_recognize_command(
     hass: HomeAssistant,
     text: str,
@@ -222,6 +248,9 @@ async def async_recognize_command(
             must not store, ``no_target`` when no exposed entity matches the targets.
 
     """
+    if (command := _automation_command(hass, pack, text, language, device_id, satellite_id)) is not None:
+        return command
+
     agent = None if get_agent_manager is None else get_agent_manager(hass).default_agent
     if agent is None:
         raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))

@@ -5,11 +5,12 @@ from zoneinfo import ZoneInfo
 
 import probatio
 
-from custom_components.at.const import DOMAIN
+from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN
 from custom_components.at.core.models import Job, Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text
 from custom_components.at.lang import LanguagePack, get_language_pack, message
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
+from custom_components.at.voice.automation import AutomationRunHandler
 from custom_components.at.voice.queries import (
     CancelQuery,
     ambiguous_speech,
@@ -231,18 +232,18 @@ class AtCancelHandler(_AtHandler):
         return _speak(intent_obj, cancel_one_speech(pack, job, now, tz))
 
 
-HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL)
+HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL, INTENT_AUTOMATION_RUN)
 
 
 @callback
 def async_register_intents(hass: HomeAssistant) -> None:
-    """Register the three handlers."""
-    for handler in (AtScheduleHandler(), AtListHandler(), AtCancelHandler()):
+    """Register the three at handlers and the automation one."""
+    for handler in (AtScheduleHandler(), AtListHandler(), AtCancelHandler(), AutomationRunHandler()):
         intent.async_register(hass, handler)
 
 
 @callback
 def async_remove_intents(hass: HomeAssistant) -> None:
-    """Remove the three handlers."""
+    """Remove every handler."""
     for intent_type in HANDLER_TYPES:
         intent.async_remove(hass, intent_type)

@@ -36,6 +36,8 @@ EVENT_JOB_MISSED = "at_job_missed"
 EVENT_JOB_SCHEDULED = "at_job_scheduled"
 
 # Intents a voice job must not store: timers, queries, chit-chat and `at`'s own ("At*").
+INTENT_AUTOMATION_RUN = "AutomationRun"
+
 REFUSED_INTENT_PREFIX = "At"
 REFUSED_INTENT_TYPES = frozenset(
     {

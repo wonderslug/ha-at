@@ -1,9 +1,11 @@
 """Built-in agent sentence triggers: each one hands its slots to the AtSchedule, AtList or AtCancel intent."""
 
 from collections.abc import Callable
+import re
 from typing import Any
 
-from custom_components.at.const import DOMAIN, LOGGER
+from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, LOGGER
+from custom_components.at.core.timeparse import TimeParseError, split_time_and_command
 from custom_components.at.ha_internal.fallthrough import async_hand_off
 from custom_components.at.ha_internal.sentence_triggers import (
     SentenceGroup,
@@ -101,6 +103,33 @@ def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relat
         }
         return await _async_handle(hass, INTENT_CANCEL, slots, given)
 
+    async def run(given: TriggerInput) -> str:
+        name = given.wildcards["name"].strip()
+        try:
+            return _speech(
+                await _async_respond(
+                    hass,
+                    INTENT_AUTOMATION_RUN,
+                    {"name": re.sub(r"\s+automation$", "", name, flags=re.IGNORECASE)},
+                    given,
+                )
+            )
+        except intent.MatchFailedError:
+            pass
+        try:
+            _, rest = split_time_and_command(name, pack)
+        except TimeParseError:
+            return await hand_off_or(given, pack.recognize_errors["no_target"].format(name=name))
+        # "run X in 30 minutes" also fits this sentence, so route it to scheduling.
+        slots = {
+            "time": name.replace(rest, "", 1).strip(),
+            "command": f"{given.sentence[: given.spans['name'][0]]}{rest}".strip(),
+        }
+        response = await _async_respond(hass, INTENT_SCHEDULE, slots, given)
+        if response.error_code is intent.IntentResponseErrorCode.NO_INTENT_MATCH:
+            return await hand_off_or(given, _speech(response))
+        return _speech(response)
+
     schedule_sentences = [*sentences["schedule_absolute"]]
     if not defer_relative:
         schedule_sentences += sentences["schedule_relative"]
@@ -108,6 +137,7 @@ def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relat
         SentenceGroup(sentences["cancel"], cancel),
         SentenceGroup(sentences["list"], list_jobs),
         SentenceGroup(schedule_sentences, schedule),
+        SentenceGroup(sentences["run"], run),
     ]
     return async_register_sentence_triggers(
         hass, groups, lists=pack.sentence_lists, language=pack.code, unparsed=unparsed

@@ -170,7 +170,9 @@ EN = LanguagePack(
     number_words=_NUMBER_WORDS,
     meridiem_words=_MERIDIEM_WORDS,
     named_times=_NAMED_TIMES,
+    run_pattern=r"(?:run|trigger|fire)\s+(?:the\s+)?(?P<name>.+?)(?:\s+automation)?",
     sentences={
+        "run": ["(run|trigger|fire) [the] {name}"],
         "schedule_absolute": _either_side(_ABSOLUTE),
         "schedule_relative": _either_side(_RELATIVE),
         "list": [_WHAT, f"{_WHAT} for {{scope}}", f"{_WHAT} for [the] {{name}}"],
@@ -236,6 +238,7 @@ EN = LanguagePack(
         "script.turn_on": "Run {name}",
         "automation.trigger": "Trigger {name}",
         # Intent types, for voice jobs
+        "AutomationRun": "Trigger {name}",
         "HassTurnOn": "Turn on {name}",
         "HassTurnOff": "Turn off {name}",
         "HassToggle": "Toggle {name}",
@@ -346,6 +349,7 @@ EN = LanguagePack(
         "intent_not_exposed": "{intent}: {target} is not exposed to voice assistants",
         "intent_not_found": "{intent}: {target} not found ({reason})",
         "intent_no_match": "no match",
+        "automation_triggered": "Triggered {name}",
         "intent_gone": "{intent}: the intent no longer exists",
         "intent_failed": "{intent} for {target} failed: {error}",
         # Why a picked action was refused (core/actions.py)
