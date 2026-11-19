@@ -1,8 +1,19 @@
+import { mdiClose, mdiPlay } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { formatCountdown, formatWhen } from "../format";
 import { sourceLabel } from "../source";
-import type { HomeAssistant, Job } from "../types";
+import { upcomingLabel } from "../state";
+import type { DataTableColumns, HomeAssistant, Job } from "../types";
+
+interface Row {
+  id: string;
+  job: Job;
+  running: boolean;
+  when: string;
+  summary: string;
+  source: string;
+}
 
 @customElement("at-upcoming-table")
 export class UpcomingTable extends LitElement {
@@ -11,6 +22,7 @@ export class UpcomingTable extends LitElement {
   @property({ attribute: false }) running: Job[] = [];
   @property({ type: Number }) now = Date.now();
   @property({ type: Boolean }) isAdmin = false;
+  @property({ type: Boolean }) narrow = false;
 
   private fire(name: string, job: Job, e?: Event) {
     e?.stopPropagation();
@@ -24,45 +36,56 @@ export class UpcomingTable extends LitElement {
     return formatWhen(due, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
   }
 
-  private row(job: Job, running: boolean) {
-    const canRun = !running && (this.isAdmin || !job.raw_action);
-    return html`<tr @click=${() => this.fire("open-job", job)}>
-      <td class="when">${running ? "Running…" : this.when(job)}</td>
-      <td>${job.summary}</td>
-      <td>${sourceLabel(job, this.hass)}</td>
-      <td class="actions">
-        ${running
-          ? nothing
-          : html`${canRun
-              ? html`<button title="Run now" aria-label="Run now" @click=${(e: Event) => this.fire("run-job", job, e)}>▶</button>`
-              : nothing}
-            <button title="Cancel" aria-label="Cancel" @click=${(e: Event) => this.fire("cancel-job", job, e)}>✕</button>`}
-      </td>
-    </tr>`;
+  private actions(row: Row) {
+    if (row.running) return nothing;
+    const canRun = this.isAdmin || !row.job.raw_action;
+    return html`${canRun
+        ? html`<ha-icon-button .label=${"Run now"} .path=${mdiPlay} @click=${(e: Event) => this.fire("run-job", row.job, e)}></ha-icon-button>`
+        : nothing}
+      <ha-icon-button .label=${"Cancel"} .path=${mdiClose} @click=${(e: Event) => this.fire("cancel-job", row.job, e)}></ha-icon-button>`;
+  }
+
+  private get columns(): DataTableColumns {
+    return {
+      when: { title: "When", main: true, minWidth: "120px" },
+      summary: { title: "Job", flex: 2 },
+      source: { title: "Source" },
+      actions: { title: "", type: "icon-button", showNarrow: true, minWidth: "96px", maxWidth: "96px", template: (r: Row) => this.actions(r) },
+    };
+  }
+
+  private onRowClick(e: CustomEvent<{ id: string }>) {
+    const job = [...this.running, ...this.pending].find((j) => j.id === e.detail.id);
+    if (job) this.fire("open-job", job);
   }
 
   protected override render() {
-    if (!this.pending.length && !this.running.length) {
-      return html`<p class="empty">Nothing scheduled.</p>`;
-    }
-    return html`<table>
-      <thead><tr><th>When</th><th>Job</th><th>Source</th><th></th></tr></thead>
-      <tbody>
-        ${this.running.map((j) => this.row(j, true))} ${this.pending.map((j) => this.row(j, false))}
-      </tbody>
-    </table>`;
+    const row = (job: Job, running: boolean): Row => ({
+      id: job.id,
+      job,
+      running,
+      when: running ? "Running…" : this.when(job),
+      summary: job.summary,
+      source: sourceLabel(job, this.hass),
+    });
+    const rows = [...this.running.map((j) => row(j, true)), ...this.pending.map((j) => row(j, false))];
+    return html`<ha-card .header=${upcomingLabel({ pending: this.pending, running: this.running, history: [] })}>
+      <ha-data-table
+        .columns=${this.columns}
+        .data=${rows}
+        .narrow=${this.narrow}
+        .noDataText=${"Nothing scheduled."}
+        clickable
+        auto-height
+        @row-click=${this.onRowClick}
+      ></ha-data-table>
+    </ha-card>`;
   }
 
   static override styles = css`
-    table { width: 100%; border-collapse: collapse; background: var(--card-background-color); border-radius: 8px; }
-    th { text-align: left; padding: 8px 12px; color: var(--secondary-text-color); font-weight: 500; }
-    td { padding: 10px 12px; border-top: 1px solid var(--divider-color); }
-    tr { cursor: pointer; }
-    tbody tr:hover { background: var(--secondary-background-color); }
-    .when { font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .actions { text-align: right; white-space: nowrap; }
-    button { font: inherit; color: var(--primary-text-color); background: none; border: none; cursor: pointer; padding: 4px 8px; }
-    .empty { color: var(--secondary-text-color); text-align: center; padding: 32px; }
+    :host {
+      display: block;
+    }
   `;
 }
 

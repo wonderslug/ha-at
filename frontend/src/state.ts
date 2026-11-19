@@ -1,4 +1,4 @@
-import type { Job, JobChangeKind, Snapshot } from "./types";
+import type { Job, JobChangeKind, JobStatus, Snapshot } from "./types";
 
 export type PanelState = Snapshot;
 
@@ -36,7 +36,21 @@ export function applyChange(state: PanelState, change: { kind: JobChangeKind; jo
   return normalize(next);
 }
 
-/** The Upcoming tab's label, with the number of pending jobs (spec 7.5). */
+/** The Upcoming card's heading, with the number of pending jobs (spec 7.5). */
 export function upcomingLabel(state: PanelState): string {
   return `Upcoming (${state.pending.length})`;
+}
+
+/** How many History rows show before "Show all" (spec 2026-11-19). */
+export const HISTORY_LIMIT = 15;
+
+/** The History rows to show for a status filter, capped unless expanded, and how many match in total. */
+export function visibleHistory(
+  history: Job[],
+  filter: "all" | JobStatus,
+  expanded: boolean,
+  limit = HISTORY_LIMIT,
+): { rows: Job[]; matching: number } {
+  const matches = filter === "all" ? history : history.filter((j) => j.status === filter);
+  return { rows: expanded ? matches : matches.slice(0, limit), matching: matches.length };
 }
