@@ -38,7 +38,11 @@ export interface Job {
   };
   result: {
     error: string | null;
+    /** The channel the cancel came through: panel, voice, llm, todo or service. */
     cancelled_by: string | null;
+    cancelled_user_id?: string | null;
+    /** Entity id of the automation or script that issued the cancel. */
+    cancelled_origin?: string | null;
   };
 }
 
@@ -85,7 +89,7 @@ export interface HomeAssistant {
   config: { time_zone: string };
   themes?: { darkMode?: boolean };
   user?: { id: string; name: string };
-  states?: Record<string, { state: string; attributes: { friendly_name?: string } }>;
+  states?: Record<string, { state: string; attributes: { friendly_name?: string; user_id?: string } }>;
   devices?: Record<string, { name?: string | null; name_by_user?: string | null }>;
 }
 

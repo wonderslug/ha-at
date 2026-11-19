@@ -132,9 +132,12 @@ async def test_at_cancel_intent_all_skips_service(hass: HomeAssistant, manager: 
     await add_job(manager, "Turn on Porch Light", 2, via=Via.LLM)
     kept = await add_job(manager, "Turn on Porch Light", 3, via=Via.SERVICE)
 
-    response = await handle(hass, INTENT_CANCEL, {"all": True})
+    response = await intent.async_handle(
+        hass, "test", INTENT_CANCEL, {"all": {"value": True}}, language="en", context=Context(user_id="voice-user")
+    )
 
     assert speech(response) == "Cancelled 2 jobs. 1 job created by automations was left alone."
+    assert manager.history()[0].result.cancelled_user_id == "voice-user"
     assert [j.id for j in manager.pending()] == [kept.id]
     assert manager.history()[0].result.cancelled_by == "voice"
 

@@ -59,7 +59,9 @@ def _action_job() -> Job:
         raw_action=True,
         targets=Targets(entity_ids=[], area_ids=["kitchen"], floor_ids=["f1"], names=[]),
         source=Source(via=Via.SERVICE, user_id=None, device_id=None, agent_id="agent"),
-        result=Result(error="boom", cancelled_by="u2"),
+        result=Result(
+            error="boom", cancelled_by="u2", cancelled_user_id="user-9", cancelled_origin="automation.bedtime"
+        ),
     )
 
 
@@ -67,6 +69,15 @@ def test_job_roundtrip() -> None:
     for job in (_intent_job(), _action_job()):
         data = json.loads(json.dumps(job.to_dict()))
         assert Job.from_dict(data) == job
+
+
+def test_old_result_without_cancel_details_loads() -> None:
+    data = _action_job().to_dict()
+    data["result"] = {"error": None, "cancelled_by": "panel"}
+    result = Job.from_dict(data).result
+    assert result.cancelled_by == "panel"
+    assert result.cancelled_user_id is None
+    assert result.cancelled_origin is None
 
 
 def test_to_dict_is_plain_json() -> None:
