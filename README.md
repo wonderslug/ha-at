@@ -7,13 +7,6 @@
 [![hacs][hacsbadge]][hacs]
 ![Project Maintenance][maintenance-shield]
 
-<!--
-Uncomment and customize these badges if you want to use them:
-
-[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
-[![Discord][discord-shield]][discord]
--->
-
 ## What it does
 
 `at` runs a Home Assistant command once, later. Say "turn on the porch light at 11 pm", and `at` stores the command and runs it at that time. It works from voice, Assist text, LLM agents, a sidebar panel, a to-do list, and service actions.
