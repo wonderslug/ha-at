@@ -188,11 +188,15 @@ class JobManager:
         await self._async_announce(job, "added", _undo)
         return job
 
-    async def async_cancel(self, job_id: str, by: str, context: Context | None = None) -> Job:
-        """Cancel a pending job; ``context`` is the cancelling call's, recorded as who and where."""
-        return (await self.async_cancel_many([job_id], by, context))[0]
+    async def async_cancel(
+        self, job_id: str, by: str, context: Context | None = None, device_id: str | None = None
+    ) -> Job:
+        """Cancel a pending job; ``context`` and ``device_id`` are the cancelling call's, recorded as who and where."""
+        return (await self.async_cancel_many([job_id], by, context, device_id))[0]
 
-    async def async_cancel_many(self, job_ids: list[str], by: str, context: Context | None = None) -> list[Job]:
+    async def async_cancel_many(
+        self, job_ids: list[str], by: str, context: Context | None = None, device_id: str | None = None
+    ) -> list[Job]:
         """Cancel several pending jobs; nothing changes if any of them is not pending."""
         jobs = [self._require_pending(job_id) for job_id in dict.fromkeys(job_ids)]
         origin = origin_entity_id(self._hass, context)
@@ -200,6 +204,7 @@ class JobManager:
             self._cancel(job, by)
             job.result.cancelled_user_id = context.user_id if context else None
             job.result.cancelled_origin = origin
+            job.result.cancelled_device_id = device_id
         await self._async_after_finish(jobs, context)
         return jobs
 

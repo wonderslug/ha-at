@@ -309,7 +309,7 @@ async def test_reschedule_copy(
     copy = response["result"]["job"]
     assert copy["id"] != job.id
     assert copy["due"] == "2026-11-20T10:00:00+00:00"
-    assert copy["source"]["via"] == str(Via.PANEL)
+    assert copy["source"]["via"] == "reschedule"
     assert copy["source"]["user_id"] == hass_read_only_user.id
     assert manager.get(job.id).source.user_id == "someone-else"
     assert len(manager.pending()) == 2

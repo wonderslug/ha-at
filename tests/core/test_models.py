@@ -58,9 +58,13 @@ def _action_job() -> Job:
         action=[{"action": "light.turn_on", "target": {"entity_id": "light.a"}}],
         raw_action=True,
         targets=Targets(entity_ids=[], area_ids=["kitchen"], floor_ids=["f1"], names=[]),
-        source=Source(via=Via.SERVICE, user_id=None, device_id=None, agent_id="agent"),
+        source=Source(via=Via.SERVICE, user_id=None, device_id=None, agent_id="agent", origin="automation.bedtime"),
         result=Result(
-            error="boom", cancelled_by="u2", cancelled_user_id="user-9", cancelled_origin="automation.bedtime"
+            error="boom",
+            cancelled_by="u2",
+            cancelled_user_id="user-9",
+            cancelled_origin="automation.bedtime",
+            cancelled_device_id="sat-1",
         ),
     )
 
@@ -78,6 +82,13 @@ def test_old_result_without_cancel_details_loads() -> None:
     assert result.cancelled_by == "panel"
     assert result.cancelled_user_id is None
     assert result.cancelled_origin is None
+    assert result.cancelled_device_id is None
+
+
+def test_old_source_without_origin_loads() -> None:
+    data = _action_job().to_dict()
+    del data["source"]["origin"]
+    assert Job.from_dict(data).source.origin is None
 
 
 def test_to_dict_is_plain_json() -> None:

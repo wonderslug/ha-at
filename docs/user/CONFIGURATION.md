@@ -184,7 +184,7 @@ action: at.clear_history
 | `at_job_cancelled` | A job was cancelled                                                    |
 | `at_job_missed`    | A job came due while Home Assistant was down, outside the grace window |
 
-Every event carries `job_id`, `summary`, `due` (ISO time), `status` and `via` (`voice`, `llm`, `panel`, `todo` or `service`). `at_job_failed` also carries `error`.
+Every event carries `job_id`, `summary`, `due` (ISO time), `status` and `via` (`voice`, `llm`, `panel`, `reschedule`, `todo` or `service`). `at_job_failed` also carries `error`.
 
 The events also show in the logbook.
 

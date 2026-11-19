@@ -99,6 +99,49 @@ async def test_schedule_command_name_overrides_summary(hass: HomeAssistant, mana
     assert response["due"] == "2026-11-18T04:27:00+00:00"
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"command": "turn on the porch light", "delay": {"minutes": 5}},
+        {"action": ACTION, "delay": {"hours": 1}},
+    ],
+)
+async def test_schedule_records_calling_automation(
+    hass: HomeAssistant, manager: JobManager, hass_admin_user: User, data: dict
+) -> None:
+    """A call made from an automation's run records that automation."""
+    run = Context(user_id=hass_admin_user.id)
+    hass.states.async_set("automation.bedtime", "on", context=run)
+    response = await hass.services.async_call(
+        DOMAIN, "schedule", data, blocking=True, return_response=True, context=run
+    )
+    assert manager.get(response["job_id"]).source.origin == "automation.bedtime"
+
+
+async def test_schedule_from_script_called_by_automation_records_script(
+    hass: HomeAssistant, manager: JobManager
+) -> None:
+    """A script started by an automation is the closer origin."""
+    run = Context()
+    hass.states.async_set("automation.bedtime", "on", context=run)
+    hass.states.async_set("script.tidy_up", "on", context=run)
+    response = await hass.services.async_call(
+        DOMAIN,
+        "schedule",
+        {"command": "turn on the porch light", "delay": {"minutes": 5}},
+        blocking=True,
+        return_response=True,
+        context=run,
+    )
+    assert manager.get(response["job_id"]).source.origin == "script.tidy_up"
+
+
+async def test_schedule_without_automation_has_no_origin(hass: HomeAssistant, manager: JobManager) -> None:
+    """A call from outside any automation or script records no origin."""
+    response = await call(hass, "schedule", {"command": "turn on the porch light", "delay": {"minutes": 5}})
+    assert manager.get(response["job_id"]).source.origin is None
+
+
 async def test_schedule_command_refused(hass: HomeAssistant, manager: JobManager) -> None:
     """A command that can't be scheduled raises a validation error carrying the speech."""
     with pytest.raises(ServiceValidationError, match="Sorry"):

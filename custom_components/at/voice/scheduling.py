@@ -73,6 +73,7 @@ async def async_schedule_command(
     device_id: str | None,
     satellite_id: str | None,
     agent_id: str | None = None,
+    origin: str | None = None,
     due: datetime | None = None,
     dry_run: bool = False,
 ) -> ScheduleOutcome:
@@ -133,7 +134,7 @@ async def async_schedule_command(
         action=None,
         raw_action=False,
         targets=command.targets,
-        source=Source(via=via, user_id=user_id, device_id=device_id, agent_id=agent_id),
+        source=Source(via=via, user_id=user_id, device_id=device_id, agent_id=agent_id, origin=origin),
         result=Result(),
     )
     relative = spec.relative if resolved is not None and resolved.relative and spec is not None else None

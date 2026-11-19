@@ -149,13 +149,15 @@ async def test_cancel_records_who_and_where(hass: HomeAssistant, make_manager: M
     run = Context(user_id="user-7")
     hass.states.async_set("automation.bedtime", "on", context=run)
 
-    await manager.async_cancel(first.id, by="service", context=run)
+    await manager.async_cancel(first.id, by="service", context=run, device_id="sat-1")
     [other] = await manager.async_cancel_many([second.id], by="panel", context=Context(user_id="user-8"))
 
     assert first.result.cancelled_user_id == "user-7"
     assert first.result.cancelled_origin == "automation.bedtime"
     assert other.result.cancelled_user_id == "user-8"
     assert other.result.cancelled_origin is None
+    assert first.result.cancelled_device_id == "sat-1"
+    assert other.result.cancelled_device_id is None
     await hass.async_block_till_done(wait_background_tasks=True)
     assert cancelled[0].context.id == run.id
     assert cancelled[1].context.user_id == "user-8"

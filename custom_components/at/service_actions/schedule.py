@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from custom_components.at.const import DOMAIN
 from custom_components.at.core.actions import build_action_job, summarize_action
+from custom_components.at.core.context import origin_entity_id
 from custom_components.at.core.models import Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve, wall_time_to_utc
 from custom_components.at.lang import get_language_pack
@@ -59,6 +60,7 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
     data = call.data
     manager = async_get_manager(hass)
     user_id = call.context.user_id
+    origin = origin_entity_id(hass, call.context)
     name: str | None = data.get("name")
 
     if "action" in data:
@@ -74,6 +76,7 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
             raw_action=True,
             via=Via.SERVICE,
             user_id=user_id,
+            origin=origin,
         )
         job = await manager.async_add(job)
     else:
@@ -86,6 +89,7 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
                 language=hass.config.language,
                 via=Via.SERVICE,
                 user_id=user_id,
+                origin=origin,
                 device_id=None,
                 satellite_id=None,
                 due=_due_from_fields(data),

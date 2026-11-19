@@ -35,6 +35,8 @@ export interface Job {
     user_id: string | null;
     device_id: string | null;
     agent_id: string | null;
+    /** Entity id of the automation or script that scheduled the job. */
+    origin?: string | null;
   };
   result: {
     error: string | null;
@@ -43,6 +45,8 @@ export interface Job {
     cancelled_user_id?: string | null;
     /** Entity id of the automation or script that issued the cancel. */
     cancelled_origin?: string | null;
+    /** The satellite or other device an Assist cancel came from. */
+    cancelled_device_id?: string | null;
   };
 }
 

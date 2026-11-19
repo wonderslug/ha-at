@@ -31,6 +31,7 @@ class Via(StrEnum):
     VOICE = "voice"
     LLM = "llm"
     PANEL = "panel"
+    RESCHEDULE = "reschedule"
     TODO = "todo"
     SERVICE = "service"
 
@@ -64,6 +65,7 @@ class Source:
     user_id: str | None = None
     device_id: str | None = None
     agent_id: str | None = None
+    origin: str | None = None
 
 
 @dataclass
@@ -74,6 +76,7 @@ class Result:
     cancelled_by: str | None = None
     cancelled_user_id: str | None = None
     cancelled_origin: str | None = None
+    cancelled_device_id: str | None = None
 
 
 def _dt(value: datetime | None) -> str | None:
@@ -139,12 +142,14 @@ class Job:
                 "user_id": self.source.user_id,
                 "device_id": self.source.device_id,
                 "agent_id": self.source.agent_id,
+                "origin": self.source.origin,
             },
             "result": {
                 "error": self.result.error,
                 "cancelled_by": self.result.cancelled_by,
                 "cancelled_user_id": self.result.cancelled_user_id,
                 "cancelled_origin": self.result.cancelled_origin,
+                "cancelled_device_id": self.result.cancelled_device_id,
             },
         }
 
@@ -191,12 +196,14 @@ class Job:
                 user_id=source.get("user_id"),
                 device_id=source.get("device_id"),
                 agent_id=source.get("agent_id"),
+                origin=source.get("origin"),
             ),
             result=Result(
                 error=result.get("error"),
                 cancelled_by=result.get("cancelled_by"),
                 cancelled_user_id=result.get("cancelled_user_id"),
                 cancelled_origin=result.get("cancelled_origin"),
+                cancelled_device_id=result.get("cancelled_device_id"),
             ),
         )
 

@@ -142,6 +142,20 @@ async def test_at_cancel_intent_all_skips_service(hass: HomeAssistant, manager: 
     assert manager.history()[0].result.cancelled_by == "voice"
 
 
+async def test_at_cancel_all_records_satellite(hass: HomeAssistant, manager: JobManager) -> None:
+    await add_job(manager, "Turn on Porch Light", 1)
+    await intent.async_handle(hass, "test", INTENT_CANCEL, {"all": {"value": True}}, language="en", device_id="sat-1")
+    assert manager.history()[0].result.cancelled_device_id == "sat-1"
+
+
+async def test_at_cancel_one_records_satellite(hass: HomeAssistant, manager: JobManager) -> None:
+    await add_job(manager, "Turn on Porch Light", 1, names=["Porch Light"])
+    await intent.async_handle(
+        hass, "test", INTENT_CANCEL, {"name": {"value": "porch"}}, language="en", device_id="sat-1"
+    )
+    assert manager.history()[0].result.cancelled_device_id == "sat-1"
+
+
 async def test_at_cancel_by_name_and_time(hass: HomeAssistant, manager: JobManager) -> None:
     await add_job(manager, "Turn on Porch Light", 1, names=["Porch Light"])
     await add_job(manager, "Turn on Hall Light", 2, names=["Hall Light"])
