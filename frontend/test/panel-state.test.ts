@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyChange, type PanelState, upcomingLabel } from "../src/state";
+import { applyChange, HISTORY_LIMIT, type PanelState, upcomingLabel, visibleHistory } from "../src/state";
 import { nextRetryDelay } from "../src/reconnect";
 import type { Job, JobStatus } from "../src/types";
 
@@ -94,5 +94,40 @@ describe("upcomingLabel", () => {
     const state: PanelState = { pending: [job("a", "pending"), job("b", "pending")], running: [job("c", "running")], history: [] };
     expect(upcomingLabel(state)).toBe("Upcoming (2)");
     expect(upcomingLabel({ pending: [], running: [], history: [] })).toBe("Upcoming (0)");
+  });
+});
+
+describe("visibleHistory", () => {
+  const many = (n: number, status: JobStatus = "done", prefix = "h") =>
+    Array.from({ length: n }, (_, i) => job(`${prefix}${i}`, status));
+
+  it("caps at 15 when collapsed", () => {
+    const r = visibleHistory(many(20), "all", false);
+    expect(HISTORY_LIMIT).toBe(15);
+    expect(r.rows).toHaveLength(15);
+    expect(ids(r.rows)[0]).toBe("h0");
+    expect(r.matching).toBe(20);
+  });
+
+  it("returns all when expanded", () => {
+    expect(visibleHistory(many(20), "all", true).rows).toHaveLength(20);
+  });
+
+  it("does not cap exactly 15", () => {
+    const r = visibleHistory(many(15), "all", false);
+    expect(r.rows).toHaveLength(15);
+    expect(r.matching).toBe(15);
+  });
+
+  it("filters before capping", () => {
+    const r = visibleHistory([...many(3, "failed", "f"), ...many(20)], "failed", false);
+    expect(r.matching).toBe(3);
+    expect(r.rows.every((j) => j.status === "failed")).toBe(true);
+  });
+
+  it("counts the new filter while expanded", () => {
+    const r = visibleHistory([...many(18, "failed", "f"), ...many(2)], "failed", true);
+    expect(r.matching).toBe(18);
+    expect(r.rows).toHaveLength(18);
   });
 });

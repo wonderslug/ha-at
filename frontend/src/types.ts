@@ -92,3 +92,6 @@ export interface HomeAssistant {
 export interface PanelInfo {
   config?: Record<string, unknown>;
 }
+
+/** Column definitions for HA's `ha-data-table`, keyed by row field. */
+export type DataTableColumns = Record<string, Record<string, unknown>>;

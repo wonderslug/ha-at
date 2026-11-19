@@ -1,3 +1,4 @@
+import { mdiDotsVertical, mdiPlus } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import * as api from "./api";
@@ -5,11 +6,10 @@ import "./components/add-job-dialog";
 import "./components/history-table";
 import "./components/job-details";
 import "./components/upcoming-table";
+import { loadHaElements } from "./ha-elements";
 import { nextRetryDelay } from "./reconnect";
-import { applyChange, normalize, type PanelState, upcomingLabel } from "./state";
+import { applyChange, normalize, type PanelState } from "./state";
 import type { AtInfo, HomeAssistant, Job, PanelInfo, SubscribeEvent } from "./types";
-
-type Tab = "upcoming" | "history";
 
 const DEFAULT_TITLE = "Scheduled Jobs";
 
@@ -20,8 +20,7 @@ export class AtPanel extends LitElement {
   @property({ attribute: false }) panel?: PanelInfo;
   @property({ attribute: false }) route?: unknown;
 
-  @state() private tab: Tab = "upcoming";
-  @state() private menuOpen = false;
+  @state() private missing?: string[];
   @state() private data: PanelState = { pending: [], running: [], history: [] };
   @state() private now = Date.now();
   @state() private reconnecting = true;
@@ -69,6 +68,7 @@ export class AtPanel extends LitElement {
     if (!this.hass || this.subscribed) return;
     this.subscribed = true;
     api.info(this.hass).then((i) => (this.atInfo = i), () => undefined);
+    void loadHaElements().then((missing) => (this.missing = missing));
     await this.subscribe();
   }
 
@@ -143,25 +143,25 @@ export class AtPanel extends LitElement {
       return;
     }
     this.confirmCancelAll = false;
-    this.menuOpen = false;
     const ids = this.data.pending.map((j) => j.id);
     if (ids.length) void this.call(() => api.cancel(hass, ids));
   }
 
   private clearHistory() {
     const hass = this.hass;
-    this.menuOpen = false;
     this.confirmCancelAll = false;
     if (hass) void this.call(() => api.clearHistory(hass));
   }
 
-  private toggleMenu() {
-    this.menuOpen = !this.menuOpen;
-    this.confirmCancelAll = false;
-  }
-
-  private fire_toggle_menu() {
-    this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true }));
+  private onMenuSelect(e: CustomEvent<{ item: { value: string } }>) {
+    const value = e.detail.item.value;
+    if (value === "cancel-all") {
+      // Keep the menu open so the confirmation shows where the user clicked.
+      if (!this.confirmCancelAll) e.preventDefault();
+      this.cancelAll();
+    } else if (value === "clear-history") {
+      this.clearHistory();
+    }
   }
 
   private get title_(): string {
@@ -169,55 +169,48 @@ export class AtPanel extends LitElement {
     return typeof title === "string" && title ? title : DEFAULT_TITLE;
   }
 
-  private tabButton(tab: Tab, label: string) {
-    return html`<button
-      class="tab ${this.tab === tab ? "active" : ""}"
-      role="tab"
-      aria-selected=${this.tab === tab}
-      @click=${() => (this.tab = tab)}
-    >
-      ${label}
-    </button>`;
-  }
-
   protected override render() {
+    if (this.missing === undefined) return nothing;
+    if (this.missing.length) {
+      return html`<div class="missing">
+        <p>This panel needs an update for this Home Assistant version.</p>
+        <p>Missing: ${this.missing.join(", ")}</p>
+      </div>`;
+    }
+    const isAdmin = this.atInfo?.is_admin ?? false;
     return html`
-      <header>
-        ${this.narrow
-          ? html`<button class="sidebar-toggle" aria-label="Open sidebar" @click=${() => this.fire_toggle_menu()}>☰</button>`
-          : nothing}
-        <h1>${this.title_}</h1>
-        <div class="tabs" role="tablist">${this.tabButton("upcoming", upcomingLabel(this.data))} ${this.tabButton("history", "History")}</div>
-        <button class="add" @click=${() => (this.addOpen = true)}>+ Add job</button>
-        <div class="menu-wrap">
-          <button class="menu" aria-label="More options" @click=${() => this.toggleMenu()}>⋮</button>
-          ${this.menuOpen ? html`<div class="menu-pop" role="menu">
-                <button role="menuitem" @click=${() => this.cancelAll()}>${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</button>
-                <button role="menuitem" @click=${() => this.clearHistory()}>Clear history</button>
-              </div>` : nothing}
+      <hass-subpage main-page .hass=${this.hass} .narrow=${this.narrow} .header=${this.title_}>
+        <ha-dropdown
+          slot="toolbar-icon"
+          placement="bottom-end"
+          @wa-select=${this.onMenuSelect}
+          @wa-after-hide=${() => (this.confirmCancelAll = false)}
+        >
+          <ha-icon-button slot="trigger" .label=${"More options"} .path=${mdiDotsVertical}></ha-icon-button>
+          <ha-dropdown-item value="cancel-all">${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</ha-dropdown-item>
+          <ha-dropdown-item value="clear-history">Clear history</ha-dropdown-item>
+        </ha-dropdown>
+        <div class="content" @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
+          ${this.reconnecting ? html`<div class="notice">Reconnecting…</div>` : nothing}
+          ${this.error
+            ? html`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => (this.error = "")}>✕</button></div>`
+            : nothing}
+          <at-upcoming-table
+            .hass=${this.hass}
+            .pending=${this.data.pending}
+            .running=${this.data.running}
+            .now=${this.now}
+            .isAdmin=${isAdmin}
+            .narrow=${this.narrow}
+          ></at-upcoming-table>
+          <at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
         </div>
-      </header>
-      ${this.reconnecting ? html`<div class="notice">Reconnecting…</div>` : nothing}
-      ${this.error
-        ? html`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => (this.error = "")}>✕</button></div>`
-        : nothing}
-      <main @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
-        ${this.tab === "upcoming"
-          ? html`<at-upcoming-table
-              .hass=${this.hass}
-              .pending=${this.data.pending}
-              .running=${this.data.running}
-              .now=${this.now}
-              .isAdmin=${this.atInfo?.is_admin ?? false}
-            ></at-upcoming-table>`
-          : html`<at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now}></at-history-table>`}
-      </main>
-      <at-add-job-dialog
-        .hass=${this.hass}
-        .isAdmin=${this.atInfo?.is_admin ?? false}
-        .open=${this.addOpen}
-        @close-add-job=${() => (this.addOpen = false)}
-      ></at-add-job-dialog>
+        <ha-button slot="fab" size="l" @click=${() => (this.addOpen = true)}>
+          <ha-svg-icon slot="start" .path=${mdiPlus}></ha-svg-icon>
+          Add job
+        </ha-button>
+      </hass-subpage>
+      <at-add-job-dialog .hass=${this.hass} .isAdmin=${isAdmin} .open=${this.addOpen} @close-add-job=${() => (this.addOpen = false)}></at-add-job-dialog>
       <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => (this.details = undefined)}></at-job-details>
     `;
   }
@@ -225,109 +218,40 @@ export class AtPanel extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      min-height: 100vh;
-      background: var(--primary-background-color);
-      color: var(--primary-text-color);
-      font-family: var(--paper-font-body1_-_font-family, inherit);
+      height: 100vh;
+      height: 100dvh;
     }
-    header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .content {
       box-sizing: border-box;
-      min-height: var(--header-height, 56px);
-      padding: 0 16px;
-      position: sticky;
-      top: 0;
-      z-index: 4;
-      background: var(--app-header-background-color, var(--card-background-color));
-      color: var(--app-header-text-color, var(--primary-text-color));
-      border-bottom: 1px solid var(--divider-color);
-    }
-    h1 {
-      margin: 0;
-      font-size: var(--ha-font-size-xl, 20px);
-      font-weight: var(--ha-font-weight-normal, 400);
-      flex: 1;
-    }
-    .sidebar-toggle {
-      font-size: 24px;
-      padding: 8px;
-      margin-left: -8px;
-      color: inherit;
-    }
-    button {
-      font: inherit;
-      color: var(--primary-text-color);
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-    .tabs {
       display: flex;
-      gap: 4px;
-    }
-    .tab {
-      padding: 10px 14px;
-      border-bottom: 2px solid transparent;
-    }
-    .tab.active {
-      color: var(--primary-color);
-      border-bottom-color: var(--primary-color);
-    }
-    .add {
-      padding: 8px 14px;
-      border-radius: 18px;
-      color: var(--text-primary-color, #fff);
-      background: var(--primary-color);
-    }
-    .menu-wrap {
-      position: relative;
-    }
-    .menu {
-      font-size: 20px;
-      padding: 4px 8px;
-    }
-    .menu-pop {
-      position: absolute;
-      right: 0;
-      top: 100%;
-      min-width: 160px;
-      background: var(--card-background-color);
-      border: 1px solid var(--divider-color);
-      border-radius: 4px;
-    }
-    main {
-      padding: 16px;
-    }
-    .menu-pop button {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 10px 14px;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 16px 16px 88px;
     }
     .notice {
-      margin: 8px 16px 0;
-      padding: 6px 12px;
-      font-size: 13px;
       color: var(--secondary-text-color);
     }
     .error {
       display: flex;
       justify-content: space-between;
-      margin: 8px 16px 0;
+      align-items: center;
       padding: 8px 12px;
       border-radius: 4px;
-      color: #fff;
-      background: var(--error-color, #db4437);
+      color: var(--text-primary-color);
+      background: var(--error-color);
     }
     .error button {
+      font: inherit;
       color: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
     }
-    @media (max-width: 600px) {
-      header {
-        flex-wrap: wrap;
-      }
+    .missing {
+      padding: 32px 16px;
+      color: var(--primary-text-color);
     }
   `;
 }

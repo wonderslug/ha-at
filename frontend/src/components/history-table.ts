@@ -1,18 +1,37 @@
-import { LitElement, css, html } from "lit";
+import { mdiAlertCircle, mdiCancel, mdiCheckCircle, mdiClockAlert } from "@mdi/js";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { live } from "lit/directives/live.js";
 import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
-import type { HomeAssistant, Job, JobStatus } from "../types";
+import { HISTORY_LIMIT, visibleHistory } from "../state";
+import type { DataTableColumns, HomeAssistant, Job, JobStatus } from "../types";
 
-const ICONS: Record<string, string> = { done: "✓", failed: "✗", missed: "⚠", cancelled: "⊘" };
-const FILTERS: ("all" | JobStatus)[] = ["all", "done", "failed", "missed", "cancelled"];
+const ICONS: Record<string, string> = { done: mdiCheckCircle, failed: mdiAlertCircle, missed: mdiClockAlert, cancelled: mdiCancel };
+const FILTERS: { value: "all" | JobStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "done", label: "Done" },
+  { value: "failed", label: "Failed" },
+  { value: "missed", label: "Missed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+interface Row {
+  id: string;
+  job: Job;
+  when: string;
+  summary: string;
+  result: string;
+}
 
 @customElement("at-history-table")
 export class HistoryTable extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
   @property({ attribute: false }) history: Job[] = [];
   @property({ type: Number }) now = Date.now();
+  @property({ type: Boolean }) narrow = false;
 
   @state() private filter: "all" | JobStatus = "all";
+  @state() private expanded = false;
   @state() private editing: string | null = null;
   @state() private value = "";
 
@@ -29,63 +48,114 @@ export class HistoryTable extends LitElement {
     this.value = "";
   }
 
-  private row(job: Job) {
-    const when = formatWhen(
-      new Date(job.finished_at ?? job.due),
-      new Date(this.now),
-      this.hass?.locale?.language ?? this.hass?.language ?? "en",
-      this.hass?.config.time_zone ?? "UTC",
-    );
-    return html`<tr @click=${() => this.fire("open-job", { job })}>
-      <td class="status ${job.status}" title=${job.status}>${ICONS[job.status] ?? job.status}</td>
-      <td class="nowrap">${when}</td>
-      <td>${job.summary}</td>
-      <td class="result">${job.result.error ?? ""}</td>
-      <td class="actions" @click=${(e: Event) => e.stopPropagation()}>
-        ${this.editing === job.id
-          ? html`<input type="datetime-local" .value=${this.value} @input=${(e: Event) => (this.value = (e.target as HTMLInputElement).value)} />
-              <button @click=${() => this.submit(job)}>Save</button>
-              <button @click=${() => (this.editing = null)}>Cancel</button>`
-          : html`<button @click=${() => { this.editing = job.id; this.value = dateToWallTime(new Date(Date.now() + 3_600_000), this.hass?.config.time_zone ?? "UTC"); }}>Re-schedule</button>`}
-      </td>
-    </tr>`;
+  private selectFilter(e: Event, value: "all" | JobStatus) {
+    // The chip toggles itself on click; cancelling the click keeps the selection under our control.
+    e.preventDefault();
+    this.filter = value;
+  }
+
+  private startEditing(job: Job) {
+    this.editing = job.id;
+    this.value = dateToWallTime(new Date(Date.now() + 3_600_000), this.hass?.config.time_zone ?? "UTC");
+  }
+
+  private actions(row: Row) {
+    const stop = (e: Event) => e.stopPropagation();
+    if (this.editing !== row.id) {
+      return html`<ha-button appearance="plain" size="s" @click=${(e: Event) => (stop(e), this.startEditing(row.job))}>Re-schedule</ha-button>`;
+    }
+    return html`<div class="edit" @click=${stop}>
+      <input type="datetime-local" .value=${this.value} @input=${(e: Event) => (this.value = (e.target as HTMLInputElement).value)} />
+      <ha-button appearance="plain" size="s" @click=${() => this.submit(row.job)}>Save</ha-button>
+      <ha-button appearance="plain" size="s" @click=${() => (this.editing = null)}>Cancel</ha-button>
+    </div>`;
+  }
+
+  private get columns(): DataTableColumns {
+    return {
+      status: {
+        title: "",
+        type: "icon",
+        showNarrow: true,
+        template: (r: Row) =>
+          html`<ha-svg-icon class="status ${r.job.status}" title=${r.job.status} .path=${ICONS[r.job.status] ?? mdiCheckCircle}></ha-svg-icon>`,
+      },
+      when: { title: "Time", minWidth: "120px" },
+      summary: { title: "Job", main: true, flex: 2 },
+      result: { title: "Result" },
+      actions: { title: "", showNarrow: true, minWidth: this.editing ? "320px" : "130px", template: (r: Row) => this.actions(r) },
+    };
+  }
+
+  private onRowClick(e: CustomEvent<{ id: string }>) {
+    const job = this.history.find((j) => j.id === e.detail.id);
+    if (job) this.fire("open-job", { job });
   }
 
   protected override render() {
-    const rows = this.filter === "all" ? this.history : this.history.filter((j) => j.status === this.filter);
-    return html`
+    const { rows, matching } = visibleHistory(this.history, this.filter, this.expanded);
+    const locale = this.hass?.locale?.language ?? this.hass?.language ?? "en";
+    const tz = this.hass?.config.time_zone ?? "UTC";
+    const data: Row[] = rows.map((job) => ({
+      id: job.id,
+      job,
+      when: formatWhen(new Date(job.finished_at ?? job.due), new Date(this.now), locale, tz),
+      summary: job.summary,
+      result: job.result.error ?? "",
+    }));
+    return html`<ha-card header="History">
       <div class="chips">
         ${FILTERS.map(
-          (f) => html`<button class="chip ${this.filter === f ? "on" : ""}" @click=${() => (this.filter = f)}>${f === "all" ? "All" : `${ICONS[f]} ${f}`}</button>`,
+          (f) => html`<ha-filter-chip .label=${f.label} .selected=${live(this.filter === f.value)} @click=${(e: Event) => this.selectFilter(e, f.value)}></ha-filter-chip>`,
         )}
       </div>
-      ${rows.length
-        ? html`<table>
-            <thead><tr><th></th><th>Time</th><th>Job</th><th>Result</th><th></th></tr></thead>
-            <tbody>${rows.map((j) => this.row(j))}</tbody>
-          </table>`
-        : html`<p class="empty">${this.history.length ? "No jobs match this filter." : "No history yet."}</p>`}
-    `;
+      <ha-data-table
+        .columns=${this.columns}
+        .data=${data}
+        .narrow=${this.narrow}
+        .noDataText=${this.history.length ? "No jobs match this filter." : "No history yet."}
+        clickable
+        auto-height
+        @row-click=${this.onRowClick}
+      ></ha-data-table>
+      ${!this.expanded && matching > HISTORY_LIMIT
+        ? html`<div class="footer"><ha-button appearance="plain" @click=${() => (this.expanded = true)}>Show all (${matching})</ha-button></div>`
+        : nothing}
+    </ha-card>`;
   }
 
   static override styles = css`
-    .chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .chip { font: inherit; color: var(--primary-text-color); background: none; border: 1px solid var(--divider-color); border-radius: 16px; padding: 4px 12px; cursor: pointer; }
-    .chip.on { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
-    table { width: 100%; border-collapse: collapse; background: var(--card-background-color); border-radius: 8px; }
-    th { text-align: left; padding: 8px 12px; color: var(--secondary-text-color); font-weight: 500; }
-    td { padding: 10px 12px; border-top: 1px solid var(--divider-color); }
-    tr { cursor: pointer; }
-    .nowrap { white-space: nowrap; }
-    .status { font-size: 18px; width: 24px; }
-    .status.done { color: var(--success-color, #43a047); }
-    .status.failed { color: var(--error-color, #db4437); }
-    .status.missed { color: var(--warning-color, #ffa600); }
-    .status.cancelled { color: var(--secondary-text-color); }
-    .result { color: var(--secondary-text-color); }
-    .actions { text-align: right; white-space: nowrap; }
-    .actions button { font: inherit; color: var(--primary-color); background: none; border: none; cursor: pointer; padding: 4px 8px; }
-    .empty { color: var(--secondary-text-color); text-align: center; padding: 32px; }
+    :host {
+      display: block;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 16px 12px;
+    }
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 8px;
+    }
+    .edit {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status.done {
+      color: var(--success-color);
+    }
+    .status.failed {
+      color: var(--error-color);
+    }
+    .status.missed {
+      color: var(--warning-color);
+    }
+    .status.cancelled {
+      color: var(--secondary-text-color);
+    }
   `;
 }
 
