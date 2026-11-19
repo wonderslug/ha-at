@@ -1294,7 +1294,7 @@ function it(e) {
 	return `Upcoming (${e.pending.length})`;
 }
 // src/at-panel.ts
-var at = "at", $ = class extends R {
+var at = "Scheduled Jobs", $ = class extends R {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.tab = "upcoming", this.menuOpen = !1, this.data = {
 			pending: [],
@@ -1378,6 +1378,12 @@ var at = "at", $ = class extends R {
 	toggleMenu() {
 		this.menuOpen = !this.menuOpen, this.confirmCancelAll = !1;
 	}
+	fire_toggle_menu() {
+		this.dispatchEvent(new Event("hass-toggle-menu", {
+			bubbles: !0,
+			composed: !0
+		}));
+	}
 	get title_() {
 		let e = this.panel?.config?.title;
 		return typeof e == "string" && e ? e : at;
@@ -1395,6 +1401,7 @@ var at = "at", $ = class extends R {
 	render() {
 		return k`
       <header>
+        ${this.narrow ? k`<button class="sidebar-toggle" aria-label="Open sidebar" @click=${() => this.fire_toggle_menu()}>☰</button>` : j}
         <h1>${this.title_}</h1>
         <div class="tabs" role="tablist">${this.tabButton("upcoming", it(this.data))} ${this.tabButton("history", "History")}</div>
         <button class="add" @click=${() => this.addOpen = !0}>+ Add job</button>
@@ -1439,15 +1446,27 @@ var at = "at", $ = class extends R {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 8px 16px;
-      background: var(--card-background-color);
+      box-sizing: border-box;
+      min-height: var(--header-height, 56px);
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: var(--app-header-background-color, var(--card-background-color));
+      color: var(--app-header-text-color, var(--primary-text-color));
       border-bottom: 1px solid var(--divider-color);
     }
     h1 {
       margin: 0;
-      font-size: 20px;
-      font-weight: 400;
+      font-size: var(--ha-font-size-xl, 20px);
+      font-weight: var(--ha-font-weight-normal, 400);
       flex: 1;
+    }
+    .sidebar-toggle {
+      font-size: 24px;
+      padding: 8px;
+      margin-left: -8px;
+      color: inherit;
     }
     button {
       font: inherit;

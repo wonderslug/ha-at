@@ -40,6 +40,7 @@ async def test_panel_registered_and_removed(hass: HomeAssistant) -> None:
         assert response["config"]["_panel_custom"]["name"] == "at-panel"
         assert response["config"]["_panel_custom"]["module_url"].startswith("/at_static/at-panel.js?v=")
         assert panel.sidebar_icon == "mdi:clock-start"
+        assert panel.sidebar_title == "Scheduled Jobs"
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

@@ -27,6 +27,7 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
 
     _attr_should_poll = False
     _attr_translation_key = "scheduled"
+    _attr_name = None
     _attr_supported_features = (
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
@@ -40,7 +41,7 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
         super().__init__(entry)
         self._manager: JobManager = entry.runtime_data.manager
         self._attr_unique_id = f"{entry.entry_id}_scheduled"
-        # Pin the id: the device name would otherwise yield todo.at_placeholder_scheduled.
+        # Pin the id: the device name would otherwise yield todo.scheduled_jobs.
         self.entity_id = "todo.at_scheduled"
 
     async def async_added_to_hass(self) -> None:

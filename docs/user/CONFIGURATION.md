@@ -4,7 +4,7 @@ Everything `at` offers, from options to events. For installation, see [getting s
 
 ## Options
 
-Go to **Settings** > **Devices & services** > **at (placeholder)** > **Configure**. Saving applies the changes right away, without restarting the integration or interrupting a running job.
+Go to **Settings** > **Devices & services** > **Scheduled Jobs** > **Configure**. Saving applies the changes right away, without restarting the integration or interrupting a running job.
 
 | Option                                     | Default | What it does                                                                                           |
 | ------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------ |
@@ -71,7 +71,7 @@ The model passes the user's time phrase verbatim, such as "at 6am" or "in 20 min
 
 ## The panel
 
-The **at (placeholder)** sidebar panel has two tabs:
+The **Scheduled Jobs** sidebar panel has two tabs:
 
 - **Upcoming**: pending and running jobs, with **Run now** and **Cancel** buttons and a details view.
 - **History**: finished jobs, filterable by status. The three-dot menu has **Clear history**.
@@ -200,7 +200,6 @@ The events also show in the logbook.
 - Spelled-out hours such as "at seven" are not recognized. Use digits.
 - Exchanges forwarded to another conversation agent start a new conversation.
 - Running jobs do not appear in the to-do list.
-- The display name, "at (placeholder)", is a placeholder.
 
 ## Troubleshooting
 

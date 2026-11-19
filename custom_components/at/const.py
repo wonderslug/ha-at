@@ -6,7 +6,7 @@ from logging import Logger, getLogger
 LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "at"
-DISPLAY_NAME = "at (placeholder)"
+DISPLAY_NAME = "Scheduled Jobs"
 
 CONF_GRACE_MINUTES = "grace_minutes"
 DEFAULT_GRACE_MINUTES = 5

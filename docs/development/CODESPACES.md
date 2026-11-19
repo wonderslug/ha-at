@@ -1,6 +1,6 @@
 # GitHub Codespaces Development Guide
 
-at (placeholder) is fully compatible with GitHub Codespaces for cloud-based development.
+Scheduled Jobs is fully compatible with GitHub Codespaces for cloud-based development.
 
 ## Quick Start
 

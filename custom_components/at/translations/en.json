@@ -153,11 +153,6 @@
       "pending_jobs": {
         "name": "Pending jobs"
       }
-    },
-    "todo": {
-      "scheduled": {
-        "name": "Scheduled"
-      }
     }
   }
 }

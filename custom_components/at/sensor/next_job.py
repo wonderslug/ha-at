@@ -24,7 +24,7 @@ class AtNextJobSensor(AtEntity, SensorEntity):
         super().__init__(entry)
         self._manager = entry.runtime_data.manager
         self._attr_unique_id = f"{entry.entry_id}_next_job"
-        # Pin the id: the device name would otherwise yield sensor.at_placeholder_next_job.
+        # Pin the id: the device name would otherwise yield sensor.scheduled_jobs_next_job.
         self.entity_id = "sensor.at_next_job"
 
     async def async_added_to_hass(self) -> None:

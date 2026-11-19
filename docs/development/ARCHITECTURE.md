@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the technical architecture of the at (placeholder) custom component for Home Assistant.
+This document describes the technical architecture of the Scheduled Jobs custom component for Home Assistant.
 
 ## Directory Structure
 

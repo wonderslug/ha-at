@@ -25,7 +25,7 @@ touch. See [`blueprint-tooling`](.agents/skills/blueprint-tooling/SKILL.md).
 **Identity — use these everywhere, never a variant:**
 
 - **Domain:** `at`
-- **Title:** at (placeholder)
+- **Title:** Scheduled Jobs
 - **Class prefix:** `At`
 - **Repository:** wonderslug/ha-at
 
