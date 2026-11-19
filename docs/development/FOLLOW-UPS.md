@@ -12,14 +12,14 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 7: minor (deferred): script.turn_on/automation.trigger report success even if target later fails (doc it); area-only summary "Run action"; vol.Invalid msg could name service; deleted-user jobs run as system context (comment)
 - Task 8: minor (deferred): logbook pack resolved at load; absolute import in events.py; no platform-load test
 - Task 10: minor (deferred): first-letter lowercasing mangles acronym-leading summaries; same-day/negative days -> "" qualifier
-- Task 11: minor (deferred): lowercase-first-letter duplicated in queries/scheduling; "1 jobs" singular; same-clock-time ambiguity says "6 AM and 6 AM"; tonight at 02:00 spans to next 06:00
+- Task 11: minor (deferred): lowercase-first-letter duplicated in queries/scheduling; same-clock-time ambiguity says "6 AM and 6 AM"; tonight at 02:00 spans to next 06:00
 - Task 13: minor (deferred): "set the light brightness at 20" schedules at 8 PM (ambiguous digits).
 - Task 13: minor (deferred): broadcast test patches intent.async_handle globally (brittle)
 - Task 13: minor (deferred): no cancellation regression test for hand-off
 - Task 14: minor (deferred): at.list exposes raw action bodies to non-admins; cancel/clear_history have no admin gate (spec: shared household queue, so OK)
 - Task 14: minor (deferred): hassfest never run on host (run in final gate/CI); run_now error order for non-admin
 - Task 16: minor (deferred): unique_id/EntityDescription convention & duplicated sensor boilerplate; \_unrecorded_attributes for jobs/summary; no unload test
-- Task 17: minor (deferred): todo update mutates due BEFORE admin check on raw_action complete (authorize-first ordering — FINAL REVIEW should fix); common.py None-context docstring; history->needs_action silently ignored; tests poke manager.\_jobs
+- Task 17: minor (deferred): common.py None-context docstring; history->needs_action silently ignored; tests poke manager.\_jobs
 - Task 19: minor (deferred): no CI bundle-freshness check; npm audit dev-only picomatch
 - Task 19: minor (deferred): script/build-frontend not shellcheck-verified; spell scripts now excluded from template sync (document)
 - Task 20: minor (deferred): no DOM tests for components; other users shown as "User"; row cancel has no confirm
