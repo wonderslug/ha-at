@@ -152,14 +152,15 @@ async def test_add_item_unrecognized_raises(hass: HomeAssistant, manager: JobMan
     assert manager.pending() == []
 
 
-async def test_delete_pending_cancels(hass: HomeAssistant, manager: JobManager) -> None:
+async def test_delete_pending_cancels(hass: HomeAssistant, manager: JobManager, hass_admin_user: User) -> None:
     """Removing a pending item cancels the job; removing a history item deletes it."""
     now = datetime.now(UTC)
     job = await manager.async_add(make_job(now + timedelta(hours=1)))
     old = make_job(now - timedelta(hours=1), status=JobStatus.DONE)
     manager._jobs[old.id] = old  # noqa: SLF001
-    await todo_call(hass, "remove_item", {"item": job.id})
+    await todo_call(hass, "remove_item", {"item": job.id}, user=hass_admin_user)
     assert manager.get(job.id).status is JobStatus.CANCELLED
+    assert manager.get(job.id).result.cancelled_user_id == hass_admin_user.id
     await todo_call(hass, "remove_item", {"item": old.id})
     assert old.id not in {j.id for j in manager.history()}
 

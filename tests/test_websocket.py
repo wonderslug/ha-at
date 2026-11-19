@@ -259,12 +259,15 @@ async def test_schedule_invalid_combination(hass: HomeAssistant, manager: JobMan
     assert response["error"]["code"] == "invalid"
 
 
-async def test_cancel_any_users_job(hass: HomeAssistant, manager: JobManager, user_client: Client) -> None:
-    """A job created by someone else can be cancelled by a non-admin."""
+async def test_cancel_any_users_job(
+    hass: HomeAssistant, manager: JobManager, user_client: Client, hass_read_only_user: User
+) -> None:
+    """A job created by someone else can be cancelled by a non-admin, who is recorded."""
     job = await manager.async_add(make_job(DUE))
     response = await send(user_client, "cancel", job_ids=[job.id])
     assert response["success"]
     assert response["result"] == {"cancelled": [job.id]}
+    assert manager.get(job.id).result.cancelled_user_id == hass_read_only_user.id
 
 
 async def test_cancel_errors(hass: HomeAssistant, manager: JobManager, admin_client: Client) -> None:

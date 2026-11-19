@@ -253,7 +253,7 @@ var g = class extends HTMLElement {
 };
 g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[p("elementProperties")] = /* @__PURE__ */ new Map(), g[p("finalized")] = /* @__PURE__ */ new Map(), le?.({ ReactiveElement: g }), (f.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
-var _ = globalThis, de = (e) => e, v = _.trustedTypes, fe = v ? v.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, pe = "$lit$", y = `lit$${Math.random().toFixed(9).slice(2)}$`, b = "?" + y, me = `<${b}>`, x = document, S = () => x.createComment(""), C = (e) => e === null || typeof e != "object" && typeof e != "function", w = Array.isArray, he = (e) => w(e) || typeof e?.[Symbol.iterator] == "function", T = "[ 	\n\f\r]", E = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ge = /-->/g, _e = />/g, D = RegExp(`>|${T}(?:([^\\s"'>=/]+)(${T}*=${T}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ve = /'/g, ye = /"/g, be = /^(?:script|style|textarea|title)$/i, O = ((e) => (t, ...n) => ({
+var _ = globalThis, de = (e) => e, v = _.trustedTypes, fe = v ? v.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, y = "$lit$", b = `lit$${Math.random().toFixed(9).slice(2)}$`, pe = "?" + b, me = `<${pe}>`, x = document, S = () => x.createComment(""), C = (e) => e === null || typeof e != "object" && typeof e != "function", w = Array.isArray, he = (e) => w(e) || typeof e?.[Symbol.iterator] == "function", T = "[ 	\n\f\r]", E = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ge = /-->/g, _e = />/g, D = RegExp(`>|${T}(?:([^\\s"'>=/]+)(${T}*=${T}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), ve = /'/g, ye = /"/g, be = /^(?:script|style|textarea|title)$/i, O = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
@@ -268,7 +268,7 @@ var Ce = (e, t) => {
 		let n = e[t], s, c, l = -1, u = 0;
 		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === E ? c[1] === "!--" ? o = ge : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = D) : (be.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = D) : o = _e : o === D ? c[0] === ">" ? (o = i ?? E, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? D : c[3] === "\"" ? ye : ve) : o === ye || o === ve ? o = D : o === ge || o === _e ? o = E : (o = D, i = void 0);
 		let d = o === D && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === E ? n + me : l >= 0 ? (r.push(s), n.slice(0, l) + pe + n.slice(l) + y + d) : n + y + (l === -2 ? t : d);
+		a += o === E ? n + me : l >= 0 ? (r.push(s), n.slice(0, l) + y + n.slice(l) + b + d) : n + b + (l === -2 ? t : d);
 	}
 	return [Se(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, M = class e {
@@ -282,8 +282,8 @@ var Ce = (e, t) => {
 		}
 		for (; (i = j.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(pe)) {
-					let t = u[o++], n = i.getAttribute(e).split(y), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(y)) {
+					let t = u[o++], n = i.getAttribute(e).split(b), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
@@ -291,12 +291,12 @@ var Ce = (e, t) => {
 						strings: n,
 						ctor: r[1] === "." ? Te : r[1] === "?" ? Ee : r[1] === "@" ? De : F
 					}), i.removeAttribute(e);
-				} else e.startsWith(y) && (c.push({
+				} else e.startsWith(b) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
 				if (be.test(i.tagName)) {
-					let e = i.textContent.split(y), t = e.length - 1;
+					let e = i.textContent.split(b), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = v ? v.emptyScript : "";
 						for (let n = 0; n < t; n++) i.append(e[n], S()), j.nextNode(), c.push({
@@ -307,16 +307,16 @@ var Ce = (e, t) => {
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === b) c.push({
+				if (i.data === pe) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(y, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(b, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += y.length - 1;
+					}), e += b.length - 1;
 				}
 			}
 			a++;
@@ -474,9 +474,9 @@ var we = class {
 		N(this, e);
 	}
 }, ke = {
-	M: pe,
-	P: y,
-	A: b,
+	M: y,
+	P: b,
+	A: pe,
 	C: 1,
 	L: Ce,
 	R: we,
@@ -1120,26 +1120,82 @@ var q = {
 		} else if (e.type === q.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
 		return it(e), t;
 	}
-}), ot = (e, t) => Date.parse(e.due) - Date.parse(t.due), st = (e) => Date.parse(e.finished_at ?? e.due), ct = (e, t) => st(t) - st(e);
-function lt(e) {
-	return {
-		pending: [...e.pending].sort(ot),
-		running: [...e.running].sort(ot),
-		history: [...e.history].sort(ct)
-	};
+});
+// src/source.ts
+function ot(e, t) {
+	let { via: n, device_id: r, user_id: i } = e.source;
+	if (n === "voice" || n === "llm") {
+		let e = r ? t?.devices?.[r] : void 0;
+		return `🎙 ${e?.name_by_user ?? e?.name ?? "Voice"}`;
+	}
+	return n === "panel" || n === "todo" ? `🖱 ${i && t?.user?.id === i ? t.user.name : "User"}` : "⚙ Automation";
+}
+var st = {
+	panel: "from the panel",
+	voice: "with voice",
+	llm: "with voice",
+	todo: "from the to-do list",
+	service: "by an action"
+};
+function ct(e, t) {
+	let n = Object.entries(t?.states ?? {}).find(([t, n]) => t.startsWith("person.") && n.attributes.user_id === e);
+	return n ? n[1].attributes.friendly_name ?? n[0] : t?.user?.id === e ? t.user.name : void 0;
+}
+function lt(e, t) {
+	let n = e.cancelled_origin, r = n ? `by ${n.split(".")[0]} ${t?.states?.[n]?.attributes.friendly_name ?? n}` : st[e.cancelled_by ?? ""], i = e.cancelled_user_id ? ct(e.cancelled_user_id, t) : void 0;
+	return [
+		"Cancelled",
+		r,
+		i && `by ${i}`
+	].filter(Boolean).join(" ");
 }
 function ut(e, t) {
+	switch (e.status) {
+		case "failed": return e.result.error ?? "";
+		case "missed": return "Home Assistant was off when it was due";
+		case "cancelled": return lt(e.result, t);
+		default: return "";
+	}
+}
+function J(e) {
+	return typeof e == "string" && /^[\w./:-]+$/.test(e) ? e : JSON.stringify(e);
+}
+function Y(e, t = 0) {
+	let n = "  ".repeat(t);
+	if (Array.isArray(e)) return e.length === 0 ? `${n}[]` : e.map((e) => {
+		if (typeof e == "object" && e) {
+			let r = Y(e, t + 1).replace(/^\s+/, "");
+			return `${n}- ${r}`;
+		}
+		return `${n}- ${J(e)}`;
+	}).join("\n");
+	if (typeof e == "object" && e) {
+		let r = Object.entries(e);
+		return r.length === 0 ? `${n}{}` : r.map(([e, r]) => typeof r == "object" && r && (Array.isArray(r) ? r.length : Object.keys(r).length) ? `${n}${e}:\n${Y(r, t + 1)}` : `${n}${e}: ${typeof r == "object" && r ? Y(r) : J(r)}`).join("\n");
+	}
+	return `${n}${J(e)}`;
+}
+// src/state.ts
+var dt = (e, t) => Date.parse(e.due) - Date.parse(t.due), ft = (e) => Date.parse(e.finished_at ?? e.due), pt = (e, t) => ft(t) - ft(e);
+function mt(e) {
+	return {
+		pending: [...e.pending].sort(dt),
+		running: [...e.running].sort(dt),
+		history: [...e.history].sort(pt)
+	};
+}
+function ht(e, t) {
 	let { job: n } = t, r = (e) => e.filter((e) => e.id !== n.id), i = {
 		pending: r(e.pending),
 		running: r(e.running),
 		history: r(e.history)
 	};
-	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), lt(i);
+	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), mt(i);
 }
-function dt(e) {
+function gt(e) {
 	return `Upcoming (${e.pending.length})`;
 }
-function ft(e, t, n, r = 15) {
+function _t(e, t, n, r = 15) {
 	let i = t === "all" ? e : e.filter((e) => e.status === t);
 	return {
 		rows: n ? i : i.slice(0, r),
@@ -1147,12 +1203,12 @@ function ft(e, t, n, r = 15) {
 	};
 }
 // src/components/history-table.ts
-var pt = {
+var vt = {
 	done: n,
 	failed: e,
 	missed: r,
 	cancelled: t
-}, mt = [
+}, yt = [
 	{
 		value: "all",
 		label: "All"
@@ -1173,7 +1229,7 @@ var pt = {
 		value: "cancelled",
 		label: "Cancelled"
 	}
-], J = class extends L {
+], X = class extends L {
 	constructor(...e) {
 		super(...e), this.history = [], this.now = Date.now(), this.narrow = !1, this.filter = "all", this.expanded = !1, this.editing = null, this.value = "";
 	}
@@ -1212,7 +1268,7 @@ var pt = {
 				title: "",
 				type: "icon",
 				showNarrow: !0,
-				template: (e) => O`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${pt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
+				template: (e) => O`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${vt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
 			},
 			when: {
 				title: "Time",
@@ -1223,7 +1279,10 @@ var pt = {
 				main: !0,
 				flex: 2
 			},
-			result: { title: "Result" },
+			details: {
+				title: "Details",
+				flex: 2
+			},
 			actions: {
 				title: "",
 				showNarrow: !0,
@@ -1237,16 +1296,16 @@ var pt = {
 		t && this.fire("open-job", { job: t });
 	}
 	render() {
-		let { rows: e, matching: t } = ft(this.history, this.filter, this.expanded), n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = this.hass?.config.time_zone ?? "UTC", i = e.map((e) => ({
+		let { rows: e, matching: t } = _t(this.history, this.filter, this.expanded), n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = this.hass?.config.time_zone ?? "UTC", i = e.map((e) => ({
 			id: e.id,
 			job: e,
 			when: U(new Date(e.finished_at ?? e.due), new Date(this.now), n, r),
 			summary: e.summary,
-			result: e.result.error ?? ""
+			details: ut(e, this.hass)
 		}));
 		return O`<ha-card header="History">
       <div class="chips">
-        ${mt.map((e) => O`<ha-filter-chip .label=${e.label} .selected=${at(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
+        ${yt.map((e) => O`<ha-filter-chip .label=${e.label} .selected=${at(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
       </div>
       <ha-data-table
         .columns=${this.columns}
@@ -1296,34 +1355,7 @@ var pt = {
   `;
 	}
 };
-G([z({ attribute: !1 })], J.prototype, "hass", void 0), G([z({ attribute: !1 })], J.prototype, "history", void 0), G([z({ type: Number })], J.prototype, "now", void 0), G([z({ type: Boolean })], J.prototype, "narrow", void 0), G([B()], J.prototype, "filter", void 0), G([B()], J.prototype, "expanded", void 0), G([B()], J.prototype, "editing", void 0), G([B()], J.prototype, "value", void 0), J = G([R("at-history-table")], J);
-// src/source.ts
-function ht(e, t) {
-	let { via: n, device_id: r, user_id: i } = e.source;
-	if (n === "voice" || n === "llm") {
-		let e = r ? t?.devices?.[r] : void 0;
-		return `🎙 ${e?.name_by_user ?? e?.name ?? "Voice"}`;
-	}
-	return n === "panel" || n === "todo" ? `🖱 ${i && t?.user?.id === i ? t.user.name : "User"}` : "⚙ Automation";
-}
-function Y(e) {
-	return typeof e == "string" && /^[\w./:-]+$/.test(e) ? e : JSON.stringify(e);
-}
-function X(e, t = 0) {
-	let n = "  ".repeat(t);
-	if (Array.isArray(e)) return e.length === 0 ? `${n}[]` : e.map((e) => {
-		if (typeof e == "object" && e) {
-			let r = X(e, t + 1).replace(/^\s+/, "");
-			return `${n}- ${r}`;
-		}
-		return `${n}- ${Y(e)}`;
-	}).join("\n");
-	if (typeof e == "object" && e) {
-		let r = Object.entries(e);
-		return r.length === 0 ? `${n}{}` : r.map(([e, r]) => typeof r == "object" && r && (Array.isArray(r) ? r.length : Object.keys(r).length) ? `${n}${e}:\n${X(r, t + 1)}` : `${n}${e}: ${typeof r == "object" && r ? X(r) : Y(r)}`).join("\n");
-	}
-	return `${n}${Y(e)}`;
-}
+G([z({ attribute: !1 })], X.prototype, "hass", void 0), G([z({ attribute: !1 })], X.prototype, "history", void 0), G([z({ type: Number })], X.prototype, "now", void 0), G([z({ type: Boolean })], X.prototype, "narrow", void 0), G([B()], X.prototype, "filter", void 0), G([B()], X.prototype, "expanded", void 0), G([B()], X.prototype, "editing", void 0), G([B()], X.prototype, "value", void 0), X = G([R("at-history-table")], X);
 // src/components/job-details.ts
 var Z = class extends L {
 	close() {
@@ -1339,7 +1371,7 @@ var Z = class extends L {
 			timeZone: t,
 			dateStyle: "medium",
 			timeStyle: "medium"
-		}).format(new Date(e.created_at)), i = e.intent ? `${e.intent.type}\n${X(e.intent.slots)}` : X(e.action ?? []);
+		}).format(new Date(e.created_at)), i = e.intent ? `${e.intent.type}\n${Y(e.intent.slots)}` : Y(e.action ?? []);
 		return O`<div class="backdrop" @click=${() => this.close()}>
       <div class="card" role="dialog" aria-label="Job details" @click=${(e) => e.stopPropagation()}>
         <h2>${e.summary}</h2>
@@ -1347,7 +1379,7 @@ var Z = class extends L {
           <dt>${e.intent ? "Intent" : "Action"}</dt>
           <dd><pre>${i}</pre></dd>
           <dt>Created by</dt>
-          <dd>${ht(e, this.hass)}</dd>
+          <dd>${ot(e, this.hass)}</dd>
           <dt>Created</dt>
           <dd>${r}</dd>
           <dt>ID</dt>
@@ -1423,9 +1455,9 @@ var Q = class extends L {
 			running: t,
 			when: t ? "Running…" : this.when(e),
 			summary: e.summary,
-			source: ht(e, this.hass)
+			source: ot(e, this.hass)
 		}), t = [...this.running.map((t) => e(t, !0)), ...this.pending.map((t) => e(t, !1))];
-		return O`<ha-card .header=${dt({
+		return O`<ha-card .header=${gt({
 			pending: this.pending,
 			running: this.running,
 			history: []
@@ -1451,7 +1483,7 @@ var Q = class extends L {
 };
 G([z({ attribute: !1 })], Q.prototype, "hass", void 0), G([z({ attribute: !1 })], Q.prototype, "pending", void 0), G([z({ attribute: !1 })], Q.prototype, "running", void 0), G([z({ type: Number })], Q.prototype, "now", void 0), G([z({ type: Boolean })], Q.prototype, "isAdmin", void 0), G([z({ type: Boolean })], Q.prototype, "narrow", void 0), Q = G([R("at-upcoming-table")], Q);
 // src/ha-elements.ts
-var gt = [
+var bt = [
 	"hass-subpage",
 	"ha-card",
 	"ha-data-table",
@@ -1462,18 +1494,18 @@ var gt = [
 	"ha-svg-icon",
 	"ha-filter-chip"
 ];
-async function _t(e, t, n) {
+async function xt(e, t, n) {
 	let r, i = new Promise((e) => r = setTimeout(e, n));
 	return await Promise.race([Promise.all(t.map((t) => e.whenDefined(t).catch(() => void 0))), i]), clearTimeout(r), t.filter((t) => !e.get(t));
 }
-async function vt() {
+async function St() {
 	let e = document.createElement("partial-panel-resolver"), t = { config: {
 		component_name: "config",
 		url_path: "config"
 	} };
 	e.hass = { panels: t }, await e._getRoutes(t).routes.config.load(), await customElements.whenDefined("ha-panel-config"), await document.createElement("ha-panel-config").routerOptions.routes.automation.load();
 }
-async function yt(e, t, n, r) {
+async function Ct(e, t, n, r) {
 	let i = Date.now() + r;
 	if (n.some((t) => !e.get(t))) {
 		let e, n = new Promise((t) => e = setTimeout(t, r)), i = t().catch((e) => {
@@ -1481,20 +1513,20 @@ async function yt(e, t, n, r) {
 		});
 		await Promise.race([i, n]), clearTimeout(e);
 	}
-	let a = await _t(e, n, Math.max(0, i - Date.now()));
+	let a = await xt(e, n, Math.max(0, i - Date.now()));
 	return a.length && console.warn("Scheduled Jobs: Home Assistant elements missing:", a.join(", ")), a;
 }
-var bt;
-function xt(e = 1e4) {
-	return bt ??= yt(customElements, vt, gt, e), bt;
+var wt;
+function Tt(e = 1e4) {
+	return wt ??= Ct(customElements, St, bt, e), wt;
 }
 // src/reconnect.ts
-var St = 1e3, Ct = 3e4;
-function wt(e) {
-	return Math.min(St * 2 ** Math.min(e, 10), Ct);
+var Et = 1e3, Dt = 3e4;
+function Ot(e) {
+	return Math.min(Et * 2 ** Math.min(e, 10), Dt);
 }
 // src/at-panel.ts
-var Tt = "Scheduled Jobs", $ = class extends L {
+var kt = "Scheduled Jobs", $ = class extends L {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.data = {
 			pending: [],
@@ -1521,7 +1553,7 @@ var Tt = "Scheduled Jobs", $ = class extends L {
 		e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
 	}
 	async start() {
-		this.hass && !this.subscribed && (this.subscribed = !0, He(this.hass).then((e) => this.atInfo = e, () => void 0), xt().then((e) => this.missing = e), await this.subscribe());
+		this.hass && !this.subscribed && (this.subscribed = !0, He(this.hass).then((e) => this.atInfo = e, () => void 0), Tt().then((e) => this.missing = e), await this.subscribe());
 	}
 	async subscribe() {
 		if (!this.hass || this.gone) return;
@@ -1540,8 +1572,8 @@ var Tt = "Scheduled Jobs", $ = class extends L {
 		}
 	}
 	onEvent(e) {
-		if ("snapshot" in e) this.data = lt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
-		else if ("change" in e) this.data = ut(this.data, e.change);
+		if ("snapshot" in e) this.data = mt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
+		else if ("change" in e) this.data = ht(this.data, e.change);
 		else if ("stopped" in e) {
 			let e = this.unsub;
 			this.unsub = void 0, e?.().catch(() => void 0), this.scheduleRetry();
@@ -1549,7 +1581,7 @@ var Tt = "Scheduled Jobs", $ = class extends L {
 	}
 	scheduleRetry() {
 		if (this.reconnecting = !0, this.gone) return;
-		let e = wt(this.attempt++);
+		let e = Ot(this.attempt++);
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	async call(e) {
@@ -1581,7 +1613,7 @@ var Tt = "Scheduled Jobs", $ = class extends L {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : Tt;
+		return typeof e == "string" && e ? e : kt;
 	}
 	render() {
 		if (this.missing === void 0) return A;

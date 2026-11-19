@@ -28,7 +28,7 @@ async def async_handle_cancel(hass: HomeAssistant, call: ServiceCall) -> Service
     for job_id in ids:
         async_get_job(manager, job_id, pending=True)
     try:
-        cancelled = await manager.async_cancel_many(ids, str(Via.SERVICE))
+        cancelled = await manager.async_cancel_many(ids, str(Via.SERVICE), call.context)
     except JobStateError as err:
         raise job_not_pending(", ".join(ids)) from err
     return {"cancelled": [job.id for job in cancelled]}

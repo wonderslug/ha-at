@@ -207,7 +207,7 @@ async def test_list_response(hass: HomeAssistant, manager: JobManager) -> None:
     assert [j["id"] for j in response["pending"]] == [soon.id]
 
 
-async def test_cancel_by_id_and_all(hass: HomeAssistant, manager: JobManager) -> None:
+async def test_cancel_by_id_and_all(hass: HomeAssistant, manager: JobManager, hass_admin_user: User) -> None:
     """Cancel by one id or a list, then `all` takes service-created jobs too."""
     now = datetime(2026, 11, 18, 4, 22, tzinfo=UTC)
     one = await manager.async_add(make_job(now + timedelta(hours=1)))
@@ -215,7 +215,8 @@ async def test_cancel_by_id_and_all(hass: HomeAssistant, manager: JobManager) ->
     three = await manager.async_add(make_job(now + timedelta(hours=3), via=Via.SERVICE))
     four = await manager.async_add(make_job(now + timedelta(hours=4)))
 
-    assert await call(hass, "cancel", {"job_id": one.id}) == {"cancelled": [one.id]}
+    assert await call(hass, "cancel", {"job_id": one.id}, user=hass_admin_user) == {"cancelled": [one.id]}
+    assert manager.get(one.id).result.cancelled_user_id == hass_admin_user.id
     assert await call(hass, "cancel", {"job_id": [two.id]}) == {"cancelled": [two.id]}
     response = await call(hass, "cancel", {"all": True})
     assert sorted(response["cancelled"]) == sorted([three.id, four.id])

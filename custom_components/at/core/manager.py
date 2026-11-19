@@ -16,10 +16,11 @@ from custom_components.at.const import (
     LOGGER,
     SWEEP_INTERVAL,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Context, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_point_in_utc_time, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
+from .context import origin_entity_id
 from .errors import JobExecutionError, JobNotFound, JobStateError
 from .events import fire_job_event
 from .models import Job, JobStatus, Result, Source, new_job_id
@@ -187,19 +188,19 @@ class JobManager:
         await self._async_announce(job, "added", _undo)
         return job
 
-    async def async_cancel(self, job_id: str, by: str) -> Job:
-        """Cancel a pending job."""
-        job = self._require_pending(job_id)
-        self._cancel(job, by)
-        await self._async_after_finish([job])
-        return job
+    async def async_cancel(self, job_id: str, by: str, context: Context | None = None) -> Job:
+        """Cancel a pending job; ``context`` is the cancelling call's, recorded as who and where."""
+        return (await self.async_cancel_many([job_id], by, context))[0]
 
-    async def async_cancel_many(self, job_ids: list[str], by: str) -> list[Job]:
+    async def async_cancel_many(self, job_ids: list[str], by: str, context: Context | None = None) -> list[Job]:
         """Cancel several pending jobs; nothing changes if any of them is not pending."""
         jobs = [self._require_pending(job_id) for job_id in dict.fromkeys(job_ids)]
+        origin = origin_entity_id(self._hass, context)
         for job in jobs:
             self._cancel(job, by)
-        await self._async_after_finish(jobs)
+            job.result.cancelled_user_id = context.user_id if context else None
+            job.result.cancelled_origin = origin
+        await self._async_after_finish(jobs, context)
         return jobs
 
     async def async_set_due(self, job_id: str, due: datetime) -> Job:
@@ -375,11 +376,11 @@ class JobManager:
             self._in_flight.discard(job.id)
         await self._async_after_finish([job])
 
-    async def _async_after_finish(self, jobs: list[Job]) -> None:
+    async def _async_after_finish(self, jobs: list[Job], context: Context | None = None) -> None:
         self._prune()
         await self._async_save()
         for job in jobs:
-            fire_job_event(self._hass, _FINISH_EVENTS[job.status], job)
+            fire_job_event(self._hass, _FINISH_EVENTS[job.status], job, context)
             if job.id in self._jobs:
                 self._notify("updated", job)
 

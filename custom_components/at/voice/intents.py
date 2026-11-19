@@ -212,7 +212,7 @@ class AtCancelHandler(_AtHandler):
 
         if _slot(intent_obj, "all") is True:
             matches = match_for_cancel(pending, CancelQuery(all=True), now, tz)
-            await manager.async_cancel_many([j.id for j in matches], by)
+            await manager.async_cancel_many([j.id for j in matches], by, intent_obj.context)
             left_alone = sum(1 for j in pending if j.source.via == Via.SERVICE)
             return _speak(intent_obj, cancel_all_speech(pack, len(matches), left_alone))
 
@@ -228,7 +228,7 @@ class AtCancelHandler(_AtHandler):
         if len(matches) > 1:
             return _speak(intent_obj, ambiguous_speech(pack, matches, query.name, now, tz))
         job: Job = matches[0]
-        await manager.async_cancel(job.id, by)
+        await manager.async_cancel(job.id, by, intent_obj.context)
         return _speak(intent_obj, cancel_one_speech(pack, job, now, tz))
 
 

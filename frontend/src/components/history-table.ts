@@ -3,6 +3,7 @@ import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
+import { historyDetail } from "../source";
 import { HISTORY_LIMIT, visibleHistory } from "../state";
 import type { DataTableColumns, HomeAssistant, Job, JobStatus } from "../types";
 
@@ -20,7 +21,7 @@ interface Row {
   job: Job;
   when: string;
   summary: string;
-  result: string;
+  details: string;
 }
 
 @customElement("at-history-table")
@@ -82,7 +83,7 @@ export class HistoryTable extends LitElement {
       },
       when: { title: "Time", minWidth: "120px" },
       summary: { title: "Job", main: true, flex: 2 },
-      result: { title: "Result" },
+      details: { title: "Details", flex: 2 },
       actions: { title: "", showNarrow: true, minWidth: this.editing ? "320px" : "130px", template: (r: Row) => this.actions(r) },
     };
   }
@@ -101,7 +102,7 @@ export class HistoryTable extends LitElement {
       job,
       when: formatWhen(new Date(job.finished_at ?? job.due), new Date(this.now), locale, tz),
       summary: job.summary,
-      result: job.result.error ?? "",
+      details: historyDetail(job, this.hass),
     }));
     return html`<ha-card header="History">
       <div class="chips">
