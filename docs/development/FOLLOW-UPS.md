@@ -5,7 +5,6 @@ These are known minor issues that were reviewed and deferred while building v1. 
 ## Deferred minors
 
 - Task 1: minor (deferred): blueprint_update tests fail on macOS git grep; shellcheck/shfmt absent on host (commits used SKIP)
-- Task 2: minor (deferred): redundant explicit single-instance guard in config_flow.py:36-37 (manifest already enforces)
 - Task 4: minor (deferred): en.py "forty five" dead entry; split regex recompiled per call; is_midnight special-case; responses: Any=None
 - Task 5: minor (deferred): no migrate-func test; prune drops history with finished_at=None (comment it); one corrupt record fails whole load
 - Task 6: minor (deferred): #5 stop during after-finish save can misreport DONE as interrupted; #7 grace-run wording
