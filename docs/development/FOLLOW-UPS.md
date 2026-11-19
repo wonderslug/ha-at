@@ -20,7 +20,6 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 14: minor (deferred): hassfest never run on host (run in final gate/CI); run_now error order for non-admin
 - Task 16: minor (deferred): unique_id/EntityDescription convention & duplicated sensor boilerplate; \_unrecorded_attributes for jobs/summary; no unload test
 - Task 17: minor (deferred): todo update mutates due BEFORE admin check on raw_action complete (authorize-first ordering — FINAL REVIEW should fix); common.py None-context docstring; history->needs_action silently ignored; tests poke manager.\_jobs
-- Task 18: minor (deferred): on_stop callback exceptions not guarded in async_stop
 - Task 19: minor (deferred): no CI bundle-freshness check; npm audit dev-only picomatch
 - Task 19: minor (deferred): script/build-frontend not shellcheck-verified; spell scripts now excluded from template sync (document)
 - Task 20: minor (deferred): no DOM tests for components; other users shown as "User"; row cancel has no confirm
