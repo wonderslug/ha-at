@@ -2,6 +2,17 @@
 
 These are known minor issues that were reviewed and deferred while building v1. Each was triaged as safe to ship; fix them when convenient.
 
+## Done
+
+- AtCancel with a relative time ("the job in 20 minutes") raised `TimeParseError`; it now matches a job near now plus the offset (#4)
+- Saving options reloaded the entry and interrupted running jobs; options now apply in place, and `defer_relative_to_ha` no longer needs a reload (#5)
+- Task 2: redundant single-instance guard in the config flow removed (#6)
+- Task 18: `on_stop` callback exceptions are now guarded in `async_stop` (#7)
+- CUSTOMIZATION.md named this repository, not `jpawlowski/ha-integration-blueprint`, as the upstream (#8)
+- Task 23: unused BuyMeCoffee/Discord badge comment removed from the README (#9)
+- Task 11 "1 jobs" singular and Task 17 authorize-first ordering were already fixed and covered by tests (#10)
+- Task 14: hassfest runs in the dev container and in CI, and passes
+
 ## Deferred minors
 
 - Task 1: minor (deferred): blueprint_update tests fail on macOS git grep; shellcheck/shfmt absent on host (commits used SKIP)
@@ -17,7 +28,7 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 13: minor (deferred): broadcast test patches intent.async_handle globally (brittle)
 - Task 13: minor (deferred): no cancellation regression test for hand-off
 - Task 14: minor (deferred): at.list exposes raw action bodies to non-admins; cancel/clear_history have no admin gate (spec: shared household queue, so OK)
-- Task 14: minor (deferred): hassfest never run on host (run in final gate/CI); run_now error order for non-admin
+- Task 14: minor (deferred): run_now error order for non-admin
 - Task 16: minor (deferred): unique_id/EntityDescription convention & duplicated sensor boilerplate; \_unrecorded_attributes for jobs/summary; no unload test
 - Task 17: minor (deferred): common.py None-context docstring; history->needs_action silently ignored; tests poke manager.\_jobs
 - Task 19: minor (deferred): no CI bundle-freshness check; npm audit dev-only picomatch
