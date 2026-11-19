@@ -72,6 +72,8 @@ class Result:
 
     error: str | None = None
     cancelled_by: str | None = None
+    cancelled_user_id: str | None = None
+    cancelled_origin: str | None = None
 
 
 def _dt(value: datetime | None) -> str | None:
@@ -141,6 +143,8 @@ class Job:
             "result": {
                 "error": self.result.error,
                 "cancelled_by": self.result.cancelled_by,
+                "cancelled_user_id": self.result.cancelled_user_id,
+                "cancelled_origin": self.result.cancelled_origin,
             },
         }
 
@@ -188,7 +192,12 @@ class Job:
                 device_id=source.get("device_id"),
                 agent_id=source.get("agent_id"),
             ),
-            result=Result(error=result.get("error"), cancelled_by=result.get("cancelled_by")),
+            result=Result(
+                error=result.get("error"),
+                cancelled_by=result.get("cancelled_by"),
+                cancelled_user_id=result.get("cancelled_user_id"),
+                cancelled_origin=result.get("cancelled_origin"),
+            ),
         )
 
 

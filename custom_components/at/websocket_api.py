@@ -252,7 +252,7 @@ async def ws_cancel(
             _not_pending(connection, msg, job_id)
             return
     try:
-        cancelled = await manager.async_cancel_many(job_ids, str(Via.PANEL))
+        cancelled = await manager.async_cancel_many(job_ids, str(Via.PANEL), connection.context(msg))
     except JobStateError:
         _not_pending(connection, msg, ", ".join(job_ids))
         return

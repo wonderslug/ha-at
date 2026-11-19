@@ -16,7 +16,7 @@ from custom_components.at.core.errors import JobExecutionError, JobStateError
 from custom_components.at.core.manager import JobChange, JobManager, ManagerOptions
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
 from custom_components.at.core.store import JobStore
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.util import dt as dt_util
 
 PAYLOAD_KEYS = {"job_id", "summary", "due", "status", "via"}
@@ -139,6 +139,26 @@ async def test_executor_error_marks_failed(
     assert len(failed) == 1
     assert set(failed[0].data) == PAYLOAD_KEYS | {"error"}
     assert failed[0].data["error"] == "boom"
+
+
+async def test_cancel_records_who_and_where(hass: HomeAssistant, make_manager: MakeManager) -> None:
+    cancelled = async_capture_events(hass, "at_job_cancelled")
+    manager = await make_manager()
+    first = await manager.async_add(_job())
+    second = await manager.async_add(_job())
+    run = Context(user_id="user-7")
+    hass.states.async_set("automation.bedtime", "on", context=run)
+
+    await manager.async_cancel(first.id, by="service", context=run)
+    [other] = await manager.async_cancel_many([second.id], by="panel", context=Context(user_id="user-8"))
+
+    assert first.result.cancelled_user_id == "user-7"
+    assert first.result.cancelled_origin == "automation.bedtime"
+    assert other.result.cancelled_user_id == "user-8"
+    assert other.result.cancelled_origin is None
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert cancelled[0].context.id == run.id
+    assert cancelled[1].context.user_id == "user-8"
 
 
 async def test_cancel_pending(

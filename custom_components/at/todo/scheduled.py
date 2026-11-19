@@ -140,7 +140,7 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
         finished = [job.id for job in jobs if job.status is not JobStatus.PENDING]
         try:
             if pending:
-                await self._manager.async_cancel_many(pending, str(Via.TODO))
+                await self._manager.async_cancel_many(pending, str(Via.TODO), self._context)
             if finished:
                 await self._manager.async_delete_history(finished)
         except JobStateError as err:

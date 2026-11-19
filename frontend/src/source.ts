@@ -14,6 +14,44 @@ export function sourceLabel(job: Job, hass: HomeAssistant | undefined): string {
   return "⚙ Automation";
 }
 
+const CANCEL_WHERE: Record<string, string> = {
+  panel: "from the panel",
+  voice: "with voice",
+  llm: "with voice",
+  todo: "from the to-do list",
+  service: "by an action",
+};
+
+/** A user's name as Activity shows it: their person's name, else the signed-in user's own name. */
+function userName(userId: string, hass: HomeAssistant | undefined): string | undefined {
+  const person = Object.entries(hass?.states ?? {}).find(([id, s]) => id.startsWith("person.") && s.attributes.user_id === userId);
+  if (person) return person[1].attributes.friendly_name ?? person[0];
+  return hass?.user?.id === userId ? hass.user.name : undefined;
+}
+
+function cancelDetail(result: Job["result"], hass: HomeAssistant | undefined): string {
+  const origin = result.cancelled_origin;
+  const where = origin
+    ? `by ${origin.split(".")[0]} ${hass?.states?.[origin]?.attributes.friendly_name ?? origin}`
+    : CANCEL_WHERE[result.cancelled_by ?? ""];
+  const who = result.cancelled_user_id ? userName(result.cancelled_user_id, hass) : undefined;
+  return ["Cancelled", where, who && `by ${who}`].filter(Boolean).join(" ");
+}
+
+/** The History "Details" text: why a job failed, was missed, or who cancelled it and from where. */
+export function historyDetail(job: Job, hass: HomeAssistant | undefined): string {
+  switch (job.status) {
+    case "failed":
+      return job.result.error ?? "";
+    case "missed":
+      return "Home Assistant was off when it was due";
+    case "cancelled":
+      return cancelDetail(job.result, hass);
+    default:
+      return "";
+  }
+}
+
 function scalar(v: unknown): string {
   return typeof v === "string" && /^[\w./:-]+$/.test(v) ? v : JSON.stringify(v);
 }
