@@ -7,10 +7,11 @@ from homeassistant.components.http.server import StaticPathConfig
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
-from .const import CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY, DISPLAY_NAME, DOMAIN
+from .const import CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY, DOMAIN
 from .data import AtConfigEntry
 
 PANEL_URL_PATH = "at"
+PANEL_TITLE = "Scheduled Jobs"
 STATIC_URL = "/at_static"
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 _STATIC_REGISTERED = f"{DOMAIN}_static_registered"
@@ -30,7 +31,7 @@ async def async_register_panel(hass: HomeAssistant, entry: AtConfigEntry) -> Non
         frontend_url_path=PANEL_URL_PATH,
         webcomponent_name="at-panel",
         module_url=f"{STATIC_URL}/at-panel.js?v={version}",
-        sidebar_title=DISPLAY_NAME,
+        sidebar_title=PANEL_TITLE,
         sidebar_icon="mdi:clock-start",
         require_admin=entry.options.get(CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY),
     )

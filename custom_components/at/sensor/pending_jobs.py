@@ -22,7 +22,7 @@ class AtPendingJobsSensor(AtEntity, SensorEntity):
         super().__init__(entry)
         self._manager = entry.runtime_data.manager
         self._attr_unique_id = f"{entry.entry_id}_pending_jobs"
-        # Pin the id: the device name would otherwise yield sensor.at_placeholder_pending_jobs.
+        # Pin the id: the device name would otherwise yield sensor.scheduled_jobs_pending_jobs.
         self.entity_id = "sensor.at_pending_jobs"
 
     async def async_added_to_hass(self) -> None:

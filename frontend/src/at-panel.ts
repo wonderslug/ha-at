@@ -11,7 +11,7 @@ import type { AtInfo, HomeAssistant, Job, PanelInfo, SubscribeEvent } from "./ty
 
 type Tab = "upcoming" | "history";
 
-const DEFAULT_TITLE = "at";
+const DEFAULT_TITLE = "Scheduled Jobs";
 
 @customElement("at-panel")
 export class AtPanel extends LitElement {
@@ -160,6 +160,10 @@ export class AtPanel extends LitElement {
     this.confirmCancelAll = false;
   }
 
+  private fire_toggle_menu() {
+    this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true }));
+  }
+
   private get title_(): string {
     const title = this.panel?.config?.title;
     return typeof title === "string" && title ? title : DEFAULT_TITLE;
@@ -179,6 +183,9 @@ export class AtPanel extends LitElement {
   protected override render() {
     return html`
       <header>
+        ${this.narrow
+          ? html`<button class="sidebar-toggle" aria-label="Open sidebar" @click=${() => this.fire_toggle_menu()}>☰</button>`
+          : nothing}
         <h1>${this.title_}</h1>
         <div class="tabs" role="tablist">${this.tabButton("upcoming", upcomingLabel(this.data))} ${this.tabButton("history", "History")}</div>
         <button class="add" @click=${() => (this.addOpen = true)}>+ Add job</button>
@@ -227,15 +234,27 @@ export class AtPanel extends LitElement {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 8px 16px;
-      background: var(--card-background-color);
+      box-sizing: border-box;
+      min-height: var(--header-height, 56px);
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: var(--app-header-background-color, var(--card-background-color));
+      color: var(--app-header-text-color, var(--primary-text-color));
       border-bottom: 1px solid var(--divider-color);
     }
     h1 {
       margin: 0;
-      font-size: 20px;
-      font-weight: 400;
+      font-size: var(--ha-font-size-xl, 20px);
+      font-weight: var(--ha-font-weight-normal, 400);
       flex: 1;
+    }
+    .sidebar-toggle {
+      font-size: 24px;
+      padding: 8px;
+      margin-left: -8px;
+      color: inherit;
     }
     button {
       font: inherit;
