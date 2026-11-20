@@ -755,7 +755,7 @@ var Qe = [
 ], K = class extends L {
 	constructor(...e) {
 		super(...e), this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.op = "turn_on", this.entity = "", this.varsText = "", this.chip = "+15m", this.when = "", this.rawText = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.onKey = (e) => {
-			e.key === "Escape" && this.open && this.close();
+			this.open && (e.key === "Escape" ? this.close() : e.key === "Tab" && this.trapFocus(e));
 		};
 	}
 	connectedCallback() {
@@ -765,13 +765,23 @@ var Qe = [
 		super.disconnectedCallback(), window.removeEventListener("keydown", this.onKey), window.clearTimeout(this.debounce);
 	}
 	updated(e) {
-		e.has("open") && this.open && this.reset();
+		e.has("open") && this.open && (this.returnFocus = $e(), this.reset(), ((this.shadowRoot?.querySelector(".dialog"))?.querySelector("input, select, textarea") ?? this.focusables()[0])?.focus());
+	}
+	focusables() {
+		let e = this.shadowRoot?.querySelector(".dialog");
+		return e ? [...e.querySelectorAll("button, input, select, textarea")].filter((e) => !e.disabled) : [];
+	}
+	trapFocus(e) {
+		let t = this.focusables();
+		if (!t.length) return;
+		let n = this.shadowRoot?.activeElement, r = n !== null && t.includes(n), i = t[0], a = t[t.length - 1];
+		e.shiftKey && (!r || n === i) ? (e.preventDefault(), a.focus()) : e.shiftKey || r && n !== a || (e.preventDefault(), i.focus());
 	}
 	reset() {
 		window.clearTimeout(this.debounce), this.parseSeq++, this.mode = "type", this.text = "", this.preview = void 0, this.op = "turn_on", this.entity = "", this.varsText = "", this.chip = "+15m", this.when = "", this.rawText = "", this.error = "", this.busy = !1;
 	}
 	close() {
-		this.reset(), this.open = !1, this.dispatchEvent(new CustomEvent("close-add-job"));
+		this.busy || (this.reset(), this.open = !1, this.dispatchEvent(new CustomEvent("close-add-job")), this.returnFocus?.focus(), this.returnFocus = void 0);
 	}
 	onText(e) {
 		this.text = e, this.preview = void 0, this.error = "", window.clearTimeout(this.debounce);
@@ -862,7 +872,7 @@ var Qe = [
 		else {
 			this.busy = !0, this.error = "";
 			try {
-				await Le(e, t), this.close();
+				await Le(e, t), this.busy = !1, this.close();
 			} catch (e) {
 				this.error = e?.message || "Could not add the job";
 			} finally {
@@ -952,7 +962,7 @@ var Qe = [
         ${this.mode === "type" ? this.typeSection() : this.mode === "pick" ? this.pickSection() : this.rawSection()}
         ${this.error ? O`<div class="error" role="alert">${this.error}</div>` : A}
         <div class="actions">
-          <button @click=${() => this.close()}>Cancel</button>
+          <button ?disabled=${this.busy} @click=${() => this.close()}>Cancel</button>
           <button class="primary" ?disabled=${!this.canSubmit || e} @click=${() => void this.submit()}>Add</button>
         </div>
       </div>
@@ -1077,6 +1087,11 @@ G([z({ attribute: !1 })], K.prototype, "hass", void 0), G([z({ type: Boolean })]
 	type: Boolean,
 	reflect: !0
 })], K.prototype, "open", void 0), G([B()], K.prototype, "mode", void 0), G([B()], K.prototype, "text", void 0), G([B()], K.prototype, "preview", void 0), G([B()], K.prototype, "op", void 0), G([B()], K.prototype, "entity", void 0), G([B()], K.prototype, "varsText", void 0), G([B()], K.prototype, "chip", void 0), G([B()], K.prototype, "when", void 0), G([B()], K.prototype, "rawText", void 0), G([B()], K.prototype, "error", void 0), G([B()], K.prototype, "busy", void 0), K = G([R("at-add-job-dialog")], K);
+function $e() {
+	let e = document.activeElement;
+	for (; e?.shadowRoot?.activeElement;) e = e.shadowRoot.activeElement;
+	return e instanceof HTMLElement ? e : void 0;
+}
 // node_modules/lit-html/directive.js
 var q = {
 	ATTRIBUTE: 1,
@@ -1085,10 +1100,10 @@ var q = {
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, $e = (e) => (...t) => ({
+}, et = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), et = class {
+}), tt = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -1102,10 +1117,10 @@ var q = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: tt } = ke, nt = (e) => e.strings === void 0, rt = {}, it = (e, t = rt) => e._$AH = t, at = $e(class extends et {
+}, { I: nt } = ke, rt = (e) => e.strings === void 0, it = {}, at = (e, t = it) => e._$AH = t, ot = et(class extends tt {
 	constructor(e) {
 		if (super(e), e.type !== q.PROPERTY && e.type !== q.ATTRIBUTE && e.type !== q.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
-		if (!nt(e)) throw Error("`live` bindings can only contain a single expression");
+		if (!rt(e)) throw Error("`live` bindings can only contain a single expression");
 	}
 	render(e) {
 		return e;
@@ -1118,55 +1133,55 @@ var q = {
 		} else if (e.type === q.BOOLEAN_ATTRIBUTE) {
 			if (!!t === n.hasAttribute(r)) return k;
 		} else if (e.type === q.ATTRIBUTE && n.getAttribute(r) === t + "") return k;
-		return it(e), t;
+		return at(e), t;
 	}
-}), ot = {
+}), st = {
 	voice: "Assist",
 	llm: "Assist",
 	panel: "Add job",
 	reschedule: "Reschedule",
 	todo: "To-do list"
-}, st = {
+}, ct = {
 	voice: "from Assist",
 	llm: "from Assist",
 	panel: "in the panel",
 	todo: "from the to-do list",
 	service: "by an action"
-}, ct = (e) => e === "voice" || e === "llm";
-function lt(e, t) {
+}, lt = (e) => e === "voice" || e === "llm";
+function ut(e, t) {
 	if (!e) return;
 	let n = Object.entries(t?.states ?? {}).find(([t, n]) => t.startsWith("person.") && n.attributes.user_id === e);
 	return n ? n[1].attributes.friendly_name ?? n[0] : t?.user?.id === e ? t.user.name : void 0;
 }
-function ut(e, t) {
+function dt(e, t) {
 	let n = e ? t?.devices?.[e] : void 0;
 	return n?.name_by_user ?? n?.name ?? void 0;
 }
-function dt(e, t) {
+function ft(e, t) {
 	return t?.states?.[e]?.attributes.friendly_name ?? e;
 }
-var ft = (e) => e.charAt(0).toUpperCase() + e.slice(1);
-function pt(e, t) {
-	let { via: n, device_id: r, user_id: i, origin: a } = e.source, o = a ? [ft(a.split(".")[0]), dt(a, t)] : [ot[n] ?? "Action"], s = ct(n) ? ut(r, t) : void 0;
+var pt = (e) => e.charAt(0).toUpperCase() + e.slice(1);
+function mt(e, t) {
+	let { via: n, device_id: r, user_id: i, origin: a } = e.source, o = a ? [pt(a.split(".")[0]), ft(a, t)] : [st[n] ?? "Action"], s = lt(n) ? dt(r, t) : void 0;
 	return [
 		...o,
 		s,
-		lt(i, t)
+		ut(i, t)
 	].filter(Boolean).join(" · ");
 }
-function mt(e, t) {
-	let n = e.cancelled_origin, r = ct(e.cancelled_by) ? ut(e.cancelled_device_id, t) : void 0, i = n ? `by ${n.split(".")[0]} ${dt(n, t)}` : [st[e.cancelled_by ?? ""], r].filter(Boolean).join(" · "), a = lt(e.cancelled_user_id, t);
+function ht(e, t) {
+	let n = e.cancelled_origin, r = lt(e.cancelled_by) ? dt(e.cancelled_device_id, t) : void 0, i = n ? `by ${n.split(".")[0]} ${ft(n, t)}` : [ct[e.cancelled_by ?? ""], r].filter(Boolean).join(" · "), a = ut(e.cancelled_user_id, t);
 	return [
 		"Cancelled",
 		i,
 		a && `by ${a}`
 	].filter(Boolean).join(" ");
 }
-function ht(e, t) {
+function gt(e, t) {
 	switch (e.status) {
 		case "failed": return e.result.error ?? "";
 		case "missed": return "Home Assistant was off when it was due";
-		case "cancelled": return mt(e.result, t);
+		case "cancelled": return ht(e.result, t);
 		default: return "";
 	}
 }
@@ -1189,26 +1204,26 @@ function Y(e, t = 0) {
 	return `${n}${J(e)}`;
 }
 // src/state.ts
-var gt = (e, t) => Date.parse(e.due) - Date.parse(t.due), _t = (e) => Date.parse(e.finished_at ?? e.due), vt = (e, t) => _t(t) - _t(e);
-function yt(e) {
+var _t = (e, t) => Date.parse(e.due) - Date.parse(t.due), vt = (e) => Date.parse(e.finished_at ?? e.due), yt = (e, t) => vt(t) - vt(e);
+function bt(e) {
 	return {
-		pending: [...e.pending].sort(gt),
-		running: [...e.running].sort(gt),
-		history: [...e.history].sort(vt)
+		pending: [...e.pending].sort(_t),
+		running: [...e.running].sort(_t),
+		history: [...e.history].sort(yt)
 	};
 }
-function bt(e, t) {
+function xt(e, t) {
 	let { job: n } = t, r = (e) => e.filter((e) => e.id !== n.id), i = {
 		pending: r(e.pending),
 		running: r(e.running),
 		history: r(e.history)
 	};
-	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), yt(i);
+	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), bt(i);
 }
-function xt(e) {
+function St(e) {
 	return `Upcoming (${e.pending.length})`;
 }
-function St(e, t, n, r = 15) {
+function Ct(e, t, n, r = 15) {
 	let i = t === "all" ? e : e.filter((e) => e.status === t);
 	return {
 		rows: n ? i : i.slice(0, r),
@@ -1216,12 +1231,12 @@ function St(e, t, n, r = 15) {
 	};
 }
 // src/components/history-table.ts
-var Ct = {
+var wt = {
 	done: n,
 	failed: e,
 	missed: r,
 	cancelled: t
-}, wt = [
+}, Tt = [
 	{
 		value: "all",
 		label: "All"
@@ -1281,7 +1296,7 @@ var Ct = {
 				title: "",
 				type: "icon",
 				showNarrow: !0,
-				template: (e) => O`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${Ct[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
+				template: (e) => O`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${wt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
 			},
 			when: {
 				title: "Time",
@@ -1309,16 +1324,16 @@ var Ct = {
 		t && this.fire("open-job", { job: t });
 	}
 	render() {
-		let { rows: e, matching: t } = St(this.history, this.filter, this.expanded), n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = this.hass?.config.time_zone ?? "UTC", i = e.map((e) => ({
+		let { rows: e, matching: t } = Ct(this.history, this.filter, this.expanded), n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = this.hass?.config.time_zone ?? "UTC", i = e.map((e) => ({
 			id: e.id,
 			job: e,
 			when: U(new Date(e.finished_at ?? e.due), new Date(this.now), n, r),
 			summary: e.summary,
-			details: ht(e, this.hass)
+			details: gt(e, this.hass)
 		}));
 		return O`<ha-card header="History">
       <div class="chips">
-        ${wt.map((e) => O`<ha-filter-chip .label=${e.label} .selected=${at(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
+        ${Tt.map((e) => O`<ha-filter-chip .label=${e.label} .selected=${ot(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
       </div>
       <ha-data-table
         .columns=${this.columns}
@@ -1392,7 +1407,7 @@ var Z = class extends L {
           <dt>${e.intent ? "Intent" : "Action"}</dt>
           <dd><pre>${i}</pre></dd>
           <dt>Created by</dt>
-          <dd>${pt(e, this.hass)}</dd>
+          <dd>${mt(e, this.hass)}</dd>
           <dt>Created</dt>
           <dd>${r}</dd>
           <dt>ID</dt>
@@ -1468,9 +1483,9 @@ var Q = class extends L {
 			running: t,
 			when: t ? "Running…" : this.when(e),
 			summary: e.summary,
-			source: pt(e, this.hass)
+			source: mt(e, this.hass)
 		}), t = [...this.running.map((t) => e(t, !0)), ...this.pending.map((t) => e(t, !1))];
-		return O`<ha-card .header=${xt({
+		return O`<ha-card .header=${St({
 			pending: this.pending,
 			running: this.running,
 			history: []
@@ -1496,7 +1511,7 @@ var Q = class extends L {
 };
 G([z({ attribute: !1 })], Q.prototype, "hass", void 0), G([z({ attribute: !1 })], Q.prototype, "pending", void 0), G([z({ attribute: !1 })], Q.prototype, "running", void 0), G([z({ type: Number })], Q.prototype, "now", void 0), G([z({ type: Boolean })], Q.prototype, "isAdmin", void 0), G([z({ type: Boolean })], Q.prototype, "narrow", void 0), Q = G([R("at-upcoming-table")], Q);
 // src/ha-elements.ts
-var Tt = [
+var Et = [
 	"hass-subpage",
 	"ha-card",
 	"ha-data-table",
@@ -1507,18 +1522,18 @@ var Tt = [
 	"ha-svg-icon",
 	"ha-filter-chip"
 ];
-async function Et(e, t, n) {
+async function Dt(e, t, n) {
 	let r, i = new Promise((e) => r = setTimeout(e, n));
 	return await Promise.race([Promise.all(t.map((t) => e.whenDefined(t).catch(() => void 0))), i]), clearTimeout(r), t.filter((t) => !e.get(t));
 }
-async function Dt() {
+async function Ot() {
 	let e = document.createElement("partial-panel-resolver"), t = { config: {
 		component_name: "config",
 		url_path: "config"
 	} };
 	e.hass = { panels: t }, await e._getRoutes(t).routes.config.load(), await customElements.whenDefined("ha-panel-config"), await document.createElement("ha-panel-config").routerOptions.routes.automation.load();
 }
-async function Ot(e, t, n, r) {
+async function kt(e, t, n, r) {
 	let i = Date.now() + r;
 	if (n.some((t) => !e.get(t))) {
 		let e, n = new Promise((t) => e = setTimeout(t, r)), i = t().catch((e) => {
@@ -1526,20 +1541,20 @@ async function Ot(e, t, n, r) {
 		});
 		await Promise.race([i, n]), clearTimeout(e);
 	}
-	let a = await Et(e, n, Math.max(0, i - Date.now()));
+	let a = await Dt(e, n, Math.max(0, i - Date.now()));
 	return a.length && console.warn("Scheduled Jobs: Home Assistant elements missing:", a.join(", ")), a;
 }
-var kt;
-function At(e = 1e4) {
-	return kt ??= Ot(customElements, Dt, Tt, e), kt;
+var At;
+function jt(e = 1e4) {
+	return At ??= kt(customElements, Ot, Et, e), At;
 }
 // src/reconnect.ts
-var jt = 1e3, Mt = 3e4;
-function Nt(e) {
-	return Math.min(jt * 2 ** Math.min(e, 10), Mt);
+var Mt = 1e3, Nt = 3e4;
+function Pt(e) {
+	return Math.min(Mt * 2 ** Math.min(e, 10), Nt);
 }
 // src/at-panel.ts
-var Pt = "Scheduled Jobs", $ = class extends L {
+var Ft = "Scheduled Jobs", $ = class extends L {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.data = {
 			pending: [],
@@ -1566,7 +1581,7 @@ var Pt = "Scheduled Jobs", $ = class extends L {
 		e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
 	}
 	async start() {
-		this.hass && !this.subscribed && (this.subscribed = !0, He(this.hass).then((e) => this.atInfo = e, () => void 0), At().then((e) => this.missing = e), await this.subscribe());
+		this.hass && !this.subscribed && (this.subscribed = !0, He(this.hass).then((e) => this.atInfo = e, () => void 0), jt().then((e) => this.missing = e), await this.subscribe());
 	}
 	async subscribe() {
 		if (!this.hass || this.gone) return;
@@ -1585,8 +1600,8 @@ var Pt = "Scheduled Jobs", $ = class extends L {
 		}
 	}
 	onEvent(e) {
-		if ("snapshot" in e) this.data = yt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
-		else if ("change" in e) this.data = bt(this.data, e.change);
+		if ("snapshot" in e) this.data = bt(e.snapshot), this.reconnecting = !1, this.attempt = 0;
+		else if ("change" in e) this.data = xt(this.data, e.change);
 		else if ("stopped" in e) {
 			let e = this.unsub;
 			this.unsub = void 0, e?.().catch(() => void 0), this.scheduleRetry();
@@ -1594,7 +1609,7 @@ var Pt = "Scheduled Jobs", $ = class extends L {
 	}
 	scheduleRetry() {
 		if (this.reconnecting = !0, this.gone) return;
-		let e = Nt(this.attempt++);
+		let e = Pt(this.attempt++);
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	async call(e) {
@@ -1626,7 +1641,7 @@ var Pt = "Scheduled Jobs", $ = class extends L {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : Pt;
+		return typeof e == "string" && e ? e : Ft;
 	}
 	render() {
 		if (this.missing === void 0) return A;
