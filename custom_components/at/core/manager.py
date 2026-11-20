@@ -131,6 +131,11 @@ class JobManager:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+            # A cancelled task may have finished its job but not saved it; persist it now.
+            try:
+                await self._async_save()
+            except Exception:  # noqa: BLE001 - The remaining teardown must still run.
+                LOGGER.exception("Saving jobs while stopping failed")
         self._tasks.clear()
         self._in_flight.clear()
         for on_stop in list(self._stop_callbacks):
@@ -225,6 +230,8 @@ class JobManager:
     async def async_run_now(self, job_id: str) -> Job:
         """Run a pending job immediately instead of at its due time."""
         self._require_pending(job_id)
+        if job_id in self._settling:
+            raise JobStateError(f"Job {job_id} is still being saved")
         self._launch(job_id)
         return self._jobs[job_id]
 
@@ -300,7 +307,8 @@ class JobManager:
         """
         Save, fire the scheduled event and notify, and only then arm the timer.
 
-        If the save fails, ``undo`` reverts the in-memory change before the error propagates.
+        If the save fails, ``undo`` reverts the in-memory change before the error propagates. A job cancelled
+        during the save is still notified, but gets no scheduled event and no timer.
         """
         self._settling.add(job.id)
         try:
@@ -310,9 +318,11 @@ class JobManager:
             raise
         finally:
             self._settling.discard(job.id)
-        fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)
+        if job.status is JobStatus.PENDING:
+            fire_job_event(self._hass, EVENT_JOB_SCHEDULED, job)
         self._notify(kind, job)
-        self._schedule(job)
+        if job.status is JobStatus.PENDING:
+            self._schedule(job)
 
     def _require_pending(self, job_id: str) -> Job:
         job = self.get(job_id)

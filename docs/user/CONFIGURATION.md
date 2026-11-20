@@ -6,13 +6,13 @@ Everything `at` offers, from options to events. For installation, see [getting s
 
 Go to **Settings** > **Devices & services** > **at: Scheduled Jobs** > **Configure**. Saving applies the changes right away, without restarting the integration or interrupting a running job.
 
-| Option                                     | Default | What it does                                                                                           |
-| ------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------ |
-| **Grace window**                           | 5       | Minutes a job may run late after a restart. Jobs later than this are marked missed. 0 to 1440.         |
-| **History age**                            | 7       | Days finished jobs stay in the history. 1 to 365.                                                      |
-| **History size**                           | 100     | Most finished jobs kept. 1 to 10000. Whichever of age and size is hit first removes the job.           |
-| **Panel for admins only**                  | off     | Shows the sidebar panel only to administrators.                                                        |
-| **Leave relative times to Home Assistant** | off     | Stops `at` from answering phrases like "in 5 minutes", so Home Assistant's own delayed commands do it. |
+| Option                                     | Default | What it does                                                                                             |
+| ------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------- |
+| **Grace window**                           | 5       | Minutes a job may run late after a restart or reload. Jobs later than this are marked missed. 0 to 1440. |
+| **History age**                            | 7       | Days finished jobs stay in the history. 1 to 365.                                                        |
+| **History size**                           | 100     | Most finished jobs kept. 1 to 10000. Whichever of age and size is hit first removes the job.             |
+| **Panel for admins only**                  | off     | Shows the sidebar panel only to administrators.                                                          |
+| **Leave relative times to Home Assistant** | off     | Stops `at` from answering phrases like "in 5 minutes", so Home Assistant's own delayed commands do it.   |
 
 With the last option on, "turn off the lights in 5 minutes" is handled by Home Assistant with its own timer. That job does not appear in `at`, and it does not survive a restart. Absolute times such as "at 6 pm" still go to `at`.
 
@@ -178,13 +178,13 @@ action: at.clear_history
 
 `at` fires these events. Use them as automation triggers.
 
-| Event              | When                                                                   |
-| ------------------ | ---------------------------------------------------------------------- |
-| `at_job_scheduled` | A job is added or moved                                                |
-| `at_job_executed`  | A job ran successfully                                                 |
-| `at_job_failed`    | A job failed                                                           |
-| `at_job_cancelled` | A job was cancelled                                                    |
-| `at_job_missed`    | A job came due while Home Assistant was down, outside the grace window |
+| Event              | When                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| `at_job_scheduled` | A job is added or moved                                                                      |
+| `at_job_executed`  | A job ran successfully                                                                       |
+| `at_job_failed`    | A job failed                                                                                 |
+| `at_job_cancelled` | A job was cancelled                                                                          |
+| `at_job_missed`    | A job came due while Home Assistant was down or `at` was reloading, outside the grace window |
 
 Every event carries `job_id`, `summary`, `due` (ISO time), `status` and `via` (`voice`, `llm`, `panel`, `reschedule`, `todo` or `service`). `at_job_failed` also carries `error`.
 
@@ -192,7 +192,7 @@ The events also show in the logbook.
 
 ## Data updates
 
-`at` does not poll. It keeps its jobs in Home Assistant's storage and sets a timer for each pending job. A one-minute sweep runs any pending job that is overdue. When Home Assistant starts, a job that came due while it was down runs if it is within the **Grace window**, and is marked missed otherwise. A job that was running when Home Assistant stopped is marked failed.
+`at` does not poll. It keeps its jobs in Home Assistant's storage and sets a timer for each pending job. A one-minute sweep runs any pending job that is overdue. When Home Assistant starts or `at` is reloaded, a job that came due in the meantime runs if it is within the **Grace window**, and is marked missed otherwise. A job that was running when Home Assistant stopped or `at` was reloaded is marked failed.
 
 ## Known limitations
 
@@ -207,7 +207,7 @@ The events also show in the logbook.
 
 - **A phrase is ignored or answered by another agent.** Check the wording against the tables above, and that the target is exposed to Assist.
 - **"Sorry, scheduling is only available in English for now."** The voice assistant you used is not set to English.
-- **A job shows as missed.** Home Assistant was down for longer than the **Grace window**.
+- **A job shows as missed.** Home Assistant was down, or `at` was reloading, for longer than the **Grace window**.
 - **Diagnostics.** On the integration page, select the three-dot menu > **Download diagnostics**. The file lists the options, job counts by status, whether your language is supported, and whether each Home Assistant hook `at` relies on was found. It holds no job text and no user IDs. Attach it to bug reports.
 
 ## Removing the integration
