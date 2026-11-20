@@ -30,13 +30,15 @@ at 11 pm turn on the porch light
 | Form           | Examples                                                                                  |
 | -------------- | ----------------------------------------------------------------------------------------- |
 | Clock time     | `at 6`, `at 6:30`, `at 6 pm`, `at 18:30`, `at 6 o'clock`, `at noon`, `at midnight`        |
+| Clock in words | `at seven`, `at seven thirty`, `at six forty-five pm`, `at seven oh five`                 |
 | Spoken-to-text | `at 11 p.m.`, `at 7 a.m.`                                                                 |
 | Day            | `today`, `tonight`, `tomorrow`, `this morning`, `this afternoon`, `this evening`          |
 | Weekday        | `on Friday`, `on Friday evening`, `on Fri`                                                |
 | Day and time   | `tomorrow at 7 am`, `at 7 am tomorrow`, `on Friday at 6:30 pm`                            |
 | Relative       | `in 20 minutes`, `in an hour`, `in two hours`, `in 2 and a half hours`, `in half an hour` |
+| Relative words | `in forty five minutes`, `in one hundred and twenty minutes`, `in twenty-five hours`      |
 
-Digits are required for the hour: "at 7" works, "at seven" does not. Durations accept number words such as "two" and "twenty".
+Numbers can be digits or words, up to "nine hundred and ninety-nine". Voice sentences accept durations up to 180.
 
 ### Listing and canceling
 
@@ -197,7 +199,7 @@ The events also show in the logbook.
 - Voice and time phrases are English only. Each voice assistant uses the sentences of its own language, whatever your Home Assistant language is, so an English assistant works on a German system. In an assistant of another language, `at` leaves the sentence to Assist. Use the panel or the `at.schedule` action with its `at` or `delay` field instead. The LLM tools take a spoken time phrase, so they also need English.
 - A job that runs `script.turn_on` or `automation.trigger` counts as done once the script or automation starts, not when it finishes. A failure inside the script or automation does not mark the job failed.
 - Commands must be ones the built-in agent understands. Anything else is refused.
-- Spelled-out hours such as "at seven" are not recognized. Use digits.
+- Canceling a job by its time by voice needs digits, such as "cancel the 7:30 job". Scheduling accepts words such as "at seven thirty".
 - Exchanges forwarded to another conversation agent start a new conversation.
 - Running jobs do not appear in the to-do list.
 

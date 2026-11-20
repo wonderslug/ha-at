@@ -69,7 +69,8 @@ class _Compiled:
 def _compile(pack: LanguagePack) -> _Compiled:
     tpl = pack.time_patterns
     subs = {
-        "number": _DIGITS + "|" + _alternation(pack.number_words),
+        **{f"num_{group}": _alternation(words) for group, words in pack.number_words.items()},
+        "scale": _alternation(pack.number_scales),
         "unit": _alternation(pack.unit_words),
         "day": _alternation(pack.day_words),
         "weekday": _alternation(pack.weekday_words),
@@ -77,6 +78,7 @@ def _compile(pack: LanguagePack) -> _Compiled:
         "named": _alternation(pack.named_times),
         "meridiem": _alternation(pack.meridiem_words),
     }
+    subs["number"] = _DIGITS + "|" + tpl["number"] % subs
     subs["clock"] = tpl["clock"] % subs
     subs["dayref"] = tpl["dayref"] % subs
 
@@ -95,11 +97,24 @@ def _compile(pack: LanguagePack) -> _Compiled:
     return _Compiled(relative=relative, phrases=phrases, splits=splits)
 
 
+@lru_cache(maxsize=8)
+def _word_values(pack: LanguagePack) -> dict[str, int]:
+    return {word: value for words in pack.number_words.values() for word, value in words.items()}
+
+
 def _number(raw: str, pack: LanguagePack) -> float:
     key = raw.lower()
-    if key in pack.number_words:
-        return float(pack.number_words[key])
-    return float(key)
+    if re.fullmatch(_DIGITS, key):
+        return float(key)
+    values = _word_values(pack)
+    total = current = 0
+    for word in re.split(r"[\s-]+", key):
+        if word in pack.number_scales:
+            total += max(current, 1) * pack.number_scales[word]
+            current = 0
+        elif word not in pack.number_fillers:
+            current += values[word]
+    return float(total + current)
 
 
 def _spec_from_match(m: re.Match[str], pack: LanguagePack) -> TimeSpec:
@@ -124,8 +139,12 @@ def _spec_from_match(m: re.Match[str], pack: LanguagePack) -> TimeSpec:
         hour, minute = pack.named_times[groups["named"]]
         meridiem = "am" if hour < _MAX_HOUR_12 else "pm"
     else:
-        hour = int(groups["hour"])
-        minute = int(groups.get("minute", "0"))
+        if "hour_words" in groups:
+            hour = int(_number(groups["hour_words"], pack))
+            minute = int(_number(groups["minute_words"], pack)) if "minute_words" in groups else 0
+        else:
+            hour = int(groups["hour"])
+            minute = int(groups.get("minute", "0"))
         if minute > _MAX_MINUTE:
             msg = f"invalid minute {minute}"
             raise TimeParseError(msg)

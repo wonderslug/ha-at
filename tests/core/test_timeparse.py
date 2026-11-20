@@ -110,6 +110,80 @@ def test_split_day_phrases() -> None:
     assert spec.period == "night"
 
 
+@pytest.mark.parametrize(
+    ("text", "minutes"),
+    [
+        ("in twenty minutes", 20),
+        ("in seventeen minutes", 17),
+        ("in forty five minutes", 45),
+        ("in forty-five minutes", 45),
+        ("in Twenty Five minutes", 25),
+        ("in ninety minutes", 90),
+        ("in a hundred minutes", 100),
+        ("in one hundred twenty minutes", 120),
+        ("in one hundred and twenty minutes", 120),
+        ("in two hundred and five minutes", 205),
+        ("in twenty one and a half minutes", 21.5),
+        ("in one hundred and fifty five hours", 155 * 60),
+    ],
+)
+def test_compound_number_words(text: str, minutes: float) -> None:
+    assert parse_time_text(text, EN).relative == timedelta(minutes=minutes)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_local"),
+    [
+        ("at seven", "2026-11-18 07:00"),
+        ("at seven thirty", "2026-11-18 07:30"),
+        ("at six forty five pm", "2026-11-18 18:45"),
+        ("at six forty-five pm", "2026-11-18 18:45"),
+        ("at seven oh five", "2026-11-18 07:05"),
+        ("at seven o five am", "2026-11-18 07:05"),
+        ("at nine o'clock", "2026-11-18 09:00"),
+        ("at eleven fifteen", "2026-11-17 23:15"),
+        ("at twenty two thirty", "2026-11-17 22:30"),
+        ("at one twenty", "2026-11-18 01:20"),
+        ("tomorrow at seven fifteen", "2026-11-18 07:15"),
+        ("at eight thirty tonight", "2026-11-18 20:30"),
+        ("on friday at ten", "2026-11-20 10:00"),
+    ],
+)
+def test_clock_time_in_words(text: str, expected_local: str) -> None:
+    result = resolve(parse_time_text(text, EN), NOW, TZ)
+    assert result.due.astimezone(TZ).strftime(FMT) == expected_local
+
+
+def test_split_clock_time_in_words() -> None:
+    cmd = "turn on the master bathroom light"
+    spec, rest = split_time_and_command(f"{cmd} at seven thirty", EN)
+    assert (rest, spec.hour, spec.minute) == (cmd, 7, 30)
+    spec, rest = split_time_and_command(f"at six forty five pm {cmd}", EN)
+    assert (rest, spec.hour, spec.minute) == (cmd, 18, 45)
+    spec, rest = split_time_and_command("set the volume to forty in forty five minutes", EN)
+    assert (rest, spec.relative) == ("set the volume to forty", timedelta(minutes=45))
+
+
+def test_sentence_list_words_parse_to_their_value() -> None:
+    """Whatever the voice sentence lists offer, the parser reads as the same number."""
+    lists = EN.sentence_lists
+    for value in lists["number_word"]["values"]:
+        assert parse_time_text(f"in {value['in']} minutes", EN).relative == timedelta(minutes=value["out"])
+    for value in lists["hour_word"]["values"]:
+        assert parse_time_text(f"at {value['in']}", EN).hour in (value["out"], value["out"] % 12 + 12)
+    for value in lists["minute_word"]["values"]:
+        assert parse_time_text(f"at seven {value['in']}", EN).minute == value["out"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["at seven sixty", "at thirty", "at twenty four", "in five twenty minutes", "in an hundred five minutes"],
+)
+def test_malformed_number_words_raise(text: str) -> None:
+    with pytest.raises(TimeParseError):
+        parse_time_text(text, EN)
+
+
 @pytest.mark.parametrize("text", ["at banana", "", "turn on the light", "at 25pm"])
 def test_unparseable_raises(text: str) -> None:
     with pytest.raises(TimeParseError):

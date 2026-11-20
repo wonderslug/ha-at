@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from datetime import datetime, timedelta
+from typing import Any
 
 from . import LanguagePack
 
@@ -32,33 +33,56 @@ def format_duration(delta: timedelta) -> str:
     return " and ".join(parts)
 
 
-_NUMBER_WORDS = {
-    "a": 1,
-    "an": 1,
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
+_UNITS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9}
+_TEENS = {
     "ten": 10,
     "eleven": 11,
     "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
     "fifteen": 15,
-    "twenty": 20,
-    "thirty": 30,
-    "forty": 40,
-    "fifty": 50,
-    "sixty": 60,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
 }
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+_NUMBER_WORDS = {"article": {"a": 1, "an": 1}, "units": _UNITS, "teens": _TEENS, "tens": _TENS}
+_HUNDRED = "hundred"
+
+# 1 to 99: "forty five", "forty-five", "seventeen", "six".
+_SMALL = r"(?:%(num_tens)s)(?:(?:\s+|-)(?:%(num_units)s))?|%(num_teens)s|%(num_units)s"
+# "seven thirty", "seven oh five", "six forty-five"
+_MINUTE_WORDS = r"(?:oh|o)\s+(?:%(num_units)s)|(?:%(num_tens)s)(?:(?:\s+|-)(?:%(num_units)s))?|%(num_teens)s"
+# Up to 999: "a hundred", "one hundred and twenty", "two hundred five".
+_NUMBER = rf"(?:(?:%(num_units)s|a)\s+)?(?:%(scale)s)(?:\s+(?:and\s+)?(?:{_SMALL}))?|{_SMALL}|%(num_article)s"
+
+
+def _spell_small(n: int) -> str:
+    names = {value: word for words in (_UNITS, _TEENS, _TENS) for word, value in words.items()}
+    tens, units = divmod(n, 10)
+    return names[n] if n in names else f"{names[tens * 10]} {names[units]}"
+
+
+def _spellings(n: int) -> list[str]:
+    """Every way the number pattern writes ``n`` (1 to 999), hyphens aside, for the sentence lists."""
+    if n < 100:
+        return [_spell_small(n)]
+    hundreds, rest = divmod(n, 100)
+    heads = [f"{_spell_small(hundreds)} {_HUNDRED}"] + ([f"a {_HUNDRED}"] if hundreds == 1 else [])
+    if not rest:
+        return heads
+    return [f"{head}{joiner}{_spell_small(rest)}" for head in heads for joiner in (" ", " and ")]
+
+
+def _spelled(numbers: Iterable[int]) -> dict[str, list[dict[str, Any]]]:
+    return {"values": [{"in": words, "out": n} for n in numbers for words in _spellings(n)]}
+
 
 # Sentence triggers. Time pieces are range or value lists (below) so free text can't reach the
 # time part; the command is the {command} wildcard. Every list is drawn from the parser's own
 # tables, so whatever a template matches the time parser understands.
-_CLOCK = "at ({hour}[:{minute}] [{meridiem}] [o'clock]|{named})"
+_CLOCK = "at ({hour}[:{minute}] [{meridiem}] [o'clock]|{hour_word} [{minute_word}] [{meridiem}] [o'clock]|{named})"
 _DAYREF = "({day}|on {weekday}) [{period}]"
 _COUNT = "({number}|{number_word})"
 _ABSOLUTE = [f"{_DAYREF} {_CLOCK}", f"{_CLOCK} {_DAYREF}", _CLOCK]
@@ -146,9 +170,11 @@ EN = LanguagePack(
             r"in\s+(?P<count>%(number)s)\s+(?P<unit>%(unit)s)(?P<half>\s+and\s+a\s+half)",
             r"in\s+half\s+an?\s+(?P<halfonly>%(unit)s)",
         ],
+        "number": _NUMBER,
         "clock": (
             r"at\s+(?:(?P<named>%(named)s)"
-            r"|(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?"
+            r"|(?:(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?"
+            rf"|(?P<hour_words>{_SMALL})(?:\s+(?P<minute_words>{_MINUTE_WORDS}))?)"
             r"(?:\s*(?P<ampm>%(meridiem)s))?(?:\s+o'?clock)?)"
         ),
         "dayref": (
@@ -168,6 +194,8 @@ EN = LanguagePack(
     number_words=_NUMBER_WORDS,
     meridiem_words=_MERIDIEM_WORDS,
     named_times=_NAMED_TIMES,
+    number_scales={_HUNDRED: 100},
+    number_fillers=frozenset({"and", "oh", "o"}),
     run_pattern=r"(?:run|trigger|fire)\s+(?:the\s+)?(?P<name>.+?)(?:\s+automation)?",
     sentences={
         "run": ["(run|trigger|fire) [the] {name}"],
@@ -185,7 +213,14 @@ EN = LanguagePack(
         "hour": {"range": {"from": 0, "to": 23, "words": False}},
         "minute": {"range": {"from": 0, "to": 59, "words": False}},
         "number": {"range": {"from": 1, "to": 180, "words": False}},
-        "number_word": _values(_NUMBER_WORDS),
+        "number_word": {
+            "values": [{"in": word, "out": 1} for word in _NUMBER_WORDS["article"]] + _spelled(range(1, 181))["values"]
+        },
+        "hour_word": _spelled(range(1, 24)),
+        "minute_word": {
+            "values": [{"in": f"{zero} {word}", "out": n} for zero in ("oh", "o") for word, n in _UNITS.items()]
+            + _spelled(range(10, 60))["values"]
+        },
         "unit": _values(_UNIT_WORDS),
         "meridiem": {"values": [{"in": word, "out": value} for word, value in _MERIDIEM_WORDS.items()]},
         "named": _values(_NAMED_TIMES),
