@@ -3,6 +3,11 @@
 from datetime import UTC, datetime
 from typing import Any
 
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
+from pytest_homeassistant_custom_component.typing import WebSocketGenerator
+
 from custom_components.at.const import (
     DISPLAY_NAME,
     DOMAIN,
@@ -14,9 +19,17 @@ from custom_components.at.const import (
 )
 from custom_components.at.lang.en import format_clock
 from custom_components.at.logbook import async_describe_events
+from homeassistant.components.recorder import Recorder
 from homeassistant.core import Event, HomeAssistant
+from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 
 SUMMARY = "Turn on Porch Light"
+
+
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(recorder_mock: Recorder, enable_custom_integrations: None) -> None:
+    """Start the recorder the logbook needs before Home Assistant, which the recorder fixture requires."""
 
 
 def _describers(hass: HomeAssistant) -> dict[str, Any]:
@@ -77,3 +90,29 @@ def test_format_clock() -> None:
     assert format_clock(datetime(2026, 1, 1, 0, 5)) == "12:05 AM"
     assert format_clock(datetime(2026, 1, 1, 12, 0)) == "12:00 PM"
     assert format_clock(datetime(2026, 1, 1, 23, 0)) == "11:00 PM"
+
+
+@pytest.mark.real_dependencies
+@pytest.mark.filterwarnings("ignore::aiohttp.web_exceptions.NotAppKeyWarning")
+async def test_logbook_shows_job_events(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Home Assistant's logbook loads the platform and shows a job event with its message."""
+    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(hass, "logbook", {})
+    config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+    start = dt_util.utcnow()
+
+    hass.bus.async_fire(EVENT_JOB_EXECUTED, _event(EVENT_JOB_EXECUTED).data)
+    await async_wait_recording_done(hass)
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "logbook/get_events", "start_time": start.isoformat()})
+    response = await client.receive_json()
+    assert response["success"]
+    rows = [(row["name"], row["message"]) for row in response["result"] if row.get("domain") == DOMAIN]
+    assert rows == [(DISPLAY_NAME, "ran Turn on Porch Light")]

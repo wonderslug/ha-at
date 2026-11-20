@@ -37,10 +37,10 @@ def async_describe_events(
     hass: HomeAssistant,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
-    """Describe the job events for the logbook."""
-    pack = get_language_pack(hass.config.language) or EN
+    """Describe the job events for the logbook, in the language Home Assistant uses when each one is shown."""
 
     def describe(event: Event) -> dict[str, str]:
+        pack = get_language_pack(hass.config.language) or EN
         key = _KEYS[str(event.event_type)]
         data = event.data
         values: dict[str, Any] = {"summary": data.get("summary", "")}
