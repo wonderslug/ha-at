@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any
 
 from custom_components.at.lang import message
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import (
+    area_registry as ar,
+    config_validation as cv,
+    device_registry as dr,
+    floor_registry as fr,
+    label_registry as lr,
+)
 from homeassistant.util import dt as dt_util
 
 from .models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
@@ -126,21 +132,57 @@ def _friendly_name(hass: HomeAssistant, entity_id: str) -> str:
     return state.name if state is not None else entity_id
 
 
+def _area_name(hass: HomeAssistant, area_id: str) -> str:
+    area = ar.async_get(hass).async_get_area(area_id)
+    return area.name if area is not None else area_id
+
+
+def _floor_name(hass: HomeAssistant, floor_id: str) -> str:
+    floor = fr.async_get(hass).async_get_floor(floor_id)
+    return floor.name if floor is not None else floor_id
+
+
+def _device_name(hass: HomeAssistant, device_id: str) -> str:
+    device = dr.async_get(hass).async_get(device_id)
+    if device is None:
+        return device_id
+    return device.name_by_user or device.name or device_id
+
+
+def _label_name(hass: HomeAssistant, label_id: str) -> str:
+    label = lr.async_get(hass).async_get_label(label_id)
+    return label.name if label is not None else label_id
+
+
+def _target_names(hass: HomeAssistant, step: dict[str, Any], pack: LanguagePack) -> list[str]:
+    """Name what one step targets: entities, devices, then areas and floors as one place, then labels."""
+    names = [_friendly_name(hass, e) for e in _target_ids(step, "entity_id")]
+    names += [_device_name(hass, d) for d in _target_ids(step, "device_id")]
+    places = [_area_name(hass, a) for a in _target_ids(step, "area_id")]
+    places += [_floor_name(hass, f) for f in _target_ids(step, "floor_id")]
+    if places:
+        place = pack.joiner.join(places)
+        things = pack.domain_words.get(str(step.get("action", "")).partition(".")[0])
+        names.append(pack.place_target.format(place=place, things=things).strip() if things else place)
+    names += [_label_name(hass, label) for label in _target_ids(step, "label_id")]
+    return names
+
+
 def summarize_action(hass: HomeAssistant, action: list[dict[str, Any]], pack: LanguagePack) -> str:
     """
-    Describe an action in one phrase, for example "Turn on Porch Light".
+    Describe an action in one phrase, for example "Turn on Porch Light" or "Turn on Kitchen lights".
 
     Returns:
-        The phrase, or the pack's generic one for anything that is not a simple entity action.
+        The phrase, or the pack's generic one for anything that is not a simple targeted action.
 
     """
     if len(action) == 1:
         name = action[0].get("action")
-        entity_ids = _target_ids(action[0], "entity_id")
-        if isinstance(name, str) and entity_ids:
+        names = _target_names(hass, action[0], pack)
+        if isinstance(name, str) and names:
             verb = pack.summary_verbs.get(name) or pack.summary_verbs.get(name.partition(".")[2])
             if verb:
-                return verb.format(name=pack.joiner.join(_friendly_name(hass, e) for e in entity_ids))
+                return verb.format(name=pack.joiner.join(names))
     return pack.generic_action_summary
 
 

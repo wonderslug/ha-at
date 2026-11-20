@@ -4,6 +4,7 @@ import dataclasses
 from typing import Any
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.at.core.actions import (
     InvalidAction,
@@ -16,6 +17,7 @@ from custom_components.at.lang import get_language_pack
 from custom_components.at.lang.en import EN
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, device_registry as dr, floor_registry as fr, label_registry as lr
 
 PACK = get_language_pack("en")
 assert PACK is not None
@@ -101,6 +103,30 @@ async def test_summarize_action(hass: HomeAssistant) -> None:
             "homeassistant.turn_on", target={"entity_id": ["light.porch", "switch.unknown"]}
         ),
         "Run action": [{"delay": 5}],
+    }
+    for summary, action in expected.items():
+        assert summarize_action(hass, action, PACK) == summary
+
+
+async def test_summarize_action_names_places_devices_and_labels(hass: HomeAssistant) -> None:
+    """Areas and floors read like a voice summary; devices and labels use their names; unknown ids stay ids."""
+    kitchen = ar.async_get(hass).async_create("Kitchen")
+    upstairs = fr.async_get(hass).async_create("Upstairs")
+    holiday = lr.async_get(hass).async_create("Holiday")
+    entry = MockConfigEntry(domain="test")
+    entry.add_to_hass(hass)
+    lamp = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={("test", "lamp")}, name="Desk Lamp"
+    )
+    expected = {
+        "Turn on Kitchen lights": step("light.turn_on", target={"area_id": kitchen.id}),
+        "Turn off Kitchen and Upstairs lights": step(
+            "light.turn_off", target={"area_id": kitchen.id, "floor_id": upstairs.floor_id}
+        ),
+        "Turn on Kitchen": step("homeassistant.turn_on", target={"area_id": kitchen.id}),
+        "Toggle Desk Lamp": step("switch.toggle", target={"device_id": lamp.id}),
+        "Turn on Holiday": step("homeassistant.turn_on", target={"label_id": holiday.label_id}),
+        "Turn on gone_area lights": step("light.turn_on", target={"area_id": "gone_area"}),
     }
     for summary, action in expected.items():
         assert summarize_action(hass, action, PACK) == summary
