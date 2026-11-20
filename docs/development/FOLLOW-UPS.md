@@ -35,10 +35,14 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 21: the add job dialog stays open through Escape, the backdrop and Cancel while a job is being added, keeps Tab inside itself, starts in the first field and gives focus back on close; component tests cover these and the parse debounce
 - Task 13: "set the light brightness at 20" no longer schedules at 8 PM; an hour after 12 needs minutes unless it is said as 24-hour time ("at 1800 hours", "at eighteen hundred"), which is now understood
 - Source labels (#17): a backend test checks an LLM cancel records the conversation's device as `cancelled_device_id`, and frontend tests cover an Assist or LLM cancel with a device but no person, and an LLM cancel with a device
+- Task 19: a frontend workflow type-checks, tests and builds the panel in CI and fails on a stale committed bundle
 
-## Deferred minors
+## Decided, no change
 
-- Task 14: minor (deferred): at.list exposes raw action bodies to non-admins; cancel/clear_history have no admin gate (spec: shared household queue, so OK)
-- Task 19: minor (deferred): CI never type-checks, tests or builds the panel, so a stale committed bundle goes unnoticed
-- Task 20: minor (deferred): row cancel has no confirm
-- Task 21: minor (deferred): single-entity picker
+- Task 14: `at.list` keeps showing raw action bodies to non-admins, and cancel and clear history stay open to every user; the queue is shared by the household
+- Task 20: cancelling a row in the panel stays without a confirmation; a cancelled job can be re-scheduled from History
+
+## Later
+
+- Task 21: the add job dialog targets one entity; choosing several is left for a wider brainstorm of the dialog
+- Upstream: Home Assistant's built-in agent runs sentence-trigger callbacks under `asyncio.as_completed` and does not cancel them when the voice request is cancelled, so they keep running; this affects every integration with sentence triggers, and no issue has been filed

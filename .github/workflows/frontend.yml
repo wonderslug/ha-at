@@ -1,0 +1,61 @@
+name: Frontend
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "frontend/**"
+      - "custom_components/at/frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    branches:
+      - "main"
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "frontend/**"
+      - "custom_components/at/frontend/**"
+      - ".github/workflows/frontend.yml"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: "Frontend checks"
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+          version: "2026.11.8"
+          install_args: node
+
+      - name: Install dependencies
+        run: npm --prefix frontend ci
+
+      - name: Type-check
+        run: npm --prefix frontend run typecheck
+
+      - name: Test
+        run: npm --prefix frontend test
+
+      # HACS installs the committed bundle, so it has to be what the sources build.
+      - name: Check the committed bundle is current
+        run: |
+          npm --prefix frontend run build
+          git diff --exit-code -- custom_components/at/frontend/ ||
+            { echo "::error::custom_components/at/frontend/at-panel.js is stale; run script/build-frontend and commit it"; exit 1; }
