@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from custom_components.at.core.models import Job, JobStatus, Via
 from custom_components.at.core.timeparse import TimeSpec, candidate_hours
-from custom_components.at.lang import LanguagePack, day_qualifier
+from custom_components.at.lang import LanguagePack, day_qualifier, spoken_summary
 
 _LIST_LIMIT = 3
 _TONIGHT_ENDS = time(6, 0)
@@ -96,7 +96,7 @@ def _item(pack: LanguagePack, job: Job, now: datetime, tz: ZoneInfo) -> str:
     responses = pack.responses
     local_due = job.due.astimezone(tz)
     return str(responses["list_item"]).format(
-        summary=job.summary[:1].lower() + job.summary[1:],
+        summary=spoken_summary(job.summary),
         time=responses["spoken_time"](local_due),
         day=day_qualifier(pack, local_due, now.astimezone(tz)),
     )

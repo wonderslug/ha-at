@@ -176,3 +176,17 @@ def test_cancel_all_speech_singular() -> None:
     assert cancel_all_speech(PACK, 1, 0) == "Cancelled 1 job."
     assert cancel_all_speech(PACK, 1, 1) == "Cancelled 1 job. 1 job created by automations was left alone."
     assert cancel_all_speech(PACK, 0, 2) == "Cancelled 0 jobs. 2 jobs created by automations were left alone."
+
+
+def test_spoken_summary_keeps_a_leading_acronym() -> None:
+    """Only an ordinary first word is lowercased mid-sentence."""
+    assert cancel_one_speech(PACK, _job(_at(0, 23), summary="TV off"), NOW, TZ) == "Cancelled: TV off at 11 PM."
+    assert cancel_one_speech(PACK, _job(_at(0, 23), summary="A light"), NOW, TZ) == "Cancelled: a light at 11 PM."
+
+
+def test_past_days_are_named() -> None:
+    """A job due before today says yesterday or its date, never nothing."""
+    assert cancel_one_speech(PACK, _job(_at(-1, 23)), NOW, TZ) == "Cancelled: turn on Porch Light at 11 PM yesterday."
+    assert (
+        cancel_one_speech(PACK, _job(_at(-3, 23)), NOW, TZ) == "Cancelled: turn on Porch Light at 11 PM on November 14."
+    )

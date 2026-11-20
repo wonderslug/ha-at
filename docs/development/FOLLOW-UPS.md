@@ -24,11 +24,11 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 6: while a new or moved job is still being saved, run now is refused instead of silently doing nothing, and a cancel there no longer sends a scheduled event or arms a timer
 - Task 7: picked actions aimed at an area, floor, device or label get a real summary ("Turn on Kitchen lights") instead of "Run action"; an invalid stored action's error names the action; the `script.turn_on` / `automation.trigger` limitation was already in Known limitations and the deleted-user context in the `_context` docstring
 - Task 8: the logbook picks its language each time an entry is shown, and a test checks the real logbook loads the platform; the absolute import in `events.py` is what the import rules now require
+- Task 10 and 11: a summary starting with an acronym ("TV off") keeps its capitals when spoken, through one `spoken_summary` helper shared by scheduling and queries; a job due yesterday or earlier says "yesterday" or its date instead of no day at all
 
 ## Deferred minors
 
-- Task 10: minor (deferred): first-letter lowercasing mangles acronym-leading summaries; same-day/negative days -> "" qualifier
-- Task 11: minor (deferred): lowercase-first-letter duplicated in queries/scheduling; same-clock-time ambiguity says "6 AM and 6 AM"; tonight at 02:00 spans to next 06:00
+- Task 11: minor (deferred): same-clock-time ambiguity says "6 AM and 6 AM"; tonight at 02:00 spans to next 06:00
 - Task 13: minor (deferred): "set the light brightness at 20" schedules at 8 PM (ambiguous digits).
 - Task 13: minor (deferred): broadcast test patches intent.async_handle globally (brittle)
 - Task 13: minor (deferred): no cancellation regression test for hand-off
