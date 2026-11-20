@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from custom_components.at.const import STORAGE_KEY, STORAGE_MINOR_VERSION, STORAGE_VERSION
+from custom_components.at.const import LOGGER, STORAGE_KEY, STORAGE_MINOR_VERSION, STORAGE_VERSION
 from homeassistant.helpers.storage import Store
 
 from .models import Job, JobStatus
@@ -41,18 +41,35 @@ class _JobStorage(Store[dict[str, Any]]):
 
 
 class JobStore:
-    """Load and save jobs."""
+    """
+    Load and save jobs.
+
+    A stored record that cannot be read is set aside under ``unreadable`` and written back unchanged on every
+    save, so one bad record neither stops the integration loading nor is lost.
+    """
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialise the store."""
         self._store = _JobStorage(hass, STORAGE_VERSION, STORAGE_KEY, minor_version=STORAGE_MINOR_VERSION)
+        self._unreadable: list[Any] = []
 
     async def async_load(self) -> list[Job]:
-        """Return all stored jobs."""
+        """Return every stored job that can be read."""
         data = await self._store.async_load()
         if not data:
             return []
-        return [Job.from_dict(item) for item in data.get("jobs", [])]
+        self._unreadable = list(data.get("unreadable", []))
+        jobs: list[Job] = []
+        for item in data.get("jobs", []):
+            try:
+                job = Job.from_dict(item)
+            except (AttributeError, KeyError, TypeError, ValueError) as err:
+                record_id = item.get("id") if isinstance(item, dict) else None
+                LOGGER.warning("Stored job %s cannot be read and was set aside: %r", record_id, err)
+                self._unreadable.append(item)
+            else:
+                jobs.append(job)
+        return jobs
 
     async def async_remove(self) -> None:
         """Delete the stored jobs."""
@@ -60,7 +77,10 @@ class JobStore:
 
     async def async_save(self, jobs: Iterable[Job]) -> None:
         """Persist the jobs."""
-        await self._store.async_save({"jobs": [job.to_dict() for job in jobs]})
+        data: dict[str, Any] = {"jobs": [job.to_dict() for job in jobs]}
+        if self._unreadable:
+            data["unreadable"] = self._unreadable
+        await self._store.async_save(data)
 
 
 def prune_history(jobs: list[Job], now: datetime, days: int, max_count: int) -> list[Job]:
