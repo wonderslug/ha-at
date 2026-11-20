@@ -292,6 +292,16 @@ async def test_run_now_raw_action_non_admin_unauthorized(
     assert manager.get(job.id).status is JobStatus.PENDING
 
 
+async def test_run_now_finished_raw_action_non_admin_unauthorized(
+    hass: HomeAssistant, manager: JobManager, hass_read_only_user: User
+) -> None:
+    """A non-admin is refused for a raw action before learning whether it is still pending."""
+    job = await manager.async_add(make_job(datetime(2026, 11, 19, tzinfo=UTC), raw_action=True))
+    await manager.async_cancel(job.id, "voice")
+    with pytest.raises(Unauthorized):
+        await call(hass, "run_now", {"job_id": job.id}, hass_read_only_user)
+
+
 async def test_clear_history(hass: HomeAssistant, manager: JobManager) -> None:
     """clear_history removes finished jobs and reports how many."""
     now = datetime(2026, 11, 18, 4, 22, tzinfo=UTC)

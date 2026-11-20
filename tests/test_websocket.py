@@ -290,6 +290,16 @@ async def test_run_now_raw_action_non_admin_unauthorized(
     assert manager.get(job.id).status is JobStatus.PENDING
 
 
+async def test_run_now_finished_raw_action_non_admin_unauthorized(
+    hass: HomeAssistant, manager: JobManager, user_client: Client
+) -> None:
+    """A non-admin is refused for a raw action before its status is checked."""
+    job = await manager.async_add(make_job(DUE, raw_action=True))
+    await manager.async_cancel(job.id, "voice")
+    response = await send(user_client, "run_now", job_id=job.id)
+    assert response["error"]["code"] == "unauthorized"
+
+
 async def test_run_now_picked_action(hass: HomeAssistant, manager: JobManager, user_client: Client) -> None:
     """A non-admin can run an allowlisted job now."""
     job = await manager.async_add(make_job(DUE))

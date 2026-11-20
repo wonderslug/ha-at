@@ -27,12 +27,12 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 10 and 11: a summary starting with an acronym ("TV off") keeps its capitals when spoken, through one `spoken_summary` helper shared by scheduling and queries; a job due yesterday or earlier says "yesterday" or its date instead of no day at all
 - Task 11: jobs sharing a time are told apart by summary when cancelling ("cancel the turn off Porch Light job"), and "tonight" asked before 6 AM ends at 6 AM that morning
 - Task 13: the broadcast hand-off test registers a stub broadcast handler instead of patching `intent.async_handle`, and a test checks that cancelling the trigger callback cancels the forwarded call
+- Task 14: run now checks a non-admin against a raw action before saying whether the job is still pending, in the action and the websocket command
 
 ## Deferred minors
 
 - Task 13: minor (deferred): "set the light brightness at 20" schedules at 8 PM (ambiguous digits).
 - Task 14: minor (deferred): at.list exposes raw action bodies to non-admins; cancel/clear_history have no admin gate (spec: shared household queue, so OK)
-- Task 14: minor (deferred): run_now error order for non-admin
 - Task 16: minor (deferred): unique_id/EntityDescription convention & duplicated sensor boilerplate; \_unrecorded_attributes for jobs/summary; no unload test
 - Task 17: minor (deferred): history->needs_action silently ignored; tests poke manager.\_jobs
 - Task 19: minor (deferred): no CI bundle-freshness check; npm audit dev-only picomatch
