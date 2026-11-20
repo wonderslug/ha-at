@@ -29,12 +29,12 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 13: the broadcast hand-off test registers a stub broadcast handler instead of patching `intent.async_handle`, and a test checks that cancelling the trigger callback cancels the forwarded call
 - Task 14: run now checks a non-admin against a raw action before saying whether the job is still pending, in the action and the websocket command
 - Task 16: the sensors and the to-do list take an `EntityDescription`, and the base entity sets the unique id and follows the queue; the `jobs`, `job_id` and `summary` attributes stay out of the recorder; a test covers unload and reload
+- Task 17: unchecking a finished to-do item is refused with the not-pending error instead of silently snapping back, and the to-do tests store history through `JobStore` and reload instead of writing `manager._jobs`
 
 ## Deferred minors
 
 - Task 13: minor (deferred): "set the light brightness at 20" schedules at 8 PM (ambiguous digits).
 - Task 14: minor (deferred): at.list exposes raw action bodies to non-admins; cancel/clear_history have no admin gate (spec: shared household queue, so OK)
-- Task 17: minor (deferred): history->needs_action silently ignored; tests poke manager.\_jobs
 - Task 19: minor (deferred): no CI bundle-freshness check; npm audit dev-only picomatch
 - Task 19: minor (deferred): script/build-frontend not shellcheck-verified; spell scripts now excluded from template sync (document)
 - Task 20: minor (deferred): no DOM tests for components; row cancel has no confirm
