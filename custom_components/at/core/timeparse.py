@@ -117,6 +117,51 @@ def _number(raw: str, pack: LanguagePack) -> float:
     return float(total + current)
 
 
+def _clock(groups: dict[str, str], pack: LanguagePack) -> tuple[int, int, Meridiem | None]:
+    """
+    Read the hour, minute and meridiem of a clock time.
+
+    An hour after 12 with no minutes is refused unless the wording makes it 24-hour
+    ("eighteen hundred", "1800 hours"): "set the brightness at 20" is not 8 PM.
+
+    Raises:
+        TimeParseError: the hour or minute is out of range, or a bare hour after 12.
+
+    """
+    has_minutes = True
+    if "hhmm" in groups:
+        hour, minute = divmod(int(groups["hhmm"]), 100)
+    elif "hour24" in groups or "hour24_words" in groups:
+        hour, minute = int(_number(groups.get("hour24") or groups["hour24_words"], pack)), 0
+    elif "hour_words" in groups:
+        hour = int(_number(groups["hour_words"], pack))
+        has_minutes = "minute_words" in groups
+        minute = int(_number(groups["minute_words"], pack)) if has_minutes else 0
+    else:
+        hour = int(groups["hour"])
+        has_minutes = "minute" in groups
+        minute = int(groups.get("minute", "0"))
+    twenty_four = any(key in groups for key in ("hhmm", "hour24", "hour24_words", "hours"))
+    if minute > _MAX_MINUTE:
+        msg = f"invalid minute {minute}"
+        raise TimeParseError(msg)
+    if "ampm" in groups:
+        if not 1 <= hour <= _MAX_HOUR_12:
+            msg = f"invalid hour {hour}"
+            raise TimeParseError(msg)
+        meridiem: Meridiem = pack.meridiem_words[groups["ampm"]]  # type: ignore[assignment]
+        return hour % 12 + (12 if meridiem == "pm" else 0), minute, meridiem
+    if hour > _MAX_HOUR_24:
+        msg = f"invalid hour {hour}"
+        raise TimeParseError(msg)
+    if (twenty_four or hour > _MAX_HOUR_12) and not has_minutes:
+        msg = f"hour {hour} needs minutes"
+        raise TimeParseError(msg)
+    if twenty_four or hour > _MAX_HOUR_12 or hour == 0:
+        return hour, minute, "am" if hour < _MAX_HOUR_12 else "pm"
+    return hour, minute, None
+
+
 def _spec_from_match(m: re.Match[str], pack: LanguagePack) -> TimeSpec:
     groups = {k: v.lower() for k, v in m.groupdict().items() if v is not None}
     if "unit" in groups or "halfonly" in groups:
@@ -139,28 +184,7 @@ def _spec_from_match(m: re.Match[str], pack: LanguagePack) -> TimeSpec:
         hour, minute = pack.named_times[groups["named"]]
         meridiem = "am" if hour < _MAX_HOUR_12 else "pm"
     else:
-        if "hour_words" in groups:
-            hour = int(_number(groups["hour_words"], pack))
-            minute = int(_number(groups["minute_words"], pack)) if "minute_words" in groups else 0
-        else:
-            hour = int(groups["hour"])
-            minute = int(groups.get("minute", "0"))
-        if minute > _MAX_MINUTE:
-            msg = f"invalid minute {minute}"
-            raise TimeParseError(msg)
-        if "ampm" in groups:
-            if not 1 <= hour <= _MAX_HOUR_12:
-                msg = f"invalid hour {hour}"
-                raise TimeParseError(msg)
-            meridiem = pack.meridiem_words[groups["ampm"]]  # type: ignore[assignment]
-            hour = hour % 12 + (12 if meridiem == "pm" else 0)
-        elif hour > _MAX_HOUR_24:
-            msg = f"invalid hour {hour}"
-            raise TimeParseError(msg)
-        elif hour > _MAX_HOUR_12:
-            meridiem = "pm"
-        elif hour == 0:
-            hour, meridiem = 0, "am"
+        hour, minute, meridiem = _clock(groups, pack)
 
     day: Day | None = None
     period: Period | None = None

@@ -101,6 +101,14 @@ async def test_schedule_sentences(
             "OK, in 1 hour and 30 minutes",
             id="hour-and-a-half",
         ),
+        pytest.param("turn on the master bathroom light at 1800 hours", "OK, at 6 PM tomorrow", id="hhmm-hours"),
+        pytest.param("at eighteen hundred hours turn on the master bathroom light", "OK, at 6 PM", id="hundred-hours"),
+        pytest.param("turn on the master bathroom light at 18 hundred", "OK, at 6 PM", id="digits-hundred"),
+        pytest.param("at oh six hundred turn on the master bathroom light", "OK, at 6 AM tomorrow", id="oh-hundred"),
+        pytest.param("turn on the master bathroom light at 23:15 hours", "OK, at 11:15 PM I'll", id="colon-hours"),
+        pytest.param(
+            "turn on the master bathroom light at twenty three fifteen hours", "OK, at 11:15 PM", id="words-hours"
+        ),
     ],
 )
 async def test_time_and_command_are_split_cleanly(
@@ -110,6 +118,25 @@ async def test_time_and_command_are_split_cleanly(
 
     assert speech.startswith(expected), speech
     assert speech.endswith(("Master Bathroom Light.", "Bedtime.")), speech
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "set the master bathroom light brightness at 20",
+        "turn on the master bathroom light at 18",
+        "turn on the master bathroom light at twenty",
+        "turn on the master bathroom light at 1800",
+    ],
+)
+async def test_bare_hour_after_12_is_refused_not_run_now(
+    hass: HomeAssistant, home: Assist, manager: JobManager, sentence: str
+) -> None:
+    speech = await say(hass, home, sentence)
+
+    assert speech == "Sorry, I didn't understand when."
+    assert manager.pending() == []
+    assert bathroom_light_untouched(hass, home)
 
 
 async def test_command_with_numbers_keeps_its_words(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
