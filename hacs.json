@@ -1,5 +1,5 @@
 {
-  "name": "Scheduled Jobs",
+  "name": "at: Scheduled Jobs",
   "homeassistant": "2026.10.0",
   "hacs": "2.0.5"
 }

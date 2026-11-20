@@ -25,7 +25,9 @@ touch. See [`blueprint-tooling`](.agents/skills/blueprint-tooling/SKILL.md).
 **Identity — use these everywhere, never a variant:**
 
 - **Domain:** `at`
-- **Title:** Scheduled Jobs
+- **Title:** at: Scheduled Jobs — the integration name in `manifest.json`, `hacs.json`, the README and the docs
+- **Display name:** Scheduled Jobs — the sidebar panel, the config entry, the device and logbook entries
+  (`PANEL_TITLE`, `DISPLAY_NAME`)
 - **Class prefix:** `At`
 - **Repository:** wonderslug/ha-at
 

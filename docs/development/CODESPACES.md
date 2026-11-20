@@ -1,6 +1,6 @@
 # GitHub Codespaces Development Guide
 
-Scheduled Jobs is fully compatible with GitHub Codespaces for cloud-based development.
+at: Scheduled Jobs is fully compatible with GitHub Codespaces for cloud-based development.
 
 ## Quick Start
 

@@ -14,13 +14,13 @@
 
 1. Go to **Settings** > **Marketplace**.
 2. Add `https://github.com/wonderslug/ha-at` as a custom repository with the category **Integration**.
-3. Open **Scheduled Jobs** and select **Download**.
+3. Open **at: Scheduled Jobs** and select **Download**.
 
 ### HACS (before Home Assistant 2026.11)
 
 1. Open HACS, then select the three-dot menu > **Custom repositories**.
 2. Add `https://github.com/wonderslug/ha-at` with the category **Integration**.
-3. Find **Scheduled Jobs**, select **Download**, and restart Home Assistant.
+3. Find **at: Scheduled Jobs**, select **Download**, and restart Home Assistant.
 
 ### Manual installation
 
@@ -31,10 +31,10 @@
 ## Setup
 
 1. Go to **Settings** > **Devices & services**.
-2. Select **Add integration** and search for **Scheduled Jobs**.
+2. Select **Add integration** and search for **at: Scheduled Jobs**.
 3. Select **Submit**.
 
-There is nothing to enter. The integration and its sidebar panel both show as "Scheduled Jobs".
+There is nothing to enter. The integration shows as "at: Scheduled Jobs" and its sidebar panel as "Scheduled Jobs".
 
 ## Your first job
 
@@ -50,7 +50,7 @@ The [configuration page](CONFIGURATION.md) lists every phrase, the panel, the en
 
 ## Removing the integration
 
-1. Go to **Settings** > **Devices & services** and select **Scheduled Jobs**.
+1. Go to **Settings** > **Devices & services** and select **at: Scheduled Jobs**.
 2. Open the three-dot menu and select **Delete**.
 
 This removes the sidebar panel, the entities, the voice sentences and the intents. The job queue and history are deleted too. If you installed through the Marketplace or HACS, you can also remove the download there, which asks for a restart. Delete any automations that use `at.*` actions or `at_job_*` events yourself.

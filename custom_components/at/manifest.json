@@ -1,6 +1,6 @@
 {
   "domain": "at",
-  "name": "at (placeholder)",
+  "name": "at: Scheduled Jobs",
   "after_dependencies": [
     "logbook",
     "todo"
