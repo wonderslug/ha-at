@@ -29,7 +29,7 @@ async def async_require_admin(hass: HomeAssistant, context: Context | None) -> N
     """
     Reject a call made by a user who is not an administrator.
 
-    A call with no user (an automation or script) is allowed.
+    A call with no context or no user (an automation or script) is allowed.
 
     Raises:
         Unauthorized: the calling user is not an administrator.

@@ -32,7 +32,7 @@ def format_duration(delta: timedelta) -> str:
     return " and ".join(parts)
 
 
-_NUMBERS = {
+_NUMBER_WORDS = {
     "a": 1,
     "an": 1,
     "one": 1,
@@ -51,7 +51,6 @@ _NUMBERS = {
     "twenty": 20,
     "thirty": 30,
     "forty": 40,
-    "forty five": 45,
     "fifty": 50,
     "sixty": 60,
 }
@@ -129,7 +128,6 @@ _UNIT_WORDS = {
     "day": 86400,
     "days": 86400,
 }
-_NUMBER_WORDS = {k: v for k, v in _NUMBERS.items() if " " not in k}
 _MERIDIEM_WORDS = {
     "am": "am",
     "a.m.": "am",

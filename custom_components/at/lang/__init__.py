@@ -43,7 +43,7 @@ class LanguagePack:
     domain_words: Mapping[str, str] = field(default_factory=dict)  # domain -> plural noun, "light" -> "lights"
     place_target: str = "{place}"  # an area or floor target, with {place} and {things}
     recognize_errors: Mapping[str, str] = field(default_factory=dict)  # no_match|refused|no_target[_domain]
-    responses: Any = None
+    responses: Mapping[str, Any] = field(default_factory=dict)  # response key -> template or formatter
     logbook: Mapping[str, str] = field(default_factory=dict)  # event key -> template
     todo: Mapping[str, str] = field(default_factory=dict)  # done|failed|missed|cancelled -> description
     messages: Mapping[str, str] = field(default_factory=dict)  # error key -> template, see ``message``

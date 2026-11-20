@@ -63,6 +63,7 @@ def _alternation(words: Iterable[str]) -> str:
 class _Compiled:
     relative: tuple[re.Pattern[str], ...]
     phrases: tuple[re.Pattern[str], ...]
+    splits: tuple[tuple[re.Pattern[str], re.Pattern[str]], ...]
 
 
 @lru_cache(maxsize=8)
@@ -83,7 +84,16 @@ def _compile(pack: LanguagePack) -> _Compiled:
     def build(templates: Iterable[str]) -> tuple[re.Pattern[str], ...]:
         return tuple(re.compile(t % subs, re.IGNORECASE) for t in templates)
 
-    return _Compiled(relative=build(tpl["relative"]), phrases=build(tpl["phrases"]))
+    relative = build(tpl["relative"])
+    phrases = build(tpl["phrases"])
+    splits = tuple(
+        (
+            re.compile(r"(?:" + p.pattern + r")(?:\s+|$)", re.IGNORECASE),
+            re.compile(r"(?:^|\s+)(?:" + p.pattern + r")$", re.IGNORECASE),
+        )
+        for p in (*relative, *phrases)
+    )
+    return _Compiled(relative=relative, phrases=phrases, splits=splits)
 
 
 def _number(raw: str, pack: LanguagePack) -> float:
@@ -167,11 +177,8 @@ def parse_time_text(text: str, pack: LanguagePack) -> TimeSpec:
 def split_time_and_command(text: str, pack: LanguagePack) -> tuple[TimeSpec, str]:
     """Split a sentence into its time phrase (at the start or end) and the rest."""
     cleaned = _clean(text)
-    compiled = _compile(pack)
     best: tuple[int, re.Match[str], str] | None = None
-    for pattern in (*compiled.relative, *compiled.phrases):
-        starts = re.compile(r"(?:" + pattern.pattern + r")(?:\s+|$)", re.IGNORECASE)
-        ends = re.compile(r"(?:^|\s+)(?:" + pattern.pattern + r")$", re.IGNORECASE)
+    for starts, ends in _compile(pack).splits:
         for rx, where in ((starts, "start"), (ends, "end")):
             m = rx.match(cleaned) if where == "start" else rx.search(cleaned)
             if m is None:
