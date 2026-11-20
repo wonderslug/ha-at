@@ -269,11 +269,11 @@ async def ws_run_now(
     job = _get_job(connection, msg, manager, msg["job_id"])
     if job is None:
         return
-    if job.status is not JobStatus.PENDING:
-        _not_pending(connection, msg, job.id)
-        return
     if job.raw_action and not connection.user.is_admin:
         _unauthorized(connection, msg)
+        return
+    if job.status is not JobStatus.PENDING:
+        _not_pending(connection, msg, job.id)
         return
     try:
         job = await manager.async_run_now(job.id)
