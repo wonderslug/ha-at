@@ -329,6 +329,7 @@ EN = LanguagePack(
         "absolute": "OK, at {time}{day} I'll {summary}.",
         "relative": "OK, in {duration}, at {time}, I'll {summary}.",
         "today": " today",
+        "yesterday": " yesterday",
         "tomorrow": " tomorrow",
         "weekday": " on {weekday}",
         "date": " on {month} {day}",

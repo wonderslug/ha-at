@@ -87,14 +87,23 @@ def message(pack: LanguagePack | None, key: str, **placeholders: object) -> str:
 _WEEK_DAYS = 7
 
 
+def spoken_summary(summary: str) -> str:
+    """Lowercase a summary's first letter to use it mid-sentence, unless it starts with an acronym such as "TV"."""
+    if summary[:2].isalpha() and summary[:2].isupper():
+        return summary
+    return summary[:1].lower() + summary[1:]
+
+
 def day_qualifier(pack: LanguagePack, local_due: datetime, local_now: datetime) -> str:
-    """Say which day, in local time: nothing for today, then tomorrow, a weekday, or a date."""
+    """Say which day, in local time: nothing for today, then yesterday, tomorrow, a weekday, or a date."""
     responses = pack.responses
     days = (local_due.date() - local_now.date()).days
-    if days <= 0:
+    if days == 0:
         return ""
+    if days == -1:
+        return str(responses["yesterday"])
     if days == 1:
         return str(responses["tomorrow"])
-    if days < _WEEK_DAYS:
+    if 0 < days < _WEEK_DAYS:
         return str(responses["weekday"]).format(weekday=responses["weekday_names"][local_due.weekday()])
     return str(responses["date"]).format(month=responses["month_names"][local_due.month - 1], day=local_due.day)

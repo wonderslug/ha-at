@@ -15,7 +15,7 @@ from custom_components.at.core.timeparse import (
     split_time_and_command,
 )
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
-from custom_components.at.lang import LanguagePack, day_qualifier, get_language_pack
+from custom_components.at.lang import LanguagePack, day_qualifier, get_language_pack, spoken_summary
 
 # Imported directly so the refusal is reachable when no language pack exists
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
@@ -52,7 +52,7 @@ def _confirmation(
 ) -> str:
     responses = pack.responses
     local_due = due.astimezone(tz)
-    spoken = summary[:1].lower() + summary[1:]
+    spoken = spoken_summary(summary)
     time = responses["spoken_time"](local_due)
     if relative is not None:
         return str(responses["relative"]).format(duration=responses["duration"](relative), time=time, summary=spoken)
