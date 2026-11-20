@@ -54,6 +54,9 @@ _HUNDRED = "hundred"
 _SMALL = r"(?:%(num_tens)s)(?:(?:\s+|-)(?:%(num_units)s))?|%(num_teens)s|%(num_units)s"
 # "seven thirty", "seven oh five", "six forty-five"
 _MINUTE_WORDS = r"(?:oh|o)\s+(?:%(num_units)s)|(?:%(num_tens)s)(?:(?:\s+|-)(?:%(num_units)s))?|%(num_teens)s"
+# A 24-hour clock hour said with "hundred": "eighteen hundred", "oh six hundred", "zero hundred".
+_HOUR_24_WORDS = r"(?:oh|o|zero)\s+(?:%(num_units)s)|zero|%(num_teens)s|twenty(?:(?:\s+|-)(?:one|two|three))?"
+_HOURS = "hours"
 # Up to 999: "a hundred", "one hundred and twenty", "two hundred five".
 _NUMBER = rf"(?:(?:%(num_units)s|a)\s+)?(?:%(scale)s)(?:\s+(?:and\s+)?(?:{_SMALL}))?|{_SMALL}|%(num_article)s"
 
@@ -82,7 +85,11 @@ def _spelled(numbers: Iterable[int]) -> dict[str, list[dict[str, Any]]]:
 # Sentence triggers. Time pieces are range or value lists (below) so free text can't reach the
 # time part; the command is the {command} wildcard. Every list is drawn from the parser's own
 # tables, so whatever a template matches the time parser understands.
-_CLOCK = "at ({hour}[:{minute}] [{meridiem}] [o'clock]|{hour_word} [{minute_word}] [{meridiem}] [o'clock]|{named})"
+# A bare hour after 12 still matches, so the parser refuses it instead of Assist running the command now.
+_CLOCK = (
+    "at ({hour}[:{minute}] [{meridiem}|hours] [o'clock]|{hour_word} [{minute_word}] [{meridiem}|hours] [o'clock]"
+    "|{hhmm} [hours]|({hour_24}|{hour_word_24}) hundred [hours]|{named})"
+)
 _DAYREF = "({day}|on {weekday}) [{period}]"
 _COUNT = "({number}|{number_word})"
 _ABSOLUTE = [f"{_DAYREF} {_CLOCK}", f"{_CLOCK} {_DAYREF}", _CLOCK]
@@ -173,9 +180,11 @@ EN = LanguagePack(
         "number": _NUMBER,
         "clock": (
             r"at\s+(?:(?P<named>%(named)s)"
+            rf"|(?P<hhmm>\d{{4}})\s+{_HOURS}"
+            rf"|(?:(?P<hour24>\d{{2}})|(?P<hour24_words>{_HOUR_24_WORDS}))\s+{_HUNDRED}(?:\s+{_HOURS})?"
             r"|(?:(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?"
             rf"|(?P<hour_words>{_SMALL})(?:\s+(?P<minute_words>{_MINUTE_WORDS}))?)"
-            r"(?:\s*(?P<ampm>%(meridiem)s))?(?:\s+o'?clock)?)"
+            rf"(?:\s*(?P<ampm>%(meridiem)s)|\s+(?P<hours>{_HOURS}))?(?:\s+o'?clock)?)"
         ),
         "dayref": (
             r"(?:(?P<day>%(day)s)|on\s+(?P<weekday>%(weekday)s))"
@@ -195,7 +204,7 @@ EN = LanguagePack(
     meridiem_words=_MERIDIEM_WORDS,
     named_times=_NAMED_TIMES,
     number_scales={_HUNDRED: 100},
-    number_fillers=frozenset({"and", "oh", "o"}),
+    number_fillers=frozenset({"and", "oh", "o", "zero"}),
     run_pattern=r"(?:run|trigger|fire)\s+(?:the\s+)?(?P<name>.+?)(?:\s+automation)?",
     sentences={
         "run": ["(run|trigger|fire) [the] {name}"],
@@ -211,12 +220,19 @@ EN = LanguagePack(
     },
     sentence_lists={
         "hour": {"range": {"from": 0, "to": 23, "words": False}},
+        "hour_24": {"values": [{"in": f"{h:02d}", "out": h} for h in range(24)]},
+        "hhmm": {"values": [{"in": f"{h:02d}{m:02d}", "out": h * 100 + m} for h in range(24) for m in range(60)]},
         "minute": {"range": {"from": 0, "to": 59, "words": False}},
         "number": {"range": {"from": 1, "to": 180, "words": False}},
         "number_word": {
             "values": [{"in": word, "out": 1} for word in _NUMBER_WORDS["article"]] + _spelled(range(1, 181))["values"]
         },
         "hour_word": _spelled(range(1, 24)),
+        "hour_word_24": {
+            "values": [{"in": "zero", "out": 0}]
+            + [{"in": f"{zero} {word}", "out": n} for zero in ("oh", "o", "zero") for word, n in _UNITS.items()]
+            + _spelled(range(10, 24))["values"]
+        },
         "minute_word": {
             "values": [{"in": f"{zero} {word}", "out": n} for zero in ("oh", "o") for word, n in _UNITS.items()]
             + _spelled(range(10, 60))["values"]

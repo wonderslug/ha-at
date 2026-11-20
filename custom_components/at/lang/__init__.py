@@ -19,7 +19,8 @@ class LanguagePack:
     ``number_words`` group, plus the ``number``, ``clock`` and ``dayref`` templates
     themselves). The named groups the parser reads are: ``count``, ``half``,
     ``halfonly``, ``unit``, ``named``, ``hour``, ``minute``, ``hour_words``,
-    ``minute_words``, ``ampm``, ``day``, ``weekday`` and ``period``.
+    ``minute_words``, ``ampm``, ``day``, ``weekday`` and ``period``, and for a time
+    that is 24-hour by its wording ``hhmm``, ``hour24``, ``hour24_words`` and ``hours``.
 
     A number in words is read by adding up its words' values, with a ``number_scales``
     word multiplying what came before it and ``number_fillers`` words skipped; the

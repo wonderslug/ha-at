@@ -31,6 +31,7 @@ at 11 pm turn on the porch light
 | -------------- | ----------------------------------------------------------------------------------------- |
 | Clock time     | `at 6`, `at 6:30`, `at 6 pm`, `at 18:30`, `at 6 o'clock`, `at noon`, `at midnight`        |
 | Clock in words | `at seven`, `at seven thirty`, `at six forty-five pm`, `at seven oh five`                 |
+| 24-hour        | `at 18:30`, `at 1800 hours`, `at eighteen hundred`, `at oh six hundred hours`             |
 | Spoken-to-text | `at 11 p.m.`, `at 7 a.m.`                                                                 |
 | Day            | `today`, `tonight`, `tomorrow`, `this morning`, `this afternoon`, `this evening`          |
 | Weekday        | `on Friday`, `on Friday evening`, `on Fri`                                                |
@@ -39,6 +40,8 @@ at 11 pm turn on the porch light
 | Relative words | `in forty five minutes`, `in one hundred and twenty minutes`, `in twenty-five hours`      |
 
 Numbers can be digits or words, up to "nine hundred and ninety-nine". Voice sentences accept durations up to 180.
+
+An hour after 12 needs its minutes or a 24-hour wording: `at 18` and `at twenty` are not times, so "set the brightness at 20" is never read as 8 PM. Say `at 18:00`, `at 1800 hours` or `at eighteen hundred` instead. A four-digit time needs "hours" after it.
 
 ### Listing and canceling
 

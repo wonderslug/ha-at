@@ -154,6 +154,61 @@ def test_clock_time_in_words(text: str, expected_local: str) -> None:
     assert result.due.astimezone(TZ).strftime(FMT) == expected_local
 
 
+@pytest.mark.parametrize(
+    ("text", "expected_local"),
+    [
+        ("at 18:00", "2026-11-18 18:00"),
+        ("at 18:00 hours", "2026-11-18 18:00"),
+        ("at 06:30 hours", "2026-11-18 06:30"),
+        ("at 1800 hours", "2026-11-18 18:00"),
+        ("at 0630 hours", "2026-11-18 06:30"),
+        ("at 18 hundred", "2026-11-18 18:00"),
+        ("at 18 hundred hours", "2026-11-18 18:00"),
+        ("at eighteen hundred", "2026-11-18 18:00"),
+        ("at eighteen hundred hours", "2026-11-18 18:00"),
+        ("at twenty-three hundred hours", "2026-11-17 23:00"),
+        ("at oh six hundred", "2026-11-18 06:00"),
+        ("at zero six hundred hours", "2026-11-18 06:00"),
+        ("at zero hundred hours", "2026-11-18 00:00"),
+        ("at 12 hundred", "2026-11-18 12:00"),
+        ("at eighteen thirty", "2026-11-18 18:30"),
+        ("at eighteen thirty hours", "2026-11-18 18:30"),
+        ("tomorrow at 0700 hours", "2026-11-18 07:00"),
+    ],
+)
+def test_24_hour_clock(text: str, expected_local: str) -> None:
+    result = resolve(parse_time_text(text, EN), NOW, TZ)
+    assert result.due.astimezone(TZ).strftime(FMT) == expected_local
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("at 13", id="bare-digits"),
+        pytest.param("at 20", id="bare-digits-20"),
+        pytest.param("at twenty", id="bare-words"),
+        pytest.param("tomorrow at 18", id="bare-with-day"),
+        pytest.param("at 18 o'clock", id="bare-oclock"),
+        pytest.param("at 18 hours", id="hours-without-minutes"),
+        pytest.param("at 1800", id="hhmm-without-hours"),
+        pytest.param("at 6 hundred", id="one-digit-hundred"),
+        pytest.param("at one hundred", id="one-word-hundred"),
+        pytest.param("at 24 hundred", id="hour-24"),
+        pytest.param("at 1860 hours", id="minute-60"),
+    ],
+)
+def test_ambiguous_or_invalid_24_hour_clock_raises(text: str) -> None:
+    with pytest.raises(TimeParseError):
+        parse_time_text(text, EN)
+
+
+def test_split_refuses_a_setting_that_looks_like_an_hour() -> None:
+    with pytest.raises(TimeParseError):
+        split_time_and_command("set the light brightness at 20", EN)
+    spec, rest = split_time_and_command("set the light brightness at 20 at 1800 hours", EN)
+    assert (rest, spec.hour, spec.minute) == ("set the light brightness at 20", 18, 0)
+
+
 def test_split_clock_time_in_words() -> None:
     cmd = "turn on the master bathroom light"
     spec, rest = split_time_and_command(f"{cmd} at seven thirty", EN)
@@ -170,7 +225,13 @@ def test_sentence_list_words_parse_to_their_value() -> None:
     for value in lists["number_word"]["values"]:
         assert parse_time_text(f"in {value['in']} minutes", EN).relative == timedelta(minutes=value["out"])
     for value in lists["hour_word"]["values"]:
-        assert parse_time_text(f"at {value['in']}", EN).hour in (value["out"], value["out"] % 12 + 12)
+        assert parse_time_text(f"at {value['in']} thirty", EN).hour in (value["out"], value["out"] % 12 + 12)
+    for name in ("hour_24", "hour_word_24"):
+        for value in lists[name]["values"]:
+            assert parse_time_text(f"at {value['in']} hundred", EN).hour == value["out"]
+    for value in lists["hhmm"]["values"]:
+        spec = parse_time_text(f"at {value['in']} hours", EN)
+        assert spec.hour * 100 + spec.minute == value["out"]
     for value in lists["minute_word"]["values"]:
         assert parse_time_text(f"at seven {value['in']}", EN).minute == value["out"]
 
