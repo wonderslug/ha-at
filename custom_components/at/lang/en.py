@@ -356,6 +356,7 @@ EN = LanguagePack(
         "cancel_one": "Cancelled: {item}.",
         "cancel_none": "I couldn't find a scheduled job matching that.",
         "cancel_ambiguous": "There are {count} jobs for {name}, at {times}. Say 'cancel the {first}'.",
+        "cancel_ambiguous_by_summary": "There are {count} jobs for {name}: {items}. Say 'cancel the {first} job'.",
         "cancel_job": "{time} job{day}",
         "cancel_all": "Cancelled {count} jobs.",
         "cancel_all_one": "Cancelled {count} job.",
