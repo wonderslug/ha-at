@@ -28,7 +28,7 @@ from .core.executor import JobExecutor
 from .core.manager import JobManager, ManagerOptions
 from .core.store import JobStore
 from .data import AtRuntimeData
-from .lang import get_language_pack
+from .lang import language_packs
 from .panel import async_register_panel, async_remove_panel
 from .service_actions import async_setup_services
 from .voice.intents import async_register_intents, async_remove_intents
@@ -81,12 +81,9 @@ def _register_voice(hass: HomeAssistant, entry: AtConfigEntry) -> Callable[[], N
         The callback that unregisters them; a no-op when none could be registered.
 
     """
-    if (pack := get_language_pack(hass.config.language)) is None:
-        LOGGER.info("at has no voice sentences for language %s; use the intents or an LLM agent", hass.config.language)
-        return _noop
     defer_relative = entry.options.get(CONF_DEFER_RELATIVE, DEFAULT_DEFER_RELATIVE)
     try:
-        return async_setup_triggers(hass, pack, defer_relative=defer_relative)
+        return async_setup_triggers(hass, language_packs(), defer_relative=defer_relative)
     except Exception as err:  # noqa: BLE001 - Home Assistant internals; without sentences, at still works
         LOGGER.warning(
             "Could not register the at voice sentences, so only the actions, panel and LLM tools work: %s", err

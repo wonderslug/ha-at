@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator
-import logging
+from dataclasses import replace
 from typing import Any, override
 from unittest.mock import patch
 
@@ -11,6 +11,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.at.const import CONF_DEFER_RELATIVE
 from custom_components.at.core.manager import JobManager
+from custom_components.at.ha_internal.sentence_triggers import LanguageSentences, _gate_lists
 from custom_components.at.lang.en import EN
 from homeassistant.components import conversation
 from homeassistant.components.assist_pipeline import (
@@ -259,21 +260,47 @@ async def test_unload_unregisters_triggers(
     assert not speech.startswith("OK, ")
 
 
-async def test_unsupported_language_registers_nothing(
-    hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry, caplog: pytest.LogCaptureFixture
+async def say_in(hass: HomeAssistant, home: Assist, text: str, language: str) -> str:
+    result = await conversation.async_converse(hass, text, None, Context(), language, device_id=home.device_id)
+    return result.response.speech["plain"]["speech"]
+
+
+async def test_sentences_do_not_depend_on_the_system_language(
+    hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry
 ) -> None:
     hass.config.language = "de"
     config_entry.add_to_hass(hass)
-    with caplog.at_level(logging.INFO):
-        await hass.config_entries.async_setup(config_entry.entry_id)
-        await hass.async_block_till_done()
-    hass.config.language = "en"
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
 
     speech = await say(hass, home, "at 11pm turn on the master bathroom light")
 
-    assert not speech.startswith("OK, ")
-    assert config_entry.runtime_data.manager.pending() == []
-    assert "no voice sentences for language de" in caplog.text
+    assert speech.startswith("OK, "), speech
+    assert len(config_entry.runtime_data.manager.pending()) == 1
+
+
+async def test_sentence_in_a_language_without_a_pack_is_left_to_assist(
+    hass: HomeAssistant, home: Assist, manager: JobManager
+) -> None:
+    speech = await say_in(hass, home, "at 11pm turn on the master bathroom light", "de")
+
+    assert speech == "Entschuldigung, das habe ich nicht verstanden"
+    assert manager.pending() == []
+    assert bathroom_light_untouched(hass, home)
+
+
+async def test_each_pipeline_language_parses_with_its_own_pack(
+    hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry
+) -> None:
+    german = replace(EN, code="de", sentences={**EN.sentences, "list": ["was steht an"]})
+    config_entry.add_to_hass(hass)
+    with patch.dict("custom_components.at.lang._PACKS", {"de": lambda: german}):
+        await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert await say_in(hass, home, "was steht an", "de-DE") == "Nothing is scheduled."
+        assert await say(hass, home, "was steht an") != "Nothing is scheduled."
+        assert (await say(hass, home, "what's scheduled")) == "Nothing is scheduled."
 
 
 async def test_public_fallback_when_lists_cannot_be_injected(
@@ -293,6 +320,17 @@ async def test_public_fallback_when_lists_cannot_be_injected(
     # The literal fallback is looser than at's own parse; what only it accepts gets an answer, not "Done".
     assert await say(hass, home, "cancelthe bedtime script") == UNRECOGNIZED
     assert (await say(hass, home, "cancel all jobs")) == "Cancelled 2 jobs."
+
+
+def test_lists_two_languages_define_differently_become_wildcards() -> None:
+    async def unparsed(_given: object) -> str:
+        return ""
+
+    hour = {"range": {"from": 1, "to": 12}}
+    english = LanguageSentences("en", [], {"hour": hour, "scope": {"values": ["tonight"]}}, unparsed)
+    german = LanguageSentences("de", [], {"hour": hour, "scope": {"values": ["heute abend"]}}, unparsed)
+
+    assert _gate_lists([english, german]) == {"hour": hour}
 
 
 @pytest.mark.parametrize("group", ["schedule_absolute", "schedule_relative", "list", "cancel"])

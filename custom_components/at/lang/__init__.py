@@ -1,9 +1,11 @@
 """Language packs: per-language phrase tables, sentence templates and responses."""
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+
+from homeassistant.util import language as language_util
 
 
 @dataclass(frozen=True, eq=False)
@@ -47,14 +49,24 @@ class LanguagePack:
     messages: Mapping[str, str] = field(default_factory=dict)  # error key -> template, see ``message``
 
 
-def get_language_pack(language: str) -> LanguagePack | None:
-    """Return the pack for a language code, or None when unsupported."""
-    code = language.lower().replace("_", "-")
-    if code == "en" or code.startswith("en-"):
-        from .en import EN  # noqa: PLC0415
+def _en() -> LanguagePack:
+    from .en import EN  # noqa: PLC0415 - en imports this module
 
-        return EN
-    return None
+    return EN
+
+
+_PACKS: dict[str, Callable[[], LanguagePack]] = {"en": _en}
+
+
+def language_packs() -> list[LanguagePack]:
+    """Return every language pack `at` ships."""
+    return [load() for load in _PACKS.values()]
+
+
+def get_language_pack(language: str) -> LanguagePack | None:
+    """Return the pack that best fits a language tag, as Home Assistant matches languages, or None."""
+    matches = language_util.matches(language.replace("_", "-"), _PACKS)
+    return _PACKS[matches[0]]() if matches else None
 
 
 def message(pack: LanguagePack | None, key: str, **placeholders: object) -> str:

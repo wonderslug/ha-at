@@ -194,7 +194,7 @@ The events also show in the logbook.
 
 ## Known limitations
 
-- Voice and time phrases are English only. In another language, use the panel or the `at.schedule` action with its `at` or `delay` field. The LLM tools take a spoken time phrase, so they also need English.
+- Voice and time phrases are English only. Each voice assistant uses the sentences of its own language, whatever your Home Assistant language is, so an English assistant works on a German system. In an assistant of another language, `at` leaves the sentence to Assist. Use the panel or the `at.schedule` action with its `at` or `delay` field instead. The LLM tools take a spoken time phrase, so they also need English.
 - A job that runs `script.turn_on` or `automation.trigger` counts as done once the script or automation starts, not when it finishes. A failure inside the script or automation does not mark the job failed.
 - Commands must be ones the built-in agent understands. Anything else is refused.
 - Spelled-out hours such as "at seven" are not recognized. Use digits.
@@ -204,7 +204,7 @@ The events also show in the logbook.
 ## Troubleshooting
 
 - **A phrase is ignored or answered by another agent.** Check the wording against the tables above, and that the target is exposed to Assist.
-- **"Sorry, scheduling is only available in English for now."** Your Home Assistant language is not English.
+- **"Sorry, scheduling is only available in English for now."** The voice assistant you used is not set to English.
 - **A job shows as missed.** Home Assistant was down for longer than the **Grace window**.
 - **Diagnostics.** On the integration page, select the three-dot menu > **Download diagnostics**. The file lists the options, job counts by status, whether your language is supported, and whether each Home Assistant hook `at` relies on was found. It holds no job text and no user IDs. Attach it to bug reports.
 
