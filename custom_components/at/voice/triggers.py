@@ -1,13 +1,14 @@
 """Built-in agent sentence triggers: each one hands its slots to the AtSchedule, AtList or AtCancel intent."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import re
 from typing import Any
 
 from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, LOGGER
 from custom_components.at.core.timeparse import TimeParseError, split_time_and_command
-from custom_components.at.ha_internal.fallthrough import async_hand_off
+from custom_components.at.ha_internal.fallthrough import async_hand_off, async_no_intent_speech
 from custom_components.at.ha_internal.sentence_triggers import (
+    LanguageSentences,
     SentenceGroup,
     TriggerInput,
     async_register_sentence_triggers,
@@ -16,6 +17,9 @@ from custom_components.at.lang import LanguagePack
 from custom_components.at.voice.intents import INTENT_CANCEL, INTENT_LIST, INTENT_SCHEDULE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
+
+# The built-in agent's own last resort, for a language Home Assistant has no sentences for either.
+_NOT_UNDERSTOOD = "Sorry, I couldn't understand that"
 
 
 async def _async_respond(
@@ -58,16 +62,45 @@ def _cancel_time(pack: LanguagePack, wildcards: dict[str, str]) -> str | None:
     return clock
 
 
-def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relative: bool) -> Callable[[], None]:
+def async_setup_triggers(
+    hass: HomeAssistant, packs: Sequence[LanguagePack], *, defer_relative: bool
+) -> Callable[[], None]:
     """
-    Register the schedule, list and cancel sentences for one language.
+    Register the schedule, list and cancel sentences of every language pack.
+
+    Each spoken sentence is answered in its own pipeline's language. A sentence in a language
+    with no pack goes back, whole, to the agent it was meant for, as if `at` weren't installed.
+
+    Returns:
+        The callback that unregisters every sentence.
+
+    """
+
+    async def other_language(given: TriggerInput) -> str:
+        try:
+            speech = await async_hand_off(hass, given)
+        except Exception:  # noqa: BLE001 - another agent's code; whatever it raises, the user still gets an answer
+            LOGGER.exception("Handing %r back to its agent failed", given.sentence)
+            speech = None
+        return speech or await async_no_intent_speech(hass, given.language) or _NOT_UNDERSTOOD
+
+    return async_register_sentence_triggers(
+        hass,
+        [_language_sentences(hass, pack, defer_relative=defer_relative) for pack in packs],
+        other_language=other_language,
+    )
+
+
+def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relative: bool) -> LanguageSentences:
+    """
+    Build one language's schedule, list and cancel sentences and their callbacks.
 
     With ``defer_relative`` the relative-time schedule sentences are left out, so Home
     Assistant's own delayed commands answer them. A schedule sentence whose command Assist
     doesn't know ("remind me at 5") goes back, whole, to the agent it was meant for.
 
     Returns:
-        The callback that unregisters every sentence.
+        The sentences, ready to register.
 
     """
     sentences = pack.sentences
@@ -139,6 +172,4 @@ def async_setup_triggers(hass: HomeAssistant, pack: LanguagePack, *, defer_relat
         SentenceGroup(schedule_sentences, schedule),
         SentenceGroup(sentences["run"], run),
     ]
-    return async_register_sentence_triggers(
-        hass, groups, lists=pack.sentence_lists, language=pack.code, unparsed=unparsed
-    )
+    return LanguageSentences(pack.code, groups, pack.sentence_lists, unparsed)

@@ -40,6 +40,12 @@ try:
 except ImportError:  # pragma: no cover - depends on the Home Assistant version
     current_chat_log = None
 
+# Semi-private: only the wording of a no-match answer depends on it.
+try:
+    from homeassistant.components.conversation.agent_manager import get_agent_manager
+except ImportError:  # pragma: no cover - depends on the Home Assistant version
+    get_agent_manager = None
+
 if TYPE_CHECKING:
     from hassil.recognize import RecognizeResult
 
@@ -56,6 +62,7 @@ def _is_at_intent(result: RecognizeResult) -> bool:
     return result.intent.name.startswith(REFUSED_INTENT_PREFIX)
 
 
+_NO_INTENT_KEY = "no_intent"
 _warned_missing: set[str] = set()
 
 
@@ -119,6 +126,21 @@ async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None
     return await _isolated(_async_default_intents(hass, given))
 
 
+async def async_no_intent_speech(hass: HomeAssistant, language: str) -> str | None:
+    """
+    Return the built-in agent's own "didn't understand" sentence for ``language``.
+
+    Returns:
+        The sentence, or None when the agent or its sentences for that language are missing.
+
+    """
+    agent = None if get_agent_manager is None else get_agent_manager(hass).default_agent
+    if agent is None or (lang_intents := await agent.async_get_or_load_intents(language)) is None:
+        return None
+    text = lang_intents.error_responses.get(_NO_INTENT_KEY)
+    return str(text) if text else None
+
+
 def probe() -> dict[str, bool]:
     """Report whether the private Home Assistant hooks this adapter uses resolved."""
     return {
@@ -126,4 +148,5 @@ def probe() -> dict[str, bool]:
         "current_session": hasattr(chat_session, "current_session"),
         "async_handle_intents": hasattr(conversation, "async_handle_intents"),
         "async_get_chat_log": hasattr(conversation, "async_get_chat_log"),
+        "get_agent_manager": callable(get_agent_manager),
     }
