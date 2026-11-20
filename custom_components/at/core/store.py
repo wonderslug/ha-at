@@ -64,7 +64,11 @@ class JobStore:
 
 
 def prune_history(jobs: list[Job], now: datetime, days: int, max_count: int) -> list[Job]:
-    """Keep non-history jobs plus the newest ``max_count`` history jobs finished within ``days``."""
+    """
+    Keep non-history jobs plus the newest ``max_count`` history jobs finished within ``days``.
+
+    A history job without ``finished_at`` cannot be aged, so it is dropped.
+    """
     cutoff = now - timedelta(days=days)
     history = [j for j in jobs if j.status in HISTORY_STATUSES]
     keep = sorted(
