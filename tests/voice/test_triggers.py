@@ -3,7 +3,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import replace
-from typing import Any, override
+from typing import override
 from unittest.mock import patch
 
 import pytest
@@ -11,7 +11,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.at.const import CONF_DEFER_RELATIVE
 from custom_components.at.core.manager import JobManager
-from custom_components.at.ha_internal.sentence_triggers import LanguageSentences, _gate_lists
+from custom_components.at.ha_internal.fallthrough import async_hand_off
+from custom_components.at.ha_internal.sentence_triggers import LanguageSentences, TriggerInput, _gate_lists
 from custom_components.at.lang.en import EN
 from homeassistant.components import conversation
 from homeassistant.components.assist_pipeline import (
@@ -370,25 +371,35 @@ async def test_unknown_command_with_time_still_refused(hass: HomeAssistant, home
     assert manager.pending() == []
 
 
+class RecordingBroadcastHandler(intent.IntentHandler):
+    """Stand in for the broadcast intent and record the messages it is given."""
+
+    intent_type = "HassBroadcast"
+    slot_schema = {"message": str}
+
+    def __init__(self) -> None:
+        """Start with no messages."""
+        self.messages: list[str] = []
+
+    @override
+    async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
+        """Record the message and answer like the real handler."""
+        self.messages.append(intent_obj.slots["message"]["value"])
+        response = intent_obj.create_response()
+        response.async_set_speech("Done")
+        return response
+
+
 async def test_full_sentence_handed_to_assist_intent(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
     """A refused command part ("broadcast dinner is") goes back whole: HA broadcasts "dinner is at 6"."""
-    assert await async_setup_component(hass, "assist_satellite", {})
-    broadcasts: list[dict] = []
-    original = intent.async_handle
+    handler = RecordingBroadcastHandler()
+    intent.async_register(hass, handler)
 
-    async def spy(
-        hass: HomeAssistant, platform: str, intent_type: str, slots: dict, *args: Any, **kwargs: Any
-    ) -> intent.IntentResponse:
-        if intent_type == "HassBroadcast":
-            broadcasts.append(slots)
-        return await original(hass, platform, intent_type, slots, *args, **kwargs)
-
-    with patch("homeassistant.helpers.intent.async_handle", spy):
-        speech = await say(hass, home, "broadcast dinner is at 6")
+    speech = await say(hass, home, "broadcast dinner is at 6")
 
     assert speech != UNRECOGNIZED
     assert manager.pending() == []
-    assert [slots["message"]["value"] for slots in broadcasts] == ["dinner is at 6"]
+    assert handler.messages == ["dinner is at 6"]
 
 
 class StubLlmAgent(conversation.AbstractConversationAgent):
@@ -507,14 +518,15 @@ class StreamingStubAgent(conversation.AbstractConversationAgent):
             return conversation.ConversationResult(response=response, conversation_id=chat_log.conversation_id)
 
 
-async def use_agent(hass: HomeAssistant, agent: conversation.AbstractConversationAgent) -> None:
-    """Make ``agent`` the pipeline's agent, with prefer-local on."""
+async def use_agent(hass: HomeAssistant, agent: conversation.AbstractConversationAgent) -> str:
+    """Make ``agent`` the pipeline's agent, with prefer-local on, and return its agent id."""
     assert await async_setup_component(hass, "assist_pipeline", {})
     agent_entry = MockConfigEntry(domain="test", title="Stub LLM")
     agent_entry.add_to_hass(hass)
     conversation.async_set_agent(hass, agent_entry, agent)
     (pipeline,) = async_get_pipelines(hass)
     await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
+    return agent_entry.entry_id
 
 
 @pytest.mark.parametrize(
@@ -568,3 +580,42 @@ async def test_failing_agent_gets_refusal_not_crash(
     assert failing_agent.texts == ["remind me at 5"]
     assert manager.pending() == []
     assert "agent exploded" in caplog.text
+
+
+class BlockingStubAgent(StubLlmAgent):
+    """A stand-in LLM that never answers, and notes when it is cancelled."""
+
+    def __init__(self) -> None:
+        """Start waiting for nothing."""
+        super().__init__()
+        self.entered = asyncio.Event()
+        self.cancelled = False
+
+    @override
+    async def async_process(self, user_input: conversation.ConversationInput) -> conversation.ConversationResult:
+        """Block until cancelled."""
+        self.texts.append(user_input.text)
+        self.entered.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            self.cancelled = True
+            raise
+        raise AssertionError
+
+
+async def test_cancelled_trigger_cancels_the_hand_off(hass: HomeAssistant, manager: JobManager) -> None:
+    """The hand-off runs as its own task, so cancelling the trigger callback must cancel the forwarded call too."""
+    agent = BlockingStubAgent()
+    agent_id = await use_agent(hass, agent)
+    given = TriggerInput("remind me at 5", {}, "en", None, None, Context(), agent_id=agent_id)
+
+    hand_off = hass.async_create_task(async_hand_off(hass, given))
+    async with asyncio.timeout(5):
+        await agent.entered.wait()
+    hand_off.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await hand_off
+
+    assert agent.cancelled
+    assert agent.texts == ["remind me at 5"]
