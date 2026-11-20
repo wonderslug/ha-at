@@ -19,10 +19,10 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 1: blueprint_update tests pass and mise provides shellcheck and shfmt, so `script/shell-check` runs without `SKIP` in the dev container and CI; the macOS `git grep` behaviour was not re-checked on a Mac host
 - Task 4: the `is_midnight` special case is gone with the unused `ResolvedTime.rolled_over` flag it fed; the spoken "tomorrow" comes from `day_qualifier()`
 - Task 4: compound number words ("forty five", "one hundred and twenty") and clock times in words ("at seven thirty", "at seven oh five") parse everywhere, voice sentences included
+- Task 5: one unreadable stored job no longer stops the integration loading; it is logged and kept aside under `unreadable` in the store, and the migrate function is tested
 
 ## Deferred minors
 
-- Task 5: minor (deferred): no migrate-func test; one corrupt record fails whole load
 - Task 6: minor (deferred): #5 stop during after-finish save can misreport DONE as interrupted; #7 grace-run wording
 - Task 6: minor (deferred): settling-window edge cases (run_now silently no-op; cancel during settling fires scheduled event for cancelled job)
 - Task 7: minor (deferred): script.turn_on/automation.trigger report success even if target later fails (doc it); area-only summary "Run action"; vol.Invalid msg could name service; deleted-user jobs run as system context (comment)
