@@ -280,8 +280,13 @@ config=None, require_admin=False, config_panel_domain=None, ...)`, public and do
 - Serving the JS bundle (`hass.http.async_register_static_paths([StaticPathConfig(...)])`) is not part of this spike.
 - **Manual check, Task 21:** whether a custom panel can reliably load HA's own `ha-selector` target and action pickers
   in the browser can't be tested in pytest. If it can't, ship the simpler built-in pickers (spec §10 item 6).
-  - **Status (Task 21):** the manual check is still pending (headless environment). The Add job dialog ships the
-    plain `<select>` pickers built from `hass.states` and does not use `ha-selector`, so it works either way.
+  - **Status (2026-11-20, HA 2026.10.4, checked by the developer in a browser):** both work inside the panel's own
+    dialog once their code is loaded. `ha-service-control` renders, narrows the target picker to the chosen action
+    and shows the action's fields; `ha-selector` with `{action: {}}` renders the automation editor's step list with
+    its add-step menu and per-step forms. Their popups open above the panel's dialog and take input, so no
+    `ha-dialog` shell is needed. Which route load registers each element was not captured; the loader tries the
+    config panel's tools/action route (Settings > Tools > Actions), then the automation editor, and stops once both
+    are defined.
 
 ## Summary for the adapters (`ha_internal/`)
 

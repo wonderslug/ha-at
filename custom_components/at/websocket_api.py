@@ -19,13 +19,13 @@ from .const import CONF_PANEL_ADMIN_ONLY, DEFAULT_PANEL_ADMIN_ONLY, DOMAIN
 from .core.actions import (
     ActionNotAllowed,
     InvalidAction,
+    async_summarize_action,
     build_action_job,
-    summarize_action,
+    classify_picked_action,
     validate_action_config,
-    validate_picked_action,
 )
 from .core.errors import JobNotFound, JobStateError
-from .core.models import Job, JobStatus, Source, Via
+from .core.models import Job, JobKind, JobStatus, Source, Via
 from .core.timeparse import wall_time_to_utc
 from .lang import get_language_pack
 from .lang.en import EN
@@ -209,25 +209,20 @@ async def ws_schedule(
     except probatio.Invalid as err:
         connection.send_error(msg_id, "invalid", str(err))
         return
-    try:
-        validate_picked_action(action, get_language_pack(hass.config.language))
-        raw_action = False
-    except ActionNotAllowed:
-        if not connection.user.is_admin:
-            _unauthorized(connection, msg)
-            return
-        raw_action = True
-    except InvalidAction as err:
-        if not connection.user.is_admin:
-            connection.send_error(msg_id, "invalid", str(err))
-            return
-        raw_action = True
     pack = get_language_pack(hass.config.language) or EN
+    try:
+        raw_action = classify_picked_action(action, is_admin=connection.user.is_admin, pack=pack)
+    except ActionNotAllowed as err:
+        connection.send_error(msg_id, "unauthorized", str(err))
+        return
+    except InvalidAction as err:
+        connection.send_error(msg_id, "invalid", str(err))
+        return
     job = build_action_job(
         hass,
         action,
         due=due,
-        summary=summarize_action(hass, action, pack),
+        summary=await async_summarize_action(hass, action, pack),
         raw_action=raw_action,
         via=Via.PANEL,
         user_id=connection.user.id,
@@ -302,7 +297,12 @@ async def ws_reschedule(
     if job.raw_action and not connection.user.is_admin:
         _unauthorized(connection, msg)
         return
-    copy = await manager.async_reschedule(job.id, due, Source(via=Via.RESCHEDULE, user_id=connection.user.id))
+    copy = await manager.async_reschedule(
+        job.id,
+        due,
+        Source(via=Via.RESCHEDULE, user_id=connection.user.id),
+        raw_action=job.raw_action or (connection.user.is_admin and job.kind is JobKind.ACTION),
+    )
     connection.send_result(msg["id"], {"job": copy.to_dict()})
 
 

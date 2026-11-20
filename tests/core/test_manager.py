@@ -215,6 +215,21 @@ async def test_run_now(
     assert executor.calls == [job.id]
 
 
+async def test_reschedule_raw_action_override(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, make_manager: MakeManager, executor: FakeExecutor
+) -> None:
+    manager = await make_manager()
+    job = await manager.async_add(_job())
+    new_due = dt_util.utcnow() + timedelta(hours=1)
+
+    kept = await manager.async_reschedule(job.id, new_due)
+    flagged = await manager.async_reschedule(job.id, new_due, raw_action=True)
+
+    assert kept.raw_action is False
+    assert flagged.raw_action is True
+    assert (await manager.async_reschedule(flagged.id, new_due)).raw_action is True
+
+
 async def test_reschedule_copies_history_job(
     hass: HomeAssistant, freezer: FrozenDateTimeFactory, make_manager: MakeManager, executor: FakeExecutor
 ) -> None:

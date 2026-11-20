@@ -42,7 +42,7 @@
         },
         "action": {
           "name": "Action",
-          "description": "An action to run later. Only administrators can schedule an action."
+          "description": "An action to run later. Any user can schedule a single action; several steps or templates need an administrator."
         },
         "at": {
           "name": "At",
@@ -125,6 +125,12 @@
   "exceptions": {
     "not_loaded": {
       "message": "at is not set up. Add the integration first."
+    },
+    "action_not_allowed": {
+      "message": "{reason}"
+    },
+    "invalid_action": {
+      "message": "{error}"
     },
     "schedule_refused": {
       "message": "{speech}"

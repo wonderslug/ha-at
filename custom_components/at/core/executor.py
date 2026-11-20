@@ -31,11 +31,21 @@ class JobExecutor:
         return message(get_language_pack(self._hass.config.language), key, **placeholders)
 
     async def _context(self, job: Job) -> Context:
-        """Run as the job's user if it still exists, otherwise as the system."""
+        """
+        Build the context the job runs under.
+
+        A job with no stored user runs with an empty context.
+
+        Raises:
+            JobExecutionError: The user who scheduled the job no longer exists.
+
+        """
         user_id = job.source.user_id
-        if user_id and await self._hass.auth.async_get_user(user_id) is not None:
-            return Context(user_id=user_id)
-        return Context()
+        if user_id is None:
+            return Context()
+        if await self._hass.auth.async_get_user(user_id) is None:
+            raise JobExecutionError(self._message("user_gone"))
+        return Context(user_id=user_id)
 
     async def async_execute(self, job: Job) -> None:
         """

@@ -1,6 +1,7 @@
 """The at.* service actions."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from freezegun.api import FrozenDateTimeFactory
 import probatio
@@ -204,7 +205,73 @@ async def test_schedule_raw_action_non_admin_unauthorized(
 ) -> None:
     """A non-admin user can't schedule a raw action."""
     with pytest.raises(Unauthorized):
-        await call(hass, "schedule", {"action": ACTION, "delay": {"minutes": 1}}, hass_read_only_user)
+        await call(hass, "schedule", {"action": [*ACTION, *ACTION], "delay": {"minutes": 1}}, hass_read_only_user)
+    assert not manager.pending()
+
+
+async def test_schedule_single_action_non_admin_ok(
+    hass: HomeAssistant, manager: JobManager, hass_read_only_user: User
+) -> None:
+    """Any user can schedule one literal action, stored as a checked job."""
+    response = await call(hass, "schedule", {"action": ACTION, "delay": {"minutes": 1}}, hass_read_only_user)
+    assert manager.get(response["job_id"]).raw_action is False
+
+
+async def test_schedule_single_action_admin_sets_raw_flag(
+    hass: HomeAssistant, manager: JobManager, hass_admin_user: User
+) -> None:
+    """An administrator's action is stored as a raw action."""
+    response = await call(hass, "schedule", {"action": ACTION, "delay": {"minutes": 1}}, hass_admin_user)
+    assert manager.get(response["job_id"]).raw_action is True
+
+
+async def test_schedule_action_unknown_user_unauthorized(hass: HomeAssistant, manager: JobManager) -> None:
+    """A user id that no longer resolves to a user is refused, not treated as an automation."""
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            DOMAIN,
+            "schedule",
+            {"action": ACTION, "delay": {"minutes": 1}},
+            blocking=True,
+            return_response=True,
+            context=Context(user_id="gone"),
+        )
+    assert not manager.pending()
+
+
+async def test_schedule_two_steps_non_admin_unauthorized(
+    hass: HomeAssistant, manager: JobManager, hass_read_only_user: User
+) -> None:
+    """Several steps need an administrator."""
+    with pytest.raises(Unauthorized):
+        await call(hass, "schedule", {"action": [*ACTION, *ACTION], "delay": {"minutes": 1}}, hass_read_only_user)
+    assert not manager.pending()
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"brightness": "{{ 5 }}"}}],
+        [{"action": "{{ 'light.turn_on' }}", "target": {"entity_id": "light.porch"}}],
+        [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"{{ 'brightness' }}": 5}}],
+    ],
+)
+async def test_schedule_template_non_admin_unauthorized(
+    hass: HomeAssistant, manager: JobManager, hass_read_only_user: User, action: list[dict[str, Any]]
+) -> None:
+    """A template anywhere needs an administrator, and the refusal says so."""
+    with pytest.raises(Unauthorized, match="^Templates are only available to administrators$"):
+        await call(hass, "schedule", {"action": action, "delay": {"minutes": 1}}, hass_read_only_user)
+    assert not manager.pending()
+
+
+async def test_schedule_misshapen_action_non_admin_invalid(
+    hass: HomeAssistant, manager: JobManager, hass_read_only_user: User
+) -> None:
+    """A shape the picker never produces is reported to a non-admin as a validation error."""
+    action = [{"action": "light.turn_on", "target": {}}]
+    with pytest.raises(ServiceValidationError):
+        await call(hass, "schedule", {"action": action, "delay": {"minutes": 1}}, hass_read_only_user)
     assert not manager.pending()
 
 

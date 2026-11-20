@@ -1,7 +1,9 @@
 """Picked-action rules: what a stored action may contain, and how to describe it."""
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeIs
+
+import probatio
 
 from custom_components.at.lang import message
 from homeassistant.exceptions import HomeAssistantError
@@ -12,6 +14,7 @@ from homeassistant.helpers import (
     floor_registry as fr,
     label_registry as lr,
 )
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.util import dt as dt_util
 
 from .models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
@@ -22,17 +25,13 @@ if TYPE_CHECKING:
     from custom_components.at.lang import LanguagePack
     from homeassistant.core import HomeAssistant
 
-_TOGGLES = ("turn_on", "turn_off", "toggle")
-_SCRIPT_RUN = "script.turn_on"
-_AUTOMATION_TRIGGER = "automation.trigger"
-
 
 class InvalidAction(HomeAssistantError):
     """The action is not one `at` allows a picked action to be; this base class means a bad shape."""
 
 
 class ActionNotAllowed(InvalidAction):
-    """The action is well formed but calls or targets something outside the allowlist."""
+    """The action is well formed but outside the single-step rule, so only an administrator may schedule it."""
 
 
 _TARGET_KEYS = frozenset({"entity_id", "area_id", "device_id", "floor_id", "label_id"})
@@ -76,22 +75,30 @@ def _check_target(name: str, target: Any, pack: LanguagePack | None) -> None:
             raise ActionNotAllowed(message(pack, "target_specific", name=name))
 
 
-def _check_data(data: Any, pack: LanguagePack | None) -> None:
-    if not isinstance(data, dict) or set(data) - {"variables"}:
-        raise ActionNotAllowed(message(pack, "data_variables_only"))
-    variables = data.get("variables", {})
-    if not isinstance(variables, dict):
-        raise InvalidAction(message(pack, "data_variables_mapping"))
-    if any(_is_template(value) for value in variables.values()):
-        raise ActionNotAllowed(message(pack, "data_variables_templates"))
+def _has_template(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any(_has_template(key) or _has_template(item) for key, item in value.items())
+    if isinstance(value, list):
+        return any(_has_template(item) for item in value)
+    return _is_template(value)
+
+
+def _is_service(name: Any) -> TypeIs[str]:
+    if not isinstance(name, str):
+        return False
+    try:
+        cv.service(name)
+    except probatio.Invalid:
+        return False
+    return True
 
 
 def validate_picked_action(action: list[dict[str, Any]], pack: LanguagePack | None = None) -> None:
     """
-    Check an action against the allowlist; messages come from ``pack``, or English without one.
+    Check an action against the single-step rule; messages come from ``pack``, or English without one.
 
     Raises:
-        ActionNotAllowed: The action is well formed but outside the allowlist.
+        ActionNotAllowed: The action is well formed but outside the single-step rule.
         InvalidAction: The action does not have the shape a picked action needs.
 
     """
@@ -101,18 +108,49 @@ def validate_picked_action(action: list[dict[str, Any]], pack: LanguagePack | No
     if not isinstance(step, dict):
         raise InvalidAction(message(pack, "action_step_mapping"))
     name = step.get("action")
-    if not isinstance(name, str) or "." not in name:
+    if _is_template(name):
+        raise ActionNotAllowed(message(pack, "templates_admin_only"))
+    if not _is_service(name):
         raise ActionNotAllowed(message(pack, "action_step_service"))
-    service = name.partition(".")[2]
-    toggle = service in _TOGGLES and name != _SCRIPT_RUN
-    if not (toggle or name in (_SCRIPT_RUN, _AUTOMATION_TRIGGER)):
-        raise ActionNotAllowed(message(pack, "action_not_allowed", name=name))
-    allowed_keys = {"action", "target"} | ({"data"} if name == _SCRIPT_RUN else set())
-    if extra := set(step) - allowed_keys:
+    if extra := set(step) - {"action", "target", "data"}:
         raise ActionNotAllowed(message(pack, "action_extra_keys", name=name, keys=", ".join(sorted(extra))))
-    _check_target(name, step.get("target"), pack)
-    if "data" in step:
-        _check_data(step["data"], pack)
+    if "target" in step:
+        _check_target(name, step["target"], pack)
+    data = step.get("data", {})
+    if not isinstance(data, dict):
+        raise InvalidAction(message(pack, "data_mapping", name=name))
+    if _has_template(data):
+        raise ActionNotAllowed(message(pack, "templates_admin_only"))
+    if data_target := {key: value for key, value in data.items() if key in _TARGET_KEYS}:
+        _check_target(name, data_target, pack)
+
+
+def classify_picked_action(action: list[dict[str, Any]], *, is_admin: bool | None, pack: LanguagePack | None) -> bool:
+    """
+    Decide whether a new action job is admin-only, refusing what a non-administrator may not schedule.
+
+    Args:
+        action: The action, already checked against the script schema.
+        is_admin: Whether the scheduling user is an administrator; None when no user scheduled it.
+        pack: The language pack for the refusal messages.
+
+    Returns:
+        The job's ``raw_action`` flag: False only for a non-administrator's single literal step.
+
+    Raises:
+        ActionNotAllowed: A non-administrator's action is outside the single-step rule.
+        InvalidAction: A non-administrator's action does not have the shape a picked action needs.
+
+    """
+    if is_admin is None:
+        return True
+    try:
+        validate_picked_action(action, pack)
+    except InvalidAction:
+        if is_admin:
+            return True
+        raise
+    return is_admin
 
 
 def _target_ids(step: dict[str, Any], key: str) -> list[str]:
@@ -168,12 +206,15 @@ def _target_names(hass: HomeAssistant, step: dict[str, Any], pack: LanguagePack)
     return names
 
 
-def summarize_action(hass: HomeAssistant, action: list[dict[str, Any]], pack: LanguagePack) -> str:
+def summarize_action(
+    hass: HomeAssistant, action: list[dict[str, Any]], pack: LanguagePack, service_name: str | None = None
+) -> str:
     """
     Describe an action in one phrase, for example "Turn on Porch Light" or "Turn on Kitchen lights".
 
     Returns:
-        The phrase, or the pack's generic one for anything that is not a simple targeted action.
+        The phrase; for an action without a known verb, the service name (with its targets) when given, else the
+        pack's generic one.
 
     """
     if len(action) == 1:
@@ -183,7 +224,28 @@ def summarize_action(hass: HomeAssistant, action: list[dict[str, Any]], pack: La
             verb = pack.summary_verbs.get(name) or pack.summary_verbs.get(name.partition(".")[2])
             if verb:
                 return verb.format(name=pack.joiner.join(names))
+        if service_name:
+            if names:
+                return pack.named_action_summary.format(action=service_name, name=pack.joiner.join(names))
+            return service_name
     return pack.generic_action_summary
+
+
+async def async_service_name(hass: HomeAssistant, action: str) -> str | None:
+    """Return the translated name of a service action such as `light.turn_on`, or None when it has none."""
+    domain, _, service = action.partition(".")
+    if not service:
+        return None
+    translations = await async_get_translations(hass, hass.config.language, "services", [domain])
+    return translations.get(f"component.{domain}.services.{service}.name") or None
+
+
+async def async_summarize_action(hass: HomeAssistant, action: list[dict[str, Any]], pack: LanguagePack) -> str:
+    """Describe an action like `summarize_action`, naming a single step by its translated service name."""
+    service_name = None
+    if len(action) == 1 and isinstance(name := action[0].get("action"), str):
+        service_name = await async_service_name(hass, name)
+    return summarize_action(hass, action, pack, service_name)
 
 
 def targets_from_action(hass: HomeAssistant, action: list[dict[str, Any]]) -> Targets:
