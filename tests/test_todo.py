@@ -8,6 +8,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUs
 
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
+from custom_components.at.core.store import JobStore
 from homeassistant.auth.const import GROUP_ID_USER
 from homeassistant.auth.models import User
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
@@ -100,7 +101,18 @@ async def test_entity_id(hass: HomeAssistant, manager: JobManager, entity_regist
     assert entity_registry.async_get_entity_id("todo", "at", f"{entry_id}_scheduled") == TODO
 
 
-async def test_items_reflect_queue_and_history(hass: HomeAssistant, manager: JobManager) -> None:
+async def add_stored_jobs(hass: HomeAssistant, config_entry: MockConfigEntry, *jobs: Job) -> JobManager:
+    """Store finished jobs the way a past run would have, and reload so the integration reads them."""
+    store = JobStore(hass)
+    await store.async_save([*(await store.async_load()), *jobs])
+    assert await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    return config_entry.runtime_data.manager
+
+
+async def test_items_reflect_queue_and_history(
+    hass: HomeAssistant, manager: JobManager, config_entry: MockConfigEntry
+) -> None:
     """Pending jobs come first by due time; history follows, newest first, with a description."""
     now = datetime.now(UTC).replace(microsecond=0)
     later = await manager.async_add(make_job(now + timedelta(days=2), summary="later"))
@@ -115,10 +127,7 @@ async def test_items_reflect_queue_and_history(hass: HomeAssistant, manager: Job
     )
     missed = make_job(now - timedelta(hours=9), status=JobStatus.MISSED, summary="missed")
     cancelled = make_job(now - timedelta(hours=8), status=JobStatus.CANCELLED, summary="cancelled")
-    for job in (done, failed, missed, cancelled):
-        manager._jobs[job.id] = job  # noqa: SLF001
-    manager._notify("added", done)  # noqa: SLF001
-    await hass.async_block_till_done()
+    await add_stored_jobs(hass, config_entry, done, failed, missed, cancelled)
 
     got = await items(hass)
     assert [i["uid"] for i in got] == [soon.id, later.id, failed.id, done.id, cancelled.id, missed.id]
@@ -152,12 +161,14 @@ async def test_add_item_unrecognized_raises(hass: HomeAssistant, manager: JobMan
     assert manager.pending() == []
 
 
-async def test_delete_pending_cancels(hass: HomeAssistant, manager: JobManager, hass_admin_user: User) -> None:
+async def test_delete_pending_cancels(
+    hass: HomeAssistant, manager: JobManager, config_entry: MockConfigEntry, hass_admin_user: User
+) -> None:
     """Removing a pending item cancels the job; removing a history item deletes it."""
     now = datetime.now(UTC)
     job = await manager.async_add(make_job(now + timedelta(hours=1)))
     old = make_job(now - timedelta(hours=1), status=JobStatus.DONE)
-    manager._jobs[old.id] = old  # noqa: SLF001
+    manager = await add_stored_jobs(hass, config_entry, old)
     await todo_call(hass, "remove_item", {"item": job.id}, user=hass_admin_user)
     assert manager.get(job.id).status is JobStatus.CANCELLED
     assert manager.get(job.id).result.cancelled_user_id == hass_admin_user.id
@@ -225,3 +236,15 @@ async def test_stale_item_is_a_validation_error(hass: HomeAssistant, manager: Jo
     await manager.async_cancel(job.id, "test")
     with pytest.raises(ServiceValidationError, match="not waiting"):
         await todo_call(hass, "update_item", {"item": job.id, "due_datetime": "2026-11-19 08:00:00-06:00"})
+
+
+async def test_reopening_a_finished_item_is_refused(
+    hass: HomeAssistant, manager: JobManager, config_entry: MockConfigEntry
+) -> None:
+    """Unchecking a finished item says why instead of silently snapping back."""
+    done = make_job(datetime.now(UTC) - timedelta(hours=1), status=JobStatus.DONE)
+    manager = await add_stored_jobs(hass, config_entry, done)
+    with pytest.raises(ServiceValidationError) as err:
+        await todo_call(hass, "update_item", {"item": done.id, "status": "needs_action"})
+    assert err.value.translation_key == "job_not_pending"
+    assert manager.get(done.id).status is JobStatus.DONE

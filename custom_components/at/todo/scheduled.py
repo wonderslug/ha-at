@@ -102,13 +102,14 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
         await manager.async_add(outcome.job)
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
-        """Move a pending job, or run it now when it is marked completed."""
+        """Move a pending job, or run it now when it is marked completed; a finished job can't be moved or reopened."""
         uid = item.uid or ""
         job = self._get(uid)
         if item.summary is not None and item.summary != job.summary:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="summary_not_editable")
         if job.status is not JobStatus.PENDING:
-            if isinstance(item.due, datetime) and item.due != job.due:
+            moved = isinstance(item.due, datetime) and item.due != job.due
+            if moved or item.status == TodoItemStatus.NEEDS_ACTION:
                 raise job_not_pending(uid)
             return
         move = isinstance(item.due, datetime) and item.due != job.due
