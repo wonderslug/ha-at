@@ -495,3 +495,92 @@ async def test_add_rolls_back_when_save_fails(hass: HomeAssistant, make_manager:
 
     added = await manager.async_add(_job())
     assert [job.id for job in manager.pending()] == [added.id]
+
+
+class GatedSave:
+    """Hold the ``nth`` store save open until released; every other save goes through."""
+
+    def __init__(self, nth: int) -> None:
+        self.nth = nth
+        self.calls = 0
+        self.reached = asyncio.Event()
+        self.release = asyncio.Event()
+        self._real = JobStore.async_save
+
+    def patch(self) -> Any:
+        """Return a patch that routes every ``JobStore.async_save`` through this gate."""
+
+        async def _save(store: JobStore, jobs: Any) -> None:
+            self.calls += 1
+            if self.calls == self.nth:
+                self.reached.set()
+                await self.release.wait()
+            await self._real(store, jobs)
+
+        return patch.object(JobStore, "async_save", _save)
+
+    async def wait_reached(self) -> None:
+        """Wait until the gated save has started."""
+        async with asyncio.timeout(5):
+            await self.reached.wait()
+
+
+async def test_stop_during_finish_save_records_done(hass: HomeAssistant, make_manager: MakeManager) -> None:
+    """A job that ran is stored as done even when stopping cuts off its final save."""
+    manager = await make_manager()
+    job = await manager.async_add(_job())
+    gate = GatedSave(nth=2)
+
+    with gate.patch():
+        await manager.async_run_now(job.id)
+        await gate.wait_reached()
+        await manager.async_stop()
+
+    stored = {j.id: j for j in await JobStore(hass).async_load()}
+    assert stored[job.id].status is JobStatus.DONE
+
+
+async def test_cancel_while_add_is_saving(
+    hass: HomeAssistant, make_manager: MakeManager, executor: FakeExecutor, freezer: FrozenDateTimeFactory
+) -> None:
+    """Cancelling a job whose add is still saving sends no scheduled event and never runs it."""
+    manager = await make_manager()
+    scheduled = async_capture_events(hass, "at_job_scheduled")
+    cancelled = async_capture_events(hass, "at_job_cancelled")
+    job = _job(due_in=timedelta(minutes=1))
+    gate = GatedSave(nth=1)
+
+    with gate.patch():
+        adding = hass.async_create_task(manager.async_add(job))
+        await gate.wait_reached()
+        await manager.async_cancel(job.id, by="user-1")
+        gate.release.set()
+        await adding
+
+    await _advance(hass, freezer, timedelta(minutes=2))
+    assert scheduled == []
+    assert len(cancelled) == 1
+    assert manager.get(job.id).status is JobStatus.CANCELLED
+    assert executor.calls == []
+
+
+async def test_run_now_while_add_is_saving_raises(
+    hass: HomeAssistant, make_manager: MakeManager, executor: FakeExecutor, freezer: FrozenDateTimeFactory
+) -> None:
+    """Run now during the add's save is refused, and the job still runs at its due time."""
+    manager = await make_manager()
+    job = _job(due_in=timedelta(minutes=1))
+    gate = GatedSave(nth=1)
+
+    with gate.patch():
+        adding = hass.async_create_task(manager.async_add(job))
+        await gate.wait_reached()
+        with pytest.raises(JobStateError):
+            await manager.async_run_now(job.id)
+        gate.release.set()
+        await adding
+
+    assert executor.calls == []
+    await _advance(hass, freezer, timedelta(minutes=2))
+    assert executor.calls == [job.id]
+    assert manager.get(job.id).status is JobStatus.DONE

@@ -20,11 +20,11 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 4: the `is_midnight` special case is gone with the unused `ResolvedTime.rolled_over` flag it fed; the spoken "tomorrow" comes from `day_qualifier()`
 - Task 4: compound number words ("forty five", "one hundred and twenty") and clock times in words ("at seven thirty", "at seven oh five") parse everywhere, voice sentences included
 - Task 5: one unreadable stored job no longer stops the integration loading; it is logged and kept aside under `unreadable` in the store, and the migrate function is tested
+- Task 6: a job that finished while Home Assistant was stopping is stored as done, not interrupted; the grace window docs say it applies after a restart or reload
+- Task 6: while a new or moved job is still being saved, run now is refused instead of silently doing nothing, and a cancel there no longer sends a scheduled event or arms a timer
 
 ## Deferred minors
 
-- Task 6: minor (deferred): #5 stop during after-finish save can misreport DONE as interrupted; #7 grace-run wording
-- Task 6: minor (deferred): settling-window edge cases (run_now silently no-op; cancel during settling fires scheduled event for cancelled job)
 - Task 7: minor (deferred): script.turn_on/automation.trigger report success even if target later fails (doc it); area-only summary "Run action"; vol.Invalid msg could name service; deleted-user jobs run as system context (comment)
 - Task 8: minor (deferred): logbook pack resolved at load; absolute import in events.py; no platform-load test
 - Task 10: minor (deferred): first-letter lowercasing mangles acronym-leading summaries; same-day/negative days -> "" qualifier

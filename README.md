@@ -23,7 +23,7 @@
 - **Actions:** `at.schedule`, `at.list`, `at.cancel`, `at.run_now` and `at.clear_history`.
 - **Events:** `at_job_scheduled`, `at_job_executed`, `at_job_failed`, `at_job_cancelled` and `at_job_missed`.
 
-Jobs survive restarts. A job that comes due while Home Assistant is down still runs if it is within the grace window, and otherwise is marked missed.
+Jobs survive restarts. A job that comes due while Home Assistant is down, or while `at` is reloading, still runs if it is within the grace window, and otherwise is marked missed.
 
 > [!NOTE]
 > Voice and text scheduling is English only. Only commands that Home Assistant's built-in agent understands can be scheduled. See [known limitations](docs/user/CONFIGURATION.md#known-limitations).
