@@ -35,9 +35,12 @@ export class AddJobDialog extends LitElement {
 
   private debounce?: number;
   private parseSeq = 0;
+  private returnFocus?: HTMLElement;
 
   private onKey = (e: KeyboardEvent) => {
-    if (e.key === "Escape" && this.open) this.close();
+    if (!this.open) return;
+    if (e.key === "Escape") this.close();
+    else if (e.key === "Tab") this.trapFocus(e);
   };
 
   override connectedCallback() {
@@ -52,7 +55,37 @@ export class AddJobDialog extends LitElement {
   }
 
   protected override updated(changed: Map<string, unknown>) {
-    if (changed.has("open") && this.open) this.reset();
+    if (changed.has("open") && this.open) {
+      this.returnFocus = deepActiveElement();
+      this.reset();
+      const dialog = this.shadowRoot?.querySelector(".dialog");
+      (dialog?.querySelector<HTMLElement>("input, select, textarea") ?? this.focusables()[0])?.focus();
+    }
+  }
+
+  private focusables(): HTMLElement[] {
+    const dialog = this.shadowRoot?.querySelector(".dialog");
+    if (!dialog) return [];
+    return [...dialog.querySelectorAll<HTMLElement>("button, input, select, textarea")].filter(
+      (el) => !(el as HTMLButtonElement).disabled,
+    );
+  }
+
+  /** Keep Tab and Shift+Tab inside the dialog, which is modal. */
+  private trapFocus(e: KeyboardEvent) {
+    const items = this.focusables();
+    if (!items.length) return;
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const inside = active !== null && items.includes(active);
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && (!inside || active === first)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (!inside || active === last)) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   private reset() {
@@ -71,10 +104,14 @@ export class AddJobDialog extends LitElement {
     this.busy = false;
   }
 
+  /** Close and reset, except while a submit is in flight: closing then would let it be sent twice. */
   private close() {
+    if (this.busy) return;
     this.reset();
     this.open = false;
     this.dispatchEvent(new CustomEvent("close-add-job"));
+    this.returnFocus?.focus();
+    this.returnFocus = undefined;
   }
 
   private onText(value: string) {
@@ -171,6 +208,7 @@ export class AddJobDialog extends LitElement {
     this.error = "";
     try {
       await api.schedule(hass, payload);
+      this.busy = false;
       this.close();
     } catch (err) {
       this.error = (err as { message?: string })?.message || "Could not add the job";
@@ -281,7 +319,7 @@ export class AddJobDialog extends LitElement {
         ${this.mode === "type" ? this.typeSection() : this.mode === "pick" ? this.pickSection() : this.rawSection()}
         ${this.error ? html`<div class="error" role="alert">${this.error}</div>` : nothing}
         <div class="actions">
-          <button @click=${() => this.close()}>Cancel</button>
+          <button ?disabled=${this.busy} @click=${() => this.close()}>Cancel</button>
           <button class="primary" ?disabled=${!this.canSubmit || rawBad} @click=${() => void this.submit()}>Add</button>
         </div>
       </div>
@@ -400,6 +438,12 @@ export class AddJobDialog extends LitElement {
       cursor: default;
     }
   `;
+}
+
+function deepActiveElement(): HTMLElement | undefined {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active instanceof HTMLElement ? active : undefined;
 }
 
 declare global {
