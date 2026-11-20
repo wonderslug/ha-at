@@ -16,11 +16,11 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 5: `prune_history` docstring says a history job without `finished_at` is dropped
 - Task 17: `async_require_admin` docstring covers a missing context
 - Task 20: other users' jobs showed "User"; the panel now resolves every user's person name (#17)
+- Task 1: blueprint_update tests pass and mise provides shellcheck and shfmt, so `script/shell-check` runs without `SKIP` in the dev container and CI; the macOS `git grep` behaviour was not re-checked on a Mac host
+- Task 4: the `is_midnight` special case is gone with the unused `ResolvedTime.rolled_over` flag it fed; the spoken "tomorrow" comes from `day_qualifier()`
 
 ## Deferred minors
 
-- Task 1: minor (deferred): blueprint_update tests fail on macOS git grep; shellcheck/shfmt absent on host (commits used SKIP)
-- Task 4: minor (deferred): is_midnight special-case
 - Task 4: minor (deferred): compound number words ("forty five", "twenty five") are not understood by the time parser or the voice sentences; only single words and digits work
 - Task 5: minor (deferred): no migrate-func test; one corrupt record fails whole load
 - Task 6: minor (deferred): #5 stop during after-finish save can misreport DONE as interrupted; #7 grace-run wording

@@ -21,34 +21,33 @@ FMT = "%Y-%m-%d %H:%M"
 
 
 @pytest.mark.parametrize(
-    ("text", "expected_local", "rolled"),
+    ("text", "expected_local"),
     [
-        ("in 20 minutes", "2026-11-17 22:42", False),
-        ("in 2 hours", "2026-11-18 00:22", False),
-        ("in an hour and a half", "2026-11-17 23:52", False),
-        ("in half an hour", "2026-11-17 22:52", False),
-        ("in 3 days", "2026-11-20 22:22", False),
-        ("at 11pm", "2026-11-17 23:00", False),
-        ("at 11 pm", "2026-11-17 23:00", False),
-        ("at 6am", "2026-11-18 06:00", True),
-        ("at 6:30", "2026-11-18 06:30", True),
-        ("at 11", "2026-11-17 23:00", False),
-        ("at 7 o'clock", "2026-11-18 07:00", True),
-        ("at noon", "2026-11-18 12:00", True),
-        ("at midnight", "2026-11-18 00:00", False),
-        ("tomorrow at 7", "2026-11-18 07:00", False),
-        ("at 6:30 tonight", "2026-11-18 18:30", True),
-        ("tomorrow morning at 8", "2026-11-18 08:00", False),
-        ("this afternoon at 3", "2026-11-18 15:00", True),
-        ("on friday at 8", "2026-11-20 08:00", False),
-        ("on tuesday at 11pm", "2026-11-17 23:00", False),
-        ("on tuesday at 9am", "2026-11-24 09:00", False),
+        ("in 20 minutes", "2026-11-17 22:42"),
+        ("in 2 hours", "2026-11-18 00:22"),
+        ("in an hour and a half", "2026-11-17 23:52"),
+        ("in half an hour", "2026-11-17 22:52"),
+        ("in 3 days", "2026-11-20 22:22"),
+        ("at 11pm", "2026-11-17 23:00"),
+        ("at 11 pm", "2026-11-17 23:00"),
+        ("at 6am", "2026-11-18 06:00"),
+        ("at 6:30", "2026-11-18 06:30"),
+        ("at 11", "2026-11-17 23:00"),
+        ("at 7 o'clock", "2026-11-18 07:00"),
+        ("at noon", "2026-11-18 12:00"),
+        ("at midnight", "2026-11-18 00:00"),
+        ("tomorrow at 7", "2026-11-18 07:00"),
+        ("at 6:30 tonight", "2026-11-18 18:30"),
+        ("tomorrow morning at 8", "2026-11-18 08:00"),
+        ("this afternoon at 3", "2026-11-18 15:00"),
+        ("on friday at 8", "2026-11-20 08:00"),
+        ("on tuesday at 11pm", "2026-11-17 23:00"),
+        ("on tuesday at 9am", "2026-11-24 09:00"),
     ],
 )
-def test_resolve_phrases(text: str, expected_local: str, rolled: bool) -> None:
+def test_resolve_phrases(text: str, expected_local: str) -> None:
     result = resolve(parse_time_text(text, EN), NOW, TZ)
     assert result.due.astimezone(TZ).strftime(FMT) == expected_local
-    assert result.rolled_over == rolled
     assert result.due.tzinfo is UTC or result.due.utcoffset() == timedelta(0)
 
 
@@ -62,7 +61,6 @@ def test_midnight_and_noon_edges() -> None:
     for text in ("at midnight", "at 12am"):
         r = resolve(parse_time_text(text, EN), now, TZ)
         assert r.due.astimezone(TZ).strftime(FMT) == "2026-11-18 00:00"
-        assert not r.rolled_over
     r = resolve(parse_time_text("at 12pm", EN), now, TZ)
     assert r.due.astimezone(TZ).strftime("%H:%M") == "12:00"
 

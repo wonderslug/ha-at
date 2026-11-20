@@ -50,7 +50,6 @@ class ResolvedTime:
     """A time phrase resolved against a clock and time zone."""
 
     due: datetime
-    rolled_over: bool
     relative: bool
 
 
@@ -233,7 +232,7 @@ def candidate_hours(spec: TimeSpec) -> list[int]:
 def resolve(spec: TimeSpec, now: datetime, tz: ZoneInfo) -> ResolvedTime:
     """Resolve a spec to an aware UTC instant relative to ``now``."""
     if spec.relative is not None:
-        return ResolvedTime(due=now.astimezone(UTC) + spec.relative, rolled_over=False, relative=True)
+        return ResolvedTime(due=now.astimezone(UTC) + spec.relative, relative=True)
 
     hours = candidate_hours(spec)
     local_now = now.astimezone(tz)
@@ -247,26 +246,14 @@ def resolve(spec: TimeSpec, now: datetime, tz: ZoneInfo) -> ResolvedTime:
         later = [c for c in candidates(offset) if c.astimezone(UTC) > now.astimezone(UTC)]
         return min(later, key=lambda c: c.astimezone(UTC)) if later else None
 
-    rolled = False
     if spec.weekday is not None:
         offset = (spec.weekday - today.weekday()) % 7
         chosen = first_after(offset) or first_after(offset + 7)
     elif spec.day == "tomorrow":
         chosen = first_after(1)
     else:
-        chosen = first_after(0)
-        if chosen is None:
-            chosen = first_after(1)
-            # "midnight" / "12am" means the coming 00:00 and never counts as rolled
-            is_midnight = (
-                spec.hour == 0
-                and spec.minute == 0
-                and spec.meridiem == "am"
-                and spec.day is None
-                and spec.period is None
-            )
-            rolled = not is_midnight
+        chosen = first_after(0) or first_after(1)
     if chosen is None:  # pragma: no cover
         msg = "could not resolve time"
         raise TimeParseError(msg)
-    return ResolvedTime(due=chosen.astimezone(UTC), rolled_over=rolled, relative=False)
+    return ResolvedTime(due=chosen.astimezone(UTC), relative=False)
