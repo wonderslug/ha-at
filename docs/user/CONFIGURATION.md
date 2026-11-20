@@ -84,10 +84,10 @@ The **Scheduled Jobs** sidebar panel has two tabs:
 Select **+ Add job** to open the **Add job** dialog:
 
 - **Type it**: a sentence such as "turn on the porch light at 11pm", with a preview of the result.
-- **Pick it**: choose an action (**Turn on**, **Turn off**, **Toggle**, **Run script**, **Trigger automation**), a target, and a time. For scripts, you can enter variables as a JSON object, for example `{"brightness": 80}`. For the time, use the date and time field or the **+15m** and **+1h** chips.
-- **Raw**: a JSON list of actions, for example `[{"action": "light.turn_on", "target": {"entity_id": "light.porch"}}]`. This tab is shown to administrators only.
+- **Pick it**: choose any action, its targets and its options, using the same form Home Assistant uses to perform an action, and a time. For the time, use the date and time field or the **+15m** and **+1h** chips. Any signed-in user can schedule one action with fixed values this way; templates need an administrator.
+- **Sequence**: several steps, built with the automation editor's step list or its YAML view. This tab is shown to administrators only. If Home Assistant's editor elements cannot be loaded, **Pick it** falls back to a verb, target and variables form, and **Sequence** to a JSON list of actions.
 
-Running a job that holds a raw action needs an administrator.
+An action scheduled by an administrator, an action scheduled by an automation or script, and any job with several steps or templates can only be run now, rescheduled or completed by an administrator. Jobs scheduled by voice or typed as a sentence are not affected. A job fails if the person who scheduled it has been removed, with the message "The user who scheduled this job no longer exists".
 
 ## Entities
 
@@ -110,7 +110,7 @@ Running jobs do not appear in the list.
 
 ### `at.schedule`
 
-Schedules a command or an action. Give exactly one of `command` or `action`, and exactly one of `at`, `delay` or `when`. Returns `job_id`, `due` and `summary`. An `action` needs an administrator (or no user, as in an automation).
+Schedules a command or an action. Give exactly one of `command` or `action`, and exactly one of `at`, `delay` or `when`. Returns `job_id`, `due` and `summary`. Any user can schedule a single action; several steps or templates need an administrator (or no user, as in an automation).
 
 ```yaml
 action: at.schedule
@@ -161,7 +161,7 @@ data:
 
 ### `at.run_now`
 
-Runs a pending job immediately. A raw action needs an administrator.
+Runs a pending job immediately. An action scheduled by an administrator or by an automation or script, and any job with several steps or templates, needs an administrator.
 
 ```yaml
 action: at.run_now

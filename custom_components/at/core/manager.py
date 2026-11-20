@@ -235,11 +235,14 @@ class JobManager:
         self._launch(job_id)
         return self._jobs[job_id]
 
-    async def async_reschedule(self, job_id: str, due: datetime, source: Source | None = None) -> Job:
+    async def async_reschedule(
+        self, job_id: str, due: datetime, source: Source | None = None, *, raw_action: bool | None = None
+    ) -> Job:
         """
         Queue a copy of any job with a new id and due time.
 
-        ``source`` says who made the copy; without it the copy keeps the original's.
+        ``source`` says who made the copy; without it the copy keeps the original's. ``raw_action`` sets the
+        copy's admin-only flag; without it the copy keeps the original's.
         """
         original = self.get(job_id)
         clone = Job(
@@ -253,7 +256,7 @@ class JobManager:
             original_text=original.original_text,
             intent=copy.deepcopy(original.intent),
             action=copy.deepcopy(original.action),
-            raw_action=original.raw_action,
+            raw_action=original.raw_action if raw_action is None else raw_action,
             targets=copy.deepcopy(original.targets),
             source=copy.deepcopy(source or original.source),
             result=Result(),

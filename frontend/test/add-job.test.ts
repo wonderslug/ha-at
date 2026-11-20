@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPickedAction, isFuture, parseJsonObject, parseRawAction, quickDue, type PickedInput } from "../src/add-job";
+import { buildPickedAction, fromServiceControl, isFuture, parseJsonObject, parseRawAction, quickDue, type PickedInput } from "../src/add-job";
 import shapes from "./picked-shapes.json";
 
 describe("shared picked shapes", () => {
@@ -80,5 +80,28 @@ describe("parseRawAction", () => {
     expect(parseRawAction('{"a":1}').ok).toBe(false);
     expect(parseRawAction("[1]").ok).toBe(false);
     expect(parseRawAction("nope").ok).toBe(false);
+  });
+});
+
+describe("fromServiceControl", () => {
+  it("is undefined until an action is chosen", () => {
+    expect(fromServiceControl(undefined)).toBeUndefined();
+    expect(fromServiceControl({})).toBeUndefined();
+  });
+  it("omits an empty target and data", () => {
+    expect(fromServiceControl({ action: "light.turn_on", target: {}, data: {} })).toEqual([{ action: "light.turn_on" }]);
+  });
+  it("drops empty target values, and the target when nothing is left", () => {
+    expect(fromServiceControl({ action: "light.turn_on", target: { entity_id: [], device_id: "" } })).toEqual([
+      { action: "light.turn_on" },
+    ]);
+    expect(fromServiceControl({ action: "light.turn_on", target: { entity_id: [], area_id: ["kitchen"] } })).toEqual([
+      { action: "light.turn_on", target: { area_id: ["kitchen"] } },
+    ]);
+  });
+  it("keeps a target and data", () => {
+    expect(
+      fromServiceControl({ action: "light.turn_on", target: { entity_id: ["light.a"] }, data: { brightness_pct: 80 } }),
+    ).toEqual([{ action: "light.turn_on", target: { entity_id: ["light.a"] }, data: { brightness_pct: 80 } }]);
   });
 });

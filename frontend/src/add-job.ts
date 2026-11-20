@@ -21,6 +21,24 @@ export function buildPickedAction(p: PickedInput): Record<string, unknown>[] {
   return [{ action: "automation.trigger", target: { entity_id: p.automation } }];
 }
 
+export type ServiceControlValue = {
+  action?: string;
+  target?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+};
+
+/** One step from `ha-service-control`'s value; `undefined` until an action is chosen. */
+export function fromServiceControl(value: ServiceControlValue | undefined): Record<string, unknown>[] | undefined {
+  if (!value?.action) return undefined;
+  const step: Record<string, unknown> = { action: value.action };
+  const target = Object.fromEntries(
+    Object.entries(value.target ?? {}).filter(([, v]) => !(v == null || v === "" || (Array.isArray(v) && v.length === 0))),
+  );
+  if (Object.keys(target).length > 0) step.target = target;
+  if (value.data && Object.keys(value.data).length > 0) step.data = value.data;
+  return [step];
+}
+
 export function quickDue(chip: "+15m" | "+1h", _now: Date): { delay_seconds: number } {
   return { delay_seconds: chip === "+15m" ? 900 : 3600 };
 }

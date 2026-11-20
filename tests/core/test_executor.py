@@ -152,15 +152,36 @@ async def test_invalid_stored_action_without_a_name_uses_the_summary(hass: HomeA
         await JobExecutor(hass).async_execute(make_job(action=[{"delay": "not a time"}]))
 
 
-async def test_context_user_missing_falls_back_to_system(hass: HomeAssistant, hass_admin_user: User) -> None:
-    """The job's user is used when it still exists; otherwise the context has no user."""
+async def test_deleted_user_fails_job(hass: HomeAssistant) -> None:
+    """A job whose scheduling user was deleted fails instead of running unrestricted."""
     hass.states.async_set("light.porch", "off")
     calls = async_mock_service(hass, "light", "turn_on")
-    executor = JobExecutor(hass)
-    await executor.async_execute(make_job(action=turn_on("light.porch"), user_id=hass_admin_user.id))
-    await executor.async_execute(make_job(action=turn_on("light.porch"), user_id="deleted-user"))
-    await executor.async_execute(make_job(action=turn_on("light.porch")))
-    assert [call.context.user_id for call in calls] == [hass_admin_user.id, None, None]
+    with pytest.raises(JobExecutionError, match=r"^The user who scheduled this job no longer exists$"):
+        await JobExecutor(hass).async_execute(make_job(action=turn_on("light.porch"), user_id="gone"))
+    assert calls == []
+
+
+async def test_deleted_user_fails_intent_job(hass: HomeAssistant) -> None:
+    """An intent job whose scheduling user was deleted fails too."""
+    spec = IntentSpec(type="HassTurnOn", slots={}, language="en", device_id=None)
+    with pytest.raises(JobExecutionError, match=r"^The user who scheduled this job no longer exists$"):
+        await JobExecutor(hass).async_execute(make_job(intent=spec, user_id="gone"))
+
+
+async def test_existing_user_runs_as_that_user(hass: HomeAssistant, hass_admin_user: User) -> None:
+    """The job runs with its scheduling user's context."""
+    hass.states.async_set("light.porch", "off")
+    calls = async_mock_service(hass, "light", "turn_on")
+    await JobExecutor(hass).async_execute(make_job(action=turn_on("light.porch"), user_id=hass_admin_user.id))
+    assert [call.context.user_id for call in calls] == [hass_admin_user.id]
+
+
+async def test_no_user_runs_without_user(hass: HomeAssistant) -> None:
+    """A job with no stored user runs with an empty context."""
+    hass.states.async_set("light.porch", "off")
+    calls = async_mock_service(hass, "light", "turn_on")
+    await JobExecutor(hass).async_execute(make_job(action=turn_on("light.porch")))
+    assert [call.context.user_id for call in calls] == [None]
 
 
 @pytest.mark.real_dependencies

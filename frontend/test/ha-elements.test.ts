@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type ElementRegistry, loadElements, loadHaElements, REQUIRED_ELEMENTS, waitForElements } from "../src/ha-elements";
+import {
+  type ElementRegistry,
+  loadElements,
+  loadHaElements,
+  loadPickerElements,
+  PICKER_ELEMENTS,
+  pickerElementsDefined,
+  REQUIRED_ELEMENTS,
+  runLoadSteps,
+  waitForElements,
+} from "../src/ha-elements";
 
 function fakeRegistry(defined: readonly string[], later: Record<string, number> = {}): ElementRegistry {
   const set = new Set(defined);
@@ -52,6 +62,78 @@ describe("loadHaElements", () => {
     const first = loadHaElements();
     expect(loadHaElements()).toBe(first);
     expect(await first).toEqual([]);
+  });
+});
+
+describe("loadPickerElements", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lists the elements the Pick it tab renders", () => {
+    expect(PICKER_ELEMENTS).toEqual(["ha-service-control", "ha-selector"]);
+  });
+
+  it("returns the same promise on every call", async () => {
+    vi.stubGlobal("customElements", fakeRegistry(PICKER_ELEMENTS));
+    const first = loadPickerElements();
+    expect(loadPickerElements()).toBe(first);
+    expect(await first).toEqual([]);
+  });
+});
+
+describe("pickerElementsDefined", () => {
+  it("needs every picker element", () => {
+    expect(pickerElementsDefined(fakeRegistry(PICKER_ELEMENTS))).toBe(true);
+    expect(pickerElementsDefined(fakeRegistry(["ha-service-control"]))).toBe(false);
+  });
+});
+
+describe("runLoadSteps", () => {
+  function defining(set: Set<string>, tags: string[], calls: string[], name: string) {
+    return async () => {
+      calls.push(name);
+      tags.forEach((t) => set.add(t));
+    };
+  }
+
+  function liveRegistry(set: Set<string>): ElementRegistry {
+    return { get: (t) => (set.has(t) ? class {} : undefined), whenDefined: () => new Promise(() => undefined) };
+  }
+
+  it("tries the steps in order and stops once every tag is defined", async () => {
+    const set = new Set<string>();
+    const calls: string[] = [];
+    const steps = [defining(set, ["a"], calls, "one"), defining(set, ["b"], calls, "two"), defining(set, [], calls, "three")];
+    await runLoadSteps(liveRegistry(set), ["a", "b"], steps, 50);
+    expect(calls).toEqual(["one", "two"]);
+  });
+
+  it("runs no step when everything is already defined", async () => {
+    const calls: string[] = [];
+    await runLoadSteps(liveRegistry(new Set(["a"])), ["a"], [defining(new Set(), [], calls, "one")], 50);
+    expect(calls).toEqual([]);
+  });
+
+  it("continues after a step throws, without logging", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const set = new Set<string>();
+    const calls: string[] = [];
+    const broken = async () => {
+      calls.push("broken");
+      throw new Error("no such route");
+    };
+    await runLoadSteps(liveRegistry(set), ["a"], [broken, defining(set, ["a"], calls, "two")], 50);
+    expect(calls).toEqual(["broken", "two"]);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("gives a hung step only its own time", async () => {
+    const set = new Set<string>();
+    const calls: string[] = [];
+    const hung = () => new Promise<void>(() => calls.push("hung"));
+    await runLoadSteps(liveRegistry(set), ["a"], [hung, defining(set, ["a"], calls, "two")], 20);
+    expect(calls).toEqual(["hung", "two"]);
+    expect(set.has("a")).toBe(true);
   });
 });
 

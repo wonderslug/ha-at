@@ -315,6 +315,7 @@ EN = LanguagePack(
         "HassTurnOn:scene": "Activate {name}",
     },
     generic_action_summary="Run action",
+    named_action_summary="{action}: {name}",
     joiner=" and ",
     domain_words={
         "light": "lights",
@@ -393,6 +394,7 @@ EN = LanguagePack(
     messages={
         # Why a job failed (core/executor.py, ha_internal/intents.py)
         "nothing_to_run": "the job has nothing to run",
+        "user_gone": "The user who scheduled this job no longer exists",
         "entity_unavailable": "{entity_id} is unavailable",
         "entity_gone": "{entity_id} no longer exists",
         "action_invalid": "{action}: the stored action is invalid: {error}",
@@ -407,15 +409,13 @@ EN = LanguagePack(
         "action_one_step": "an action must have exactly one step",
         "action_step_mapping": "the step must be a mapping",
         "action_step_service": "the step must call a service",
-        "action_not_allowed": "{name} is not an allowed action",
         "action_extra_keys": "{name} does not allow {keys}",
         "target_missing": "{name} needs a target",
         "target_extra_keys": "{name} target does not allow {keys}",
         "target_ids_strings": "{name} target ids must be strings",
         "target_specific": "{name} target must name specific ids",
-        "data_variables_only": "script.turn_on only allows data.variables",
-        "data_variables_mapping": "data.variables must be a mapping",
-        "data_variables_templates": "data.variables must not contain templates",
+        "templates_admin_only": "Templates are only available to administrators",
+        "data_mapping": "{name} data must be a mapping",
         # Voice intents
         "not_set_up": "Sorry, scheduling isn't set up.",
     },

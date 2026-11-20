@@ -5,20 +5,27 @@ from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from custom_components.at.const import DOMAIN
-from custom_components.at.core.actions import build_action_job, summarize_action
+from custom_components.at.core.actions import (
+    ActionNotAllowed,
+    InvalidAction,
+    async_summarize_action,
+    build_action_job,
+    classify_picked_action,
+)
 from custom_components.at.core.context import origin_entity_id
 from custom_components.at.core.models import Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text, resolve, wall_time_to_utc
 from custom_components.at.lang import get_language_pack
 from custom_components.at.lang.en import EN
 from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.util import dt as dt_util
 
-from .common import async_get_manager, async_require_admin
+from .common import async_get_manager
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
+    from custom_components.at.lang import LanguagePack
+    from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse
 
 
 def _invalid(key: str, **placeholders: str) -> ServiceValidationError:
@@ -46,6 +53,35 @@ def _action_due(hass: HomeAssistant, data: dict[str, Any]) -> datetime:
         raise _invalid("bad_time", when=data["when"]) from err
 
 
+class AtActionUnauthorized(Unauthorized):
+    """A non-administrator's action needs an administrator; the message says why."""
+
+    def __init__(self, context: Context, reason: str) -> None:
+        """Keep the authorization failure, and carry the reason as its translated message."""
+        super().__init__(context=context)
+        self.translation_domain = DOMAIN
+        self.translation_key = "action_not_allowed"
+        self.translation_placeholders = {"reason": reason}
+        self._message = reason
+
+
+async def _raw_action(
+    hass: HomeAssistant, call: ServiceCall, action: list[dict[str, Any]], pack: LanguagePack | None
+) -> bool:
+    is_admin: bool | None = None
+    if call.context.user_id is not None:
+        user = await hass.auth.async_get_user(call.context.user_id)
+        if user is None:
+            raise Unauthorized(context=call.context)
+        is_admin = user.is_admin
+    try:
+        return classify_picked_action(action, is_admin=is_admin, pack=pack)
+    except ActionNotAllowed as err:
+        raise AtActionUnauthorized(call.context, str(err)) from err
+    except InvalidAction as err:
+        raise _invalid("invalid_action", error=str(err)) from err
+
+
 async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     """
     Schedule a command or a raw action.
@@ -64,16 +100,16 @@ async def async_handle_schedule(hass: HomeAssistant, call: ServiceCall) -> Servi
     name: str | None = data.get("name")
 
     if "action" in data:
-        await async_require_admin(hass, call.context)
         action: list[dict[str, Any]] = data["action"]
         pack = get_language_pack(hass.config.language)
-        summary = name or (summarize_action(hass, action, pack or EN))
+        raw_action = await _raw_action(hass, call, action, pack)
+        summary = name or await async_summarize_action(hass, action, pack or EN)
         job = build_action_job(
             hass,
             action,
             due=_action_due(hass, data),
             summary=summary,
-            raw_action=True,
+            raw_action=raw_action,
             via=Via.SERVICE,
             user_id=user_id,
             origin=origin,

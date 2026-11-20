@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.at.core.manager import JobManager
-from custom_components.at.core.models import JobKind, JobStatus, Via
+from custom_components.at.core.models import IntentSpec, JobKind, JobStatus, Via
 from homeassistant.auth.models import User
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
@@ -23,7 +23,7 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore::aiohttp.web_exceptions.NotAppKeyWarning"),
 ]
 
-RAW_ACTION = [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"brightness": 5}}]
+RAW_ACTION = [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"brightness": "{{ 5 }}"}}]
 DUE = datetime(2026, 11, 19, 10, 0, tzinfo=UTC)
 
 type Client = Any
@@ -210,6 +210,25 @@ async def test_schedule_raw_action_non_admin_unauthorized(
     assert not manager.pending()
 
 
+@pytest.mark.parametrize(
+    "action",
+    [
+        RAW_ACTION,
+        [{"action": "{{ 'light.turn_on' }}", "target": {"entity_id": "light.porch"}}],
+        [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "data": {"{{ 'brightness' }}": 5}}],
+    ],
+)
+async def test_schedule_template_non_admin_says_why(
+    hass: HomeAssistant, manager: JobManager, user_client: Client, action: list[dict[str, Any]]
+) -> None:
+    """A non-admin's template anywhere is refused as unauthorized, with the reason, and nothing is queued."""
+    response = await send(user_client, "schedule", action=action, delay_seconds=60)
+    assert not response["success"]
+    assert response["error"]["code"] == "unauthorized"
+    assert response["error"]["message"] == "Templates are only available to administrators"
+    assert not manager.pending()
+
+
 async def test_schedule_raw_action_admin_ok_sets_raw_flag(
     hass: HomeAssistant, manager: JobManager, admin_client: Client
 ) -> None:
@@ -218,6 +237,39 @@ async def test_schedule_raw_action_admin_ok_sets_raw_flag(
     assert response["success"], response
     assert response["result"]["job"]["raw_action"] is True
     assert response["result"]["job"]["due"] == "2026-11-19T10:00:00+00:00"
+
+
+async def test_schedule_single_action_admin_sets_raw_flag(
+    hass: HomeAssistant, manager: JobManager, admin_client: Client
+) -> None:
+    """A job an administrator schedules is admin-only even when its action is plain."""
+    action = [{"action": "light.turn_on", "target": {"entity_id": "light.a"}}]
+    response = await send(admin_client, "schedule", action=action, delay_seconds=60)
+    assert response["success"], response
+    assert manager.get(response["result"]["job"]["id"]).raw_action is True
+
+
+async def test_schedule_any_single_action_non_admin_ok(
+    hass: HomeAssistant, manager: JobManager, user_client: Client
+) -> None:
+    """A non-admin may schedule any single literal action."""
+    action = [{"action": "climate.set_temperature", "target": {"entity_id": "climate.a"}, "data": {"temperature": 21}}]
+    response = await send(user_client, "schedule", action=action, delay_seconds=60)
+    assert response["success"], response
+    assert manager.get(response["result"]["job"]["id"]).raw_action is False
+
+
+async def test_schedule_two_steps_non_admin_unauthorized(
+    hass: HomeAssistant, manager: JobManager, user_client: Client
+) -> None:
+    """A non-admin may not schedule more than one step."""
+    action = [
+        {"action": "light.turn_on", "target": {"entity_id": "light.a"}},
+        {"action": "light.turn_off", "target": {"entity_id": "light.a"}},
+    ]
+    response = await send(user_client, "schedule", action=action, delay_seconds=60)
+    assert response["error"]["code"] == "unauthorized"
+    assert not manager.pending()
 
 
 async def test_schedule_malformed_action_invalid_for_admin(
@@ -244,11 +296,11 @@ async def test_schedule_misshapen_picked_action_non_admin_invalid(
     hass: HomeAssistant, manager: JobManager, user_client: Client
 ) -> None:
     """A non-admin's picked action with a bad shape is invalid, not unauthorized."""
-    action = [{"action": "script.turn_on", "target": {"entity_id": "script.bedtime"}, "data": {"variables": "x"}}]
+    action = [{"action": "script.turn_on", "target": {"entity_id": "script.bedtime"}, "data": "x"}]
     response = await send(user_client, "schedule", action=action, delay_seconds=60)
     assert not response["success"]
     assert response["error"]["code"] == "invalid"
-    assert response["error"]["message"] == "data.variables must be a mapping"
+    assert response["error"]["message"] == "script.turn_on data must be a mapping"
     assert not manager.pending()
 
 
@@ -323,6 +375,41 @@ async def test_reschedule_copy(
     assert copy["source"]["user_id"] == hass_read_only_user.id
     assert manager.get(job.id).source.user_id == "someone-else"
     assert len(manager.pending()) == 2
+
+
+async def test_reschedule_by_admin_flags_copy(
+    hass: HomeAssistant, manager: JobManager, admin_client: Client, hass_admin_user: User
+) -> None:
+    """An administrator rescheduling a plain job makes the copy admin-only, run as the administrator."""
+    job = await manager.async_add(make_job(DUE))
+    response = await send(admin_client, "reschedule", job_id=job.id, due="2026-11-20T10:00:00+00:00")
+    assert response["success"], response
+    copy = manager.get(response["result"]["job"]["id"])
+    assert copy.raw_action is True
+    assert copy.source.user_id == hass_admin_user.id
+    assert manager.get(job.id).raw_action is False
+
+
+async def test_reschedule_intent_job_by_admin_not_flagged(
+    hass: HomeAssistant, manager: JobManager, admin_client: Client
+) -> None:
+    """An administrator rescheduling an intent job leaves the flag off."""
+    intent_job = make_job(DUE)
+    intent_job.kind = JobKind.INTENT
+    intent_job.action = None
+    intent_job.intent = IntentSpec(type="HassTurnOn", slots={}, language="en")
+    job = await manager.async_add(intent_job)
+    response = await send(admin_client, "reschedule", job_id=job.id, due="2026-11-20T10:00:00+00:00")
+    assert response["success"], response
+    assert manager.get(response["result"]["job"]["id"]).raw_action is False
+
+
+async def test_reschedule_non_admin_keeps_flag(hass: HomeAssistant, manager: JobManager, user_client: Client) -> None:
+    """A non-admin's copy of a plain job stays plain."""
+    job = await manager.async_add(make_job(DUE))
+    response = await send(user_client, "reschedule", job_id=job.id, due="2026-11-20T10:00:00+00:00")
+    assert response["success"], response
+    assert manager.get(response["result"]["job"]["id"]).raw_action is False
 
 
 async def test_reschedule_raw_action_non_admin_unauthorized(
