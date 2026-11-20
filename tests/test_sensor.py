@@ -7,7 +7,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Targets, Via, new_job_id
-from homeassistant.const import STATE_UNKNOWN
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -92,3 +93,26 @@ async def test_pending_jobs_sensor_count_and_attributes(hass: HomeAssistant, ini
         {"id": soon.id, "due": soon.due.isoformat(), "summary": "soon"},
         {"id": later.id, "due": later.due.isoformat(), "summary": "later"},
     ]
+
+
+async def test_sensors_follow_unload_and_reload(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:
+    """Unloading leaves the sensors unavailable; after a reload they follow the new queue."""
+    entry = init_integration
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.NOT_LOADED
+    for entity_id in (NEXT, PENDING):
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == STATE_UNAVAILABLE
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    manager: JobManager = entry.runtime_data.manager
+    await manager.async_add(make_job(datetime.now(UTC) + timedelta(hours=1), "after reload"))
+    pending = hass.states.get(PENDING)
+    assert pending is not None
+    assert pending.state == "1"
+    next_job = hass.states.get(NEXT)
+    assert next_job is not None
+    assert next_job.attributes["summary"] == "after reload"
