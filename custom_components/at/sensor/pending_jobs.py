@@ -3,34 +3,28 @@
 from typing import TYPE_CHECKING, Any
 
 from custom_components.at.entity.base import AtEntity
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorStateClass
 
 if TYPE_CHECKING:
-    from custom_components.at.core.manager import JobChange
     from custom_components.at.data import AtConfigEntry
+
+ENTITY_DESCRIPTION = SensorEntityDescription(
+    key="pending_jobs",
+    translation_key="pending_jobs",
+    state_class=SensorStateClass.MEASUREMENT,
+)
 
 
 class AtPendingJobsSensor(AtEntity, SensorEntity):
     """The number of pending jobs."""
 
-    _attr_should_poll = False
-    _attr_translation_key = "pending_jobs"
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _unrecorded_attributes = frozenset({"jobs"})
 
     def __init__(self, entry: AtConfigEntry) -> None:
         """Initialize the sensor."""
-        super().__init__(entry)
-        self._manager = entry.runtime_data.manager
-        self._attr_unique_id = f"{entry.entry_id}_pending_jobs"
+        super().__init__(entry, ENTITY_DESCRIPTION)
         # Pin the id: the device name would otherwise yield sensor.scheduled_jobs_pending_jobs.
         self.entity_id = "sensor.at_pending_jobs"
-
-    async def async_added_to_hass(self) -> None:
-        """Follow the job queue."""
-        self.async_on_remove(self._manager.subscribe(self._on_change))
-
-    def _on_change(self, _change: JobChange) -> None:
-        self.async_write_ha_state()
 
     @property
     def native_value(self) -> int:

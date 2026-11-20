@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from custom_components.at.const import DOMAIN
 from custom_components.at.core.errors import JobNotFound, JobStateError
-from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobStatus, Via
 from custom_components.at.core.timeparse import TimeParseError, split_time_and_command
 from custom_components.at.entity.base import AtEntity
@@ -16,18 +15,18 @@ from custom_components.at.voice.scheduling import ScheduleRefused, async_schedul
 from homeassistant.components.todo.const import TodoItemStatus, TodoListEntityFeature
 from homeassistant.components.todo.entity import TodoItem, TodoListEntity
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers.entity import EntityDescription
 
 if TYPE_CHECKING:
-    from custom_components.at.core.manager import JobChange
     from custom_components.at.data import AtConfigEntry
+
+
+ENTITY_DESCRIPTION = EntityDescription(key="scheduled", translation_key="scheduled", name=None)
 
 
 class AtScheduledTodo(AtEntity, TodoListEntity):
     """Pending jobs as open items and finished jobs as completed ones."""
 
-    _attr_should_poll = False
-    _attr_translation_key = "scheduled"
-    _attr_name = None
     _attr_supported_features = (
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
@@ -38,18 +37,9 @@ class AtScheduledTodo(AtEntity, TodoListEntity):
 
     def __init__(self, entry: AtConfigEntry) -> None:
         """Initialize the to-do list."""
-        super().__init__(entry)
-        self._manager: JobManager = entry.runtime_data.manager
-        self._attr_unique_id = f"{entry.entry_id}_scheduled"
+        super().__init__(entry, ENTITY_DESCRIPTION)
         # Pin the id: the device name would otherwise yield todo.scheduled_jobs.
         self.entity_id = "todo.at_scheduled"
-
-    async def async_added_to_hass(self) -> None:
-        """Follow the job queue."""
-        self.async_on_remove(self._manager.subscribe(self._on_change))
-
-    def _on_change(self, _change: JobChange) -> None:
-        self.async_write_ha_state()
 
     @property
     def _pack(self) -> LanguagePack:
