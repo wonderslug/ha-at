@@ -28,6 +28,7 @@ any of it in your own repository, see [`../README.md`](../README.md). This file 
 | [`blueprint-update`](blueprint-update/SKILL.md)         | carrying over blueprint changes the template sync cannot deliver           |
 | [`blueprint-scaffold`](blueprint-scaffold/SKILL.md)     | turning the fresh template into an integration for one real device         |
 | [`blueprint-import`](blueprint-import/SKILL.md)         | migrating an existing custom integration into this repository              |
+| [`at-live-test`](at-live-test/SKILL.md)                 | checking a change on the running development instance without leftovers    |
 
 `blueprint-scaffold` and `blueprint-import` are one-time skills: each ends with a step that removes itself once its
 job is done. Leaving them in place costs context in every later session.
