@@ -190,3 +190,22 @@ def test_past_days_are_named() -> None:
     assert (
         cancel_one_speech(PACK, _job(_at(-3, 23)), NOW, TZ) == "Cancelled: turn on Porch Light at 11 PM on November 14."
     )
+
+
+def test_tonight_after_midnight_ends_this_morning() -> None:
+    """Asked at 2 AM, tonight is the rest of this night, not the day ahead as well."""
+    two_am = NOW.replace(hour=2)
+    before_dawn, midday, evening = _job(_at(0, 4)), _job(_at(0, 12)), _job(_at(0, 23))
+    assert select_for_list([before_dawn, midday, evening], "tonight", None, two_am, TZ) == [before_dawn]
+
+
+def test_ambiguous_same_time_names_the_jobs() -> None:
+    """Two jobs at the same time are told apart by summary, and the suggested phrase selects one."""
+    on = _job(_at(1, 6), summary="Turn on Porch Light")
+    off = _job(_at(1, 6), summary="Turn off Porch Light")
+    off.id = "off"
+    assert ambiguous_speech(PACK, [off, on], None, NOW, TZ) == (
+        "There are 2 jobs for Porch Light: turn off Porch Light at 6 AM and turn on Porch Light at 6 AM. "
+        "Say 'cancel the turn off Porch Light job'."
+    )
+    assert match_for_cancel([on, off], CancelQuery(name="turn off porch light"), NOW, TZ) == [off]

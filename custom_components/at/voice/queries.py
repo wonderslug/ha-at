@@ -48,7 +48,8 @@ def select_for_list(
     elif scope == "tomorrow":
         selected = [j for j in selected if j.due.astimezone(tz).date() == today + timedelta(days=1)]
     elif scope == "tonight":
-        end = datetime.combine(today + timedelta(days=1), _TONIGHT_ENDS, tzinfo=tz)
+        end_day = today if local_now.time() < _TONIGHT_ENDS else today + timedelta(days=1)
+        end = datetime.combine(end_day, _TONIGHT_ENDS, tzinfo=tz)
         selected = [j for j in selected if now <= j.due < end]
     if name:
         selected = [j for j in selected if _matches_name(j, name)]
@@ -129,7 +130,7 @@ def _spoken_day(pack: LanguagePack, local_due: datetime, local_now: datetime) ->
 
 
 def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None, now: datetime, tz: ZoneInfo) -> str:
-    """Ask which of several matching jobs to cancel, by time, and by day when they fall on different days."""
+    """Ask which of several matching jobs to cancel: by time, by day when they fall on different days, or by summary when two share a time."""
     responses = pack.responses
     local_now = now.astimezone(tz)
     ordered = sorted(jobs, key=lambda j: j.due)
@@ -142,6 +143,17 @@ def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None
         time + (_spoken_day(pack, local, local_now) if several_days else "")
         for time, local in zip(spoken, locals_, strict=True)
     ]
+    summaries = [spoken_summary(job.summary) for job in ordered]
+    if len(set(times)) < len(times) and len(set(summaries)) == len(summaries):
+        items = [
+            str(responses["list_item"]).format(
+                summary=summary, time=time, day=_spoken_day(pack, local, local_now) if several_days else ""
+            )
+            for summary, time, local in zip(summaries, spoken, locals_, strict=True)
+        ]
+        return str(responses["cancel_ambiguous_by_summary"]).format(
+            count=len(ordered), name=name or query_name or "", items=pack.joiner.join(items), first=summaries[0]
+        )
     # The suggested phrase names the day only when another job shares the first job's time.
     first_day = _spoken_day(pack, locals_[0], local_now) if spoken.count(spoken[0]) > 1 else ""
     first_job = str(responses["cancel_job"]).format(time=spoken[0], day=first_day)
