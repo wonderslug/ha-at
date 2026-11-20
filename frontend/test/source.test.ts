@@ -76,6 +76,19 @@ describe("historyDetail", () => {
     expect(viaDevice("deleted")).toBe("Cancelled from Assist");
   });
 
+  it("names the device without a person when nobody is known", () => {
+    const fromDevice = (by: string) =>
+      historyDetail(job("cancelled", { cancelled_by: by, cancelled_user_id: null, cancelled_device_id: "sat-1" }), hass);
+    expect(fromDevice("voice")).toBe("Cancelled from Assist · Kitchen satellite");
+    expect(fromDevice("llm")).toBe("Cancelled from Assist · Kitchen satellite");
+  });
+
+  it("names the device an LLM cancel came from, with the person", () => {
+    expect(
+      historyDetail(job("cancelled", { cancelled_by: "llm", cancelled_user_id: "u-brian", cancelled_device_id: "phone" }), hass),
+    ).toBe("Cancelled from Assist · Brian's phone by Brian");
+  });
+
   it("names the automation or script it came from", () => {
     expect(cancelled("service", null, "automation.bedtime")).toBe("Cancelled by automation Bedtime");
     expect(cancelled("service", "u-brian", "script.tidy_up")).toBe("Cancelled by script Tidy up by Brian");
