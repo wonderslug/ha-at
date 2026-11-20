@@ -33,6 +33,7 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 19: `npm audit` reports nothing, `script/shell-check` covers `script/build-frontend`, and the spell-script exclusion is explained in `.templatesyncignore`
 - Task 20: the upcoming and history tables have DOM tests (happy-dom) for their actions, permissions, events, filter and re-schedule; `wallTimeToDate` already moves a spring-forward gap time forward like the backend, and `format.test.ts` covers it
 - Task 21: the add job dialog stays open through Escape, the backdrop and Cancel while a job is being added, keeps Tab inside itself, starts in the first field and gives focus back on close; component tests cover these and the parse debounce
+- Source labels (#17): a backend test checks an LLM cancel records the conversation's device as `cancelled_device_id`, and frontend tests cover an Assist or LLM cancel with a device but no person, and an LLM cancel with a device
 
 ## Deferred minors
 
@@ -41,5 +42,3 @@ These are known minor issues that were reviewed and deferred while building v1. 
 - Task 19: minor (deferred): CI never type-checks, tests or builds the panel, so a stale committed bundle goes unnoticed
 - Task 20: minor (deferred): row cancel has no confirm
 - Task 21: minor (deferred): single-entity picker
-- Source labels (#17): minor (deferred): no backend test that an LLM cancel records `llm_context.device_id` as `cancelled_device_id` (same code path as voice, which is tested)
-- Source labels (#17): minor (deferred): no frontend test for an Assist cancel with a device but no person ("Cancelled from Assist · Kitchen satellite"), or for an `llm` cancel with a device

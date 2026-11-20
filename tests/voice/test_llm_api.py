@@ -116,3 +116,24 @@ async def test_cancel_tool_rejects_non_bool_all(api: llm.APIInstance, config_ent
     with pytest.raises(intent.InvalidSlotInfo):
         await api.async_call_tool(llm.ToolInput(tool_name="at__AtCancel", tool_args={"all": "yes"}))
     assert len(config_entry.runtime_data.manager.pending()) == 1
+
+
+async def test_cancel_tool_records_the_llm_device(
+    api: llm.APIInstance, config_entry: MockConfigEntry, assist: Assist
+) -> None:
+    """A cancel through the LLM tool records the conversation's device as where it was cancelled from."""
+    await api.async_call_tool(
+        llm.ToolInput(
+            tool_name="at__AtSchedule",
+            tool_args={"time": "in 20 minutes", "command": "turn on the porch light"},
+        )
+    )
+    (job,) = config_entry.runtime_data.manager.pending()
+
+    await api.async_call_tool(llm.ToolInput(tool_name="at__AtCancel", tool_args={"name": "porch light"}))
+
+    cancelled = config_entry.runtime_data.manager.get(job.id)
+    assert cancelled.status == JobStatus.CANCELLED
+    assert cancelled.result.cancelled_by == str(Via.LLM)
+    assert cancelled.result.cancelled_device_id == assist.device_id
+    assert assist.device_id is not None
