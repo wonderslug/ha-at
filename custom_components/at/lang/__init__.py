@@ -14,11 +14,16 @@ class LanguagePack:
     Everything language specific that the core logic needs.
 
     ``time_patterns`` holds regex templates with ``%(name)s`` placeholders that the
-    time parser expands from the word tables below (``number``, ``unit``, ``day``,
-    ``weekday``, ``period``, ``named``, ``meridiem``, plus the ``clock`` and
-    ``dayref`` templates themselves). The named groups the parser reads are:
-    ``count``, ``half``, ``halfonly``, ``unit``, ``named``, ``hour``, ``minute``,
-    ``ampm``, ``day``, ``weekday`` and ``period``.
+    time parser expands from the word tables below (``unit``, ``day``, ``weekday``,
+    ``period``, ``named``, ``meridiem``, ``scale``, ``num_<group>`` for each
+    ``number_words`` group, plus the ``number``, ``clock`` and ``dayref`` templates
+    themselves). The named groups the parser reads are: ``count``, ``half``,
+    ``halfonly``, ``unit``, ``named``, ``hour``, ``minute``, ``hour_words``,
+    ``minute_words``, ``ampm``, ``day``, ``weekday`` and ``period``.
+
+    A number in words is read by adding up its words' values, with a ``number_scales``
+    word multiplying what came before it and ``number_fillers`` words skipped; the
+    ``number`` template decides which word orders are valid.
     """
 
     code: str
@@ -27,9 +32,11 @@ class LanguagePack:
     period_words: Mapping[str, str]  # word -> morning|afternoon|evening|night
     weekday_words: Mapping[str, int]  # word -> 0 (Monday) .. 6
     unit_words: Mapping[str, int]  # word -> seconds
-    number_words: Mapping[str, int]
+    number_words: Mapping[str, Mapping[str, int]]  # group -> word -> value
     meridiem_words: Mapping[str, str]  # word -> am|pm
     named_times: Mapping[str, tuple[int, int]]  # word -> (hour, minute)
+    number_scales: Mapping[str, int] = field(default_factory=dict)  # word -> multiplier, "hundred" -> 100
+    number_fillers: frozenset[str] = frozenset()  # words inside a number that add nothing, "and", "oh"
     # Sentence trigger templates by group: schedule_absolute, schedule_relative, list, cancel
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use

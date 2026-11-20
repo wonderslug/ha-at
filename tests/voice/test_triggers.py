@@ -65,6 +65,11 @@ def bathroom_light_untouched(hass: HomeAssistant, home: Assist) -> bool:
         "in 30 minutes run the bedtime script",
         "run the bedtime script in 30 minutes",
         "in an hour and a half turn on the master bathroom light",
+        "in forty five minutes run the bedtime script",
+        "run the bedtime script in one hundred and twenty minutes",
+        "turn on the master bathroom light at seven thirty",
+        "at six forty five pm turn on the master bathroom light",
+        "tomorrow at seven oh five turn on the master bathroom light",
     ],
 )
 async def test_schedule_sentences(
