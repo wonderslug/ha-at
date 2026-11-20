@@ -138,6 +138,20 @@ async def test_missing_service_fails_cleanly(hass: HomeAssistant) -> None:
         await JobExecutor(hass).async_execute(make_job(action=turn_on("light.porch")))
 
 
+async def test_invalid_stored_action_names_the_action(hass: HomeAssistant) -> None:
+    """An action that no longer passes the script schema is named in the error."""
+    hass.states.async_set("light.porch", "off")
+    action = [{"action": "light.turn_on", "target": {"entity_id": "light.porch"}, "continue_on_error": "maybe"}]
+    with pytest.raises(JobExecutionError, match=r"^light\.turn_on: the stored action is invalid: "):
+        await JobExecutor(hass).async_execute(make_job(action=action))
+
+
+async def test_invalid_stored_action_without_a_name_uses_the_summary(hass: HomeAssistant) -> None:
+    """A step with no action name falls back to the job summary."""
+    with pytest.raises(JobExecutionError, match=r"^test: the stored action is invalid: "):
+        await JobExecutor(hass).async_execute(make_job(action=[{"delay": "not a time"}]))
+
+
 async def test_context_user_missing_falls_back_to_system(hass: HomeAssistant, hass_admin_user: User) -> None:
     """The job's user is used when it still exists; otherwise the context has no user."""
     hass.states.async_set("light.porch", "off")

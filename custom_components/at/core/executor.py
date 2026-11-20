@@ -64,6 +64,7 @@ class JobExecutor:
             sequence = cv.SCRIPT_SCHEMA(action)
             await script.Script(self._hass, sequence, f"at job {job.id}", DOMAIN).async_run(context=context)
         except vol.Invalid as err:
-            raise JobExecutionError(self._message("action_invalid", error=err)) from err
+            names = ", ".join(str(s.get("action")) for s in action if isinstance(s, dict) and s.get("action"))
+            raise JobExecutionError(self._message("action_invalid", action=names or job.summary, error=err)) from err
         except HomeAssistantError as err:
             raise JobExecutionError(self._message("action_failed", summary=job.summary, error=err)) from err

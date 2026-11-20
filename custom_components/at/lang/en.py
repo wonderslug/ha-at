@@ -377,7 +377,7 @@ EN = LanguagePack(
         "nothing_to_run": "the job has nothing to run",
         "entity_unavailable": "{entity_id} is unavailable",
         "entity_gone": "{entity_id} no longer exists",
-        "action_invalid": "the stored action is invalid: {error}",
+        "action_invalid": "{action}: the stored action is invalid: {error}",
         "action_failed": "{summary}: {error}",
         "intent_not_exposed": "{intent}: {target} is not exposed to voice assistants",
         "intent_not_found": "{intent}: {target} not found ({reason})",
