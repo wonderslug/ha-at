@@ -4,7 +4,6 @@
     "GIT_TERMINAL_PROMPT": "0",
     "GCM_INTERACTIVE": "0"
   },
-  "plansDirectory": ".agents/scratch/plans",
   "attribution": {
     "sessionUrl": false
   },
@@ -93,5 +92,9 @@
         ]
       }
     ]
+  },
+  "plansDirectory": ".agents/scratch/plans",
+  "enabledPlugins": {
+    "superpowers@anthropic-plugin-directory": true
   }
 }
