@@ -1,9 +1,10 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.svg">
-  <img src="docs/brand/logo.svg" alt="" height="64">
+  <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo.svg">
+  <img src="docs/brand/logo.svg" alt="at: Scheduled Jobs" height="64">
 </picture>
 
-# at: Scheduled Jobs
+# at: Scheduled Jobs - One-Shot jobs sometime in the future for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
