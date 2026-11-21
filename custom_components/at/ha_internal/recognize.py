@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from custom_components.at.const import INTENT_AUTOMATION_RUN, REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
 from custom_components.at.core.models import IntentSpec, Targets
+from custom_components.at.ha_internal.intent_checks import target_check
 from custom_components.at.voice.automation import match_automations
 from homeassistant.components import conversation
 from homeassistant.exceptions import HomeAssistantError, TemplateError
@@ -88,28 +89,6 @@ def _slots(result: RecognizeResult) -> dict[str, Any]:
     }
 
 
-def _values(slots: dict[str, Any], key: str) -> set[str] | None:
-    if key not in slots:
-        return None
-    value = slots[key].get("value")
-    return {str(item) for item in value} if isinstance(value, list) else {str(value)}
-
-
-def _constraints(slots: dict[str, Any]) -> intent.MatchTargetsConstraints:
-    """Mirror the target constraints the service intent handlers build from the slots."""
-    name = slots.get("name", {}).get("value")
-    area = slots.get("area", {}).get("value")
-    floor = slots.get("floor", {}).get("value")
-    return intent.MatchTargetsConstraints(
-        name=None if name in (None, "all") else str(name),
-        area_name=None if area is None else str(area),
-        floor_name=None if floor is None else str(floor),
-        domains=_values(slots, "domain"),
-        device_classes=_values(slots, "device_class"),
-        assistant=ASSISTANT,
-    )
-
-
 def _satellite_area_id(hass: HomeAssistant, device_id: str | None, satellite_id: str | None) -> str | None:
     """Return the area of the satellite or device, as the default agent finds it."""
     if satellite_id is not None and (entry := er.async_get(hass).async_get(satellite_id)) is not None:
@@ -143,11 +122,27 @@ def _fallback_no_target(pack: LanguagePack, constraints: intent.MatchTargetsCons
     return pack.recognize_errors.get("no_target", "{name}").format(name=name)
 
 
+async def _no_target_error(
+    hass: HomeAssistant,
+    agent: DefaultAgent,
+    language: str,
+    pack: LanguagePack,
+    text: str,
+    err: intent.MatchFailedError,
+) -> RecognizeError:
+    """Word a failed target match the way the default agent would."""
+    message = None
+    if _get_match_error_response is not None:
+        key, args = _get_match_error_response(err)
+        message = await _ha_error_text(hass, agent, language, key, args)
+    return RecognizeError("no_target", message or _fallback_no_target(pack, err.constraints, text))
+
+
 def _target_name(
     pack: LanguagePack, constraints: intent.MatchTargetsConstraints, match: intent.MatchTargetsResult
 ) -> str | None:
-    """Name the target for the summary: the entities by name, or the area or floor."""
-    if constraints.name:
+    """Name the target for the summary: the entities by name or when there is one, else the area or floor."""
+    if constraints.name or constraints.single_target:
         return pack.joiner.join(state.name for state in match.states) or None
     places = [area.name for area in match.areas] or [floor.name for floor in match.floors]
     if not places:
@@ -158,11 +153,41 @@ def _target_name(
     return pack.place_target.format(place=place, things=things).strip() if things else place
 
 
-def _summary(pack: LanguagePack, intent_type: str, name: str | None, entity_ids: list[str]) -> str:
+_DETAIL_SLOTS = ("item", "search_query")
+
+
+def _summary(
+    pack: LanguagePack,
+    intent_type: str,
+    name: str | None,
+    entity_ids: list[str],
+    slots: dict[str, Any],
+    cleaning_areas: list[str],
+) -> str:
+    """
+    Fill the first template whose fields are all known, else the generic summary.
+
+    Templates may use ``{name}``, the spoken ``{item}`` and ``{search_query}``, and ``{area}``,
+    the areas a vacuum is asked to clean.
+    """
+    fields = {key: str(slots[key].get("text") or slots[key].get("value")) for key in _DETAIL_SLOTS if key in slots}
+    if name:
+        fields["name"] = name
+    if cleaning_areas:
+        fields["area"] = pack.joiner.join(cleaning_areas)
     domains = {entity_id.partition(".")[0] for entity_id in entity_ids}
-    verb = pack.domain_summary_verbs.get(f"{intent_type}:{domains.pop()}") if len(domains) == 1 else None
-    verb = verb or pack.summary_verbs.get(intent_type)
-    return verb.format(name=name) if verb and name else pack.generic_action_summary
+    candidates = (
+        pack.domain_summary_verbs.get(f"{intent_type}:{domains.pop()}") if len(domains) == 1 else None,
+        pack.summary_verbs.get(intent_type),
+    )
+    for verb in candidates:
+        if verb is None:
+            continue
+        try:
+            return verb.format(**fields)
+        except KeyError:
+            continue
+    return pack.generic_action_summary
 
 
 def _spoken_names(slots: dict[str, Any], match: intent.MatchTargetsResult | None, by_name: bool) -> list[str]:
@@ -274,32 +299,31 @@ async def async_recognize_command(
     if is_refused_intent(intent_type):
         raise RecognizeError("refused", pack.recognize_errors.get("refused", intent_type))
 
-    slots = _slots(result)
-    constraints = _constraints(slots)
-
     if result.unmatched_entities:
         raise await _unmatched_error(hass, agent, result, language, pack, text)
 
-    area_id = _satellite_area_id(hass, device_id, satellite_id)
+    slots = _slots(result)
+    # Fix the area the default agent would prefer now, so the job prefers the same one later.
+    if (area_id := _satellite_area_id(hass, device_id, satellite_id)) is not None:
+        slots["preferred_area_id"] = {"value": area_id}
+
+    try:
+        check = target_check(hass, intent_type, slots)
+    except intent.MatchFailedError as err:
+        raise await _no_target_error(hass, agent, language, pack, text, err) from err
+    constraints = check.constraints
     match: intent.MatchTargetsResult | None = None
     if constraints.has_constraints:
-        preferences = intent.MatchTargetsPreferences(area_id=area_id)
-        match = intent.async_match_targets(hass, constraints, preferences)
+        match = intent.async_match_targets(hass, constraints, check.preferences)
         if not match.is_match:
-            message = None
-            if _get_match_error_response is not None:
-                key, args = _get_match_error_response(intent.MatchFailedError(match, constraints, preferences))
-                message = await _ha_error_text(hass, agent, language, key, args)
-            raise RecognizeError("no_target", message or _fallback_no_target(pack, constraints, text))
-
-    # Fix the area the default agent would prefer now, so the job prefers the same one later.
-    if area_id is not None:
-        slots["preferred_area_id"] = {"value": area_id}
+            raise await _no_target_error(
+                hass, agent, language, pack, text, intent.MatchFailedError(match, constraints, check.preferences)
+            )
 
     by_name = bool(constraints.name)
     targets = Targets(
         entity_ids=[state.entity_id for state in match.states] if match else [],
-        area_ids=[area.id for area in match.areas] if match else [],
+        area_ids=[area.id for area in check.cleaning_areas or (match.areas if match else [])],
         floor_ids=[floor.floor_id for floor in match.floors] if match else [],
         names=_spoken_names(slots, match, by_name),
     )
@@ -309,7 +333,9 @@ async def async_recognize_command(
             type=intent_type, slots=slots, language=language, device_id=device_id, satellite_id=satellite_id
         ),
         targets=targets,
-        summary=_summary(pack, intent_type, name, targets.entity_ids),
+        summary=_summary(
+            pack, intent_type, name, targets.entity_ids, slots, [area.name for area in check.cleaning_areas]
+        ),
     )
 
 
