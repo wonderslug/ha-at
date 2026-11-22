@@ -5,11 +5,12 @@ from zoneinfo import ZoneInfo
 
 import probatio
 
-from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN
+from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, INTENT_PLACE_ANNOUNCE
 from custom_components.at.core.models import Job, Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text
 from custom_components.at.lang import LanguagePack, get_language_pack, message
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
+from custom_components.at.voice.announce import PlaceAnnounceHandler
 from custom_components.at.voice.automation import AutomationRunHandler
 from custom_components.at.voice.queries import (
     CancelQuery,
@@ -21,7 +22,7 @@ from custom_components.at.voice.queries import (
     match_for_cancel,
     select_for_list,
 )
-from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command
+from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command, command_comes_first
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import intent
 from homeassistant.util import dt as dt_util
@@ -145,11 +146,13 @@ class AtScheduleHandler(_AtHandler):
     async def _async_run(
         self, intent_obj: intent.Intent, pack: LanguagePack, manager: JobManager
     ) -> intent.IntentResponse:
+        command_text = _text_slot(intent_obj, "command") or ""
         outcome = await async_schedule_command(
             intent_obj.hass,
             manager,
-            command_text=_text_slot(intent_obj, "command") or "",
+            command_text=command_text,
             time_text=_text_slot(intent_obj, "time"),
+            time_last=intent_obj.text_input is not None and command_comes_first(intent_obj.text_input, command_text),
             language=intent_obj.language,
             via=self._via_for(intent_obj),
             user_id=intent_obj.context.user_id,
@@ -232,13 +235,19 @@ class AtCancelHandler(_AtHandler):
         return _speak(intent_obj, cancel_one_speech(pack, job, now, tz))
 
 
-HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL, INTENT_AUTOMATION_RUN)
+HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL, INTENT_AUTOMATION_RUN, INTENT_PLACE_ANNOUNCE)
 
 
 @callback
 def async_register_intents(hass: HomeAssistant) -> None:
-    """Register the three at handlers and the automation one."""
-    for handler in (AtScheduleHandler(), AtListHandler(), AtCancelHandler(), AutomationRunHandler()):
+    """Register the three at handlers, the automation one and the place announcement."""
+    for handler in (
+        AtScheduleHandler(),
+        AtListHandler(),
+        AtCancelHandler(),
+        AutomationRunHandler(),
+        PlaceAnnounceHandler(),
+    ):
         intent.async_register(hass, handler)
 
 

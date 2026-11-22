@@ -37,6 +37,7 @@ EVENT_JOB_SCHEDULED = "at_job_scheduled"
 
 # Intents a voice job must not store: timers, queries, chit-chat and `at`'s own ("At*").
 INTENT_AUTOMATION_RUN = "AutomationRun"
+INTENT_PLACE_ANNOUNCE = "PlaceAnnounce"
 
 REFUSED_INTENT_PREFIX = "At"
 REFUSED_INTENT_TYPES = frozenset(
@@ -56,8 +57,9 @@ REFUSED_INTENT_TYPES = frozenset(
         # Not in the plan's list, but "what's the temperature" is recognized as this query intent.
         "HassClimateGetTemperature",
         "HassNevermind",
-        # "broadcast dinner is at 6" is a message to say now, not a command to run later.
-        "HassBroadcast",
         "HassRespond",
     }
 )
+
+# Intents that end in free text: in "broadcast dinner is at 6" the time is part of the message.
+TIME_LAST_REFUSED_INTENT_TYPES = frozenset({"HassBroadcast", INTENT_PLACE_ANNOUNCE})

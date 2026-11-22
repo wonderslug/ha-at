@@ -10,6 +10,7 @@ from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.at.core.models import JobKind, JobStatus, Via
 from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command
+from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME
 from homeassistant.core import HomeAssistant
@@ -185,3 +186,51 @@ async def test_unsupported_language_refuses(hass: HomeAssistant, manager: MagicM
     parse.assert_not_called()
     split.assert_not_called()
     recognize.assert_not_called()
+
+
+@pytest.fixture
+def kitchen_satellite(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> str:
+    """A satellite that takes announcements, so a broadcast has somewhere to go."""
+    entry = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        "kitchen_satellite",
+        suggested_object_id="kitchen_satellite",
+        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
+    )
+    hass.states.async_set(entry.entity_id, "idle")
+    return entry.entity_id
+
+
+@pytest.mark.usefixtures("kitchen_satellite")
+async def test_broadcast_split_from_one_text_with_its_time_first(
+    hass: HomeAssistant, manager: MagicMock, home: Assist
+) -> None:
+    outcome = await schedule(hass, manager, home, "at 6pm broadcast dinner is ready", None)
+
+    assert outcome.job.intent is not None
+    assert outcome.job.intent.type == "HassBroadcast"
+    assert outcome.speech == 'OK, at 6 PM tomorrow I\'ll broadcast "dinner is ready".'
+
+
+@pytest.mark.usefixtures("kitchen_satellite")
+async def test_broadcast_split_from_one_text_with_its_time_last_is_unrecognized(
+    hass: HomeAssistant, manager: MagicMock, home: Assist
+) -> None:
+    """The time after a message belongs to it, so the sentence goes back to Assist whole."""
+    with pytest.raises(ScheduleRefused) as exc:
+        await schedule(hass, manager, home, "broadcast dinner is at 6", None)
+
+    assert exc.value.unrecognized
+    manager.async_add.assert_not_called()
+
+
+@pytest.mark.usefixtures("kitchen_satellite")
+async def test_broadcast_with_a_separate_time_is_scheduled(
+    hass: HomeAssistant, manager: MagicMock, home: Assist
+) -> None:
+    """The LLM tool and the action pass the time apart, so nothing is taken from the message."""
+    outcome = await schedule(hass, manager, home, "broadcast dinner is ready", "at 6pm")
+
+    assert outcome.job.intent is not None
+    assert outcome.job.intent.type == "HassBroadcast"

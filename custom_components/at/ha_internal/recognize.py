@@ -12,9 +12,15 @@ from dataclasses import dataclass
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
-from custom_components.at.const import INTENT_AUTOMATION_RUN, REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
+from custom_components.at.const import (
+    INTENT_AUTOMATION_RUN,
+    REFUSED_INTENT_PREFIX,
+    REFUSED_INTENT_TYPES,
+    TIME_LAST_REFUSED_INTENT_TYPES,
+)
 from custom_components.at.core.models import IntentSpec, Targets
 from custom_components.at.ha_internal.intent_checks import target_check
+from custom_components.at.voice.announce import parse_announcement
 from custom_components.at.voice.automation import match_automations
 from homeassistant.components import conversation
 from homeassistant.exceptions import HomeAssistantError, TemplateError
@@ -153,7 +159,7 @@ def _target_name(
     return pack.place_target.format(place=place, things=things).strip() if things else place
 
 
-_DETAIL_SLOTS = ("item", "search_query")
+_DETAIL_SLOTS = ("item", "message", "search_query")
 
 
 def _summary(
@@ -162,23 +168,27 @@ def _summary(
     name: str | None,
     entity_ids: list[str],
     slots: dict[str, Any],
-    cleaning_areas: list[str],
+    areas: list[str],
+    floors: list[str],
 ) -> str:
     """
     Fill the first template whose fields are all known, else the generic summary.
 
-    Templates may use ``{name}``, the spoken ``{item}`` and ``{search_query}``, and ``{area}``,
-    the areas a vacuum is asked to clean.
+    Templates may use ``{name}``, the spoken ``{item}``, ``{message}`` and ``{search_query}``,
+    and ``{area}`` or ``{floor}``, the areas or floors the command acts on. A command on a floor
+    uses the ``<intent>:floor`` template.
     """
     fields = {key: str(slots[key].get("text") or slots[key].get("value")) for key in _DETAIL_SLOTS if key in slots}
     if name:
         fields["name"] = name
-    if cleaning_areas:
-        fields["area"] = pack.joiner.join(cleaning_areas)
+    if areas:
+        fields["area"] = pack.joiner.join(areas)
+    if floors:
+        fields["floor"] = pack.joiner.join(floors)
     domains = {entity_id.partition(".")[0] for entity_id in entity_ids}
     candidates = (
         pack.domain_summary_verbs.get(f"{intent_type}:{domains.pop()}") if len(domains) == 1 else None,
-        pack.summary_verbs.get(intent_type),
+        pack.summary_verbs.get(f"{intent_type}:floor" if floors else intent_type),
     )
     for verb in candidates:
         if verb is None:
@@ -261,9 +271,13 @@ async def async_recognize_command(
     satellite_id: str | None,
     context: Context,
     pack: LanguagePack,
+    time_last: bool = False,
 ) -> RecognizedCommand:
     """
     Recognize ``text`` as Assist would, without running it.
+
+    ``time_last`` says the time was spoken after ``text``; for an intent that ends in free
+    text, such as a broadcast message, that time belongs to the text and the command is refused.
 
     Returns:
         The intent to store, what it targets and a one-line summary.
@@ -280,40 +294,45 @@ async def async_recognize_command(
     if agent is None:
         raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
 
-    # Non-strict, and only once: a strict call first poisons the agent's intent cache.
-    result = await agent.async_recognize_intent(
-        conversation.ConversationInput(
-            text=text,
-            context=context,
-            conversation_id=None,
-            device_id=device_id,
-            satellite_id=satellite_id,
-            language=language,
-            agent_id=conversation.HOME_ASSISTANT_AGENT,
+    if (announcement := parse_announcement(hass, pack, text)) is not None:
+        intent_type, slots = announcement.intent_type, announcement.slots
+    else:
+        # Non-strict, and only once: a strict call first poisons the agent's intent cache.
+        result = await agent.async_recognize_intent(
+            conversation.ConversationInput(
+                text=text,
+                context=context,
+                conversation_id=None,
+                device_id=device_id,
+                satellite_id=satellite_id,
+                language=language,
+                agent_id=conversation.HOME_ASSISTANT_AGENT,
+            )
         )
-    )
-    if result is None:
-        raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
+        if result is None:
+            raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
+        intent_type = result.intent.name
+        if is_refused_intent(intent_type):
+            raise RecognizeError("refused", pack.recognize_errors.get("refused", intent_type))
+        if result.unmatched_entities:
+            raise await _unmatched_error(hass, agent, result, language, pack, text)
+        slots = _slots(result)
 
-    intent_type = result.intent.name
-    if is_refused_intent(intent_type):
+    if time_last and intent_type in TIME_LAST_REFUSED_INTENT_TYPES:
         raise RecognizeError("refused", pack.recognize_errors.get("refused", intent_type))
-
-    if result.unmatched_entities:
-        raise await _unmatched_error(hass, agent, result, language, pack, text)
-
-    slots = _slots(result)
     # Fix the area the default agent would prefer now, so the job prefers the same one later.
     if (area_id := _satellite_area_id(hass, device_id, satellite_id)) is not None:
         slots["preferred_area_id"] = {"value": area_id}
 
     try:
-        check = target_check(hass, intent_type, slots)
+        check = target_check(hass, intent_type, slots, device_id)
     except intent.MatchFailedError as err:
         raise await _no_target_error(hass, agent, language, pack, text, err) from err
     constraints = check.constraints
     match: intent.MatchTargetsResult | None = None
-    if constraints.has_constraints:
+    if check.states is not None:
+        match = intent.MatchTargetsResult(is_match=True, states=check.states)
+    elif constraints.has_constraints:
         match = intent.async_match_targets(hass, constraints, check.preferences)
         if not match.is_match:
             raise await _no_target_error(
@@ -323,8 +342,8 @@ async def async_recognize_command(
     by_name = bool(constraints.name)
     targets = Targets(
         entity_ids=[state.entity_id for state in match.states] if match else [],
-        area_ids=[area.id for area in check.cleaning_areas or (match.areas if match else [])],
-        floor_ids=[floor.floor_id for floor in match.floors] if match else [],
+        area_ids=[area.id for area in check.areas or (match.areas if match else [])],
+        floor_ids=[floor.floor_id for floor in check.floors or (match.floors if match else [])],
         names=_spoken_names(slots, match, by_name),
     )
     name = _target_name(pack, constraints, match) if match else None
@@ -334,7 +353,13 @@ async def async_recognize_command(
         ),
         targets=targets,
         summary=_summary(
-            pack, intent_type, name, targets.entity_ids, slots, [area.name for area in check.cleaning_areas]
+            pack,
+            intent_type,
+            name,
+            targets.entity_ids,
+            slots,
+            [area.name for area in check.areas],
+            [floor.name for floor in check.floors],
         ),
     )
 

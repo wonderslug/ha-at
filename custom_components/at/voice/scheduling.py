@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import re
 from zoneinfo import ZoneInfo
 
 from custom_components.at.core.manager import JobManager
@@ -61,6 +62,15 @@ def _confirmation(
     )
 
 
+def _words(text: str) -> str:
+    return " ".join(re.sub(r"[^\w\s']", " ", text.casefold()).split())
+
+
+def command_comes_first(sentence: str, command: str) -> bool:
+    """Say whether ``sentence`` starts with ``command``, so its time phrase came after it."""
+    return _words(sentence).startswith(_words(command))
+
+
 async def async_schedule_command(
     hass: HomeAssistant,
     manager: JobManager,
@@ -76,9 +86,13 @@ async def async_schedule_command(
     origin: str | None = None,
     due: datetime | None = None,
     dry_run: bool = False,
+    time_last: bool = False,
 ) -> ScheduleOutcome:
     """
     Schedule a spoken or typed command for later.
+
+    ``time_last`` says a separately given ``time_text`` was spoken after the command; when the
+    time is split out of ``command_text`` here, its position is found from the text itself.
 
     Returns:
         The job and the sentence confirming it. With ``dry_run`` the job is not saved.
@@ -101,6 +115,7 @@ async def async_schedule_command(
         try:
             if time_text is None:
                 spec, recognize_text = split_time_and_command(command_text, pack)
+                time_last = command_comes_first(command_text, recognize_text)
             else:
                 spec = parse_time_text(time_text, pack)
             resolved = resolve(spec, now, tz)
@@ -117,6 +132,7 @@ async def async_schedule_command(
             satellite_id=satellite_id,
             context=Context(user_id=user_id),
             pack=pack,
+            time_last=time_last,
         )
     except RecognizeError as err:
         raise ScheduleRefused(err.message, unrecognized=err.code in ("no_match", "refused")) from err

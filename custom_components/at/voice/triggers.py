@@ -1,4 +1,4 @@
-"""Built-in agent sentence triggers: each one hands its slots to the AtSchedule, AtList or AtCancel intent."""
+"""Built-in agent sentence triggers: schedule, list, cancel, run an automation, and announce."""
 
 from collections.abc import Callable, Sequence
 import re
@@ -7,6 +7,7 @@ from typing import Any
 from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, LOGGER
 from custom_components.at.core.timeparse import TimeParseError, split_time_and_command
 from custom_components.at.ha_internal.fallthrough import async_hand_off, async_no_intent_speech
+from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
 from custom_components.at.ha_internal.sentence_triggers import (
     LanguageSentences,
     SentenceGroup,
@@ -14,6 +15,7 @@ from custom_components.at.ha_internal.sentence_triggers import (
     async_register_sentence_triggers,
 )
 from custom_components.at.lang import LanguagePack
+from custom_components.at.voice.announce import parse_announcement, trigger_sentences
 from custom_components.at.voice.intents import INTENT_CANCEL, INTENT_LIST, INTENT_SCHEDULE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
@@ -114,10 +116,33 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
             return pack.recognize_errors["no_match"]
         return refusal if speech is None else speech
 
+    async def announce(given: TriggerInput) -> str:
+        """Announce now; a sentence that turns out not to be an announcement goes back to its agent."""
+        if (announcement := parse_announcement(hass, pack, given.sentence)) is None:
+            return await hand_off_or(given, pack.recognize_errors["no_match"])
+        try:
+            command = await async_recognize_command(
+                hass,
+                given.sentence,
+                language=given.language,
+                device_id=given.device_id,
+                satellite_id=given.satellite_id,
+                context=given.context,
+                pack=pack,
+            )
+        except RecognizeError as err:
+            return err.message
+        slots = {name: slot["value"] for name, slot in command.intent.slots.items() if name in announcement.slots}
+        await _async_respond(hass, command.intent.type, slots, given)
+        return str(pack.responses["announced"])
+
     async def schedule(given: TriggerInput) -> str:
         slots = {"time": given.sentence_without("command"), "command": given.wildcards["command"]}
         response = await _async_respond(hass, INTENT_SCHEDULE, slots, given)
         if response.error_code is intent.IntentResponseErrorCode.NO_INTENT_MATCH:
+            # "tell everyone dinner is at 6": the time is part of the message, so announce it now.
+            if parse_announcement(hass, pack, given.sentence) is not None:
+                return await announce(given)
             return await hand_off_or(given, _speech(response))
         return _speech(response)
 
@@ -169,6 +194,7 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
     groups = [
         SentenceGroup(sentences["cancel"], cancel),
         SentenceGroup(sentences["list"], list_jobs),
+        SentenceGroup(trigger_sentences(pack), announce),
         SentenceGroup(schedule_sentences, schedule),
         SentenceGroup(sentences["run"], run),
     ]
