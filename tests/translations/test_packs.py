@@ -97,6 +97,45 @@ def test_malformed_examples_fail() -> None:
     assert [kind for kind, _ in _failures(result)] == ["bad_examples"]
 
 
+GOOD_TIME = {"category": "relative", "text": "in 20 minutes", "expect": "2026-11-17 22:42"}
+GOOD_SENTENCE = {"text": "run the morning routine", "group": "run"}
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        pytest.param({"text": "x"}, id="missing-fields"),
+        pytest.param({"category": "bogus", "text": "in 20 minutes", "expect": None}, id="unknown-category"),
+        pytest.param({"category": "relative", "text": "in 20 minutes", "expect": 5}, id="bad-expect"),
+    ],
+)
+def test_malformed_time_entry_names_its_index(entry: dict[str, Any]) -> None:
+    result = check_pack(EN, _examples([GOOD_TIME, entry]), EN)
+    assert _failures(result) == [("bad_examples", "times[1]")]
+    assert result.examples_total == 1
+    assert result.examples_passed == 1
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        pytest.param({"text": "x"}, id="missing-group"),
+        pytest.param({"text": "run the morning routine", "group": "bogus"}, id="unknown-group"),
+        pytest.param({"text": "run the morning routine", "group": "run", "slots": "name"}, id="slots-not-a-mapping"),
+    ],
+)
+def test_malformed_sentence_entry_names_its_index(entry: dict[str, Any]) -> None:
+    result = check_pack(EN, _examples(sentences=[GOOD_SENTENCE, entry]), EN)
+    assert _failures(result) == [("bad_examples", "sentences[1]")]
+    assert result.examples_total == 1
+    assert result.examples_passed == 1
+
+
+def test_bad_date_in_header_fails_without_raising() -> None:
+    result = check_pack(EN, {"now": "tomorrow", "times": [GOOD_TIME]}, EN)
+    assert [kind for kind, _ in _failures(result)] == ["bad_examples"]
+
+
 @pytest.mark.parametrize("code", list(_PACKS))
 def test_registered_pack(code: str) -> None:
     path = EXAMPLES_DIR / f"{code}.yaml"
