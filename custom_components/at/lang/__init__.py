@@ -38,7 +38,8 @@ class LanguagePack:
     named_times: Mapping[str, tuple[int, int]]  # word -> (hour, minute)
     number_scales: Mapping[str, int] = field(default_factory=dict)  # word -> multiplier, "hundred" -> 100
     number_fillers: frozenset[str] = frozenset()  # words inside a number that add nothing, "and", "oh"
-    # Sentence trigger templates by group: schedule_absolute, schedule_relative, list, cancel
+    # Sentence templates by group: schedule_absolute, schedule_relative, list, cancel, run, announce_area,
+    # announce_floor ({area} and {floor} are the registries' names) and announce_everyone
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use
     run_pattern: str = ""  # regex with a ``name`` group for "run <automation>" outside a sentence trigger

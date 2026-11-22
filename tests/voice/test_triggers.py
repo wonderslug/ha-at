@@ -3,11 +3,13 @@
 import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import replace
+from datetime import timedelta
 from typing import override
 from unittest.mock import patch
 
+from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
 from custom_components.at.const import CONF_DEFER_RELATIVE
 from custom_components.at.core.manager import JobManager
@@ -29,7 +31,7 @@ from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import chat_session, entity_registry as er, intent
+from homeassistant.helpers import area_registry as ar, chat_session, entity_registry as er, floor_registry as fr, intent
 from homeassistant.setup import async_setup_component
 from tests.assist import LIGHT, Assist, say  # noqa: TID251  (plain module; see tests/assist.py)
 
@@ -453,6 +455,114 @@ async def test_broadcast_with_its_time_first_is_scheduled(
     assert speech == 'OK, at 6 PM tomorrow I\'ll broadcast "dinner is ready".'
     assert [job.intent.type for job in manager.pending() if job.intent] == ["HassBroadcast"]
     assert broadcast.messages == []
+
+
+@pytest.fixture
+def announce_calls(
+    hass: HomeAssistant, area_registry: ar.AreaRegistry, entity_registry: er.EntityRegistry
+) -> list[ServiceCall]:
+    """Put an announcing satellite in the office, beside the one spoken to, and record announcements."""
+    office = area_registry.async_get_area_by_name("Office")
+    assert office is not None
+    entry = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        "office_speaker",
+        suggested_object_id="office_speaker",
+        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
+    )
+    entity_registry.async_update_entity(entry.entity_id, area_id=office.id)
+    hass.states.async_set(entry.entity_id, "idle")
+    return async_mock_service(hass, "assist_satellite", "announce")
+
+
+@pytest.mark.usefixtures("manager")
+async def test_announcement_to_an_area_now(
+    hass: HomeAssistant, home: Assist, announce_calls: list[ServiceCall]
+) -> None:
+    speech = await say(hass, home, "announce in the office dinner is ready")
+
+    assert speech == "Done"
+    assert [(call.data["entity_id"], call.data["message"]) for call in announce_calls] == [
+        (["assist_satellite.office_speaker"], "dinner is ready")
+    ]
+
+
+async def test_announcement_to_an_area_later(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    home: Assist,
+    manager: JobManager,
+    announce_calls: list[ServiceCall],
+) -> None:
+    speech = await say(hass, home, "at 11pm tell everyone in the office that dinner is ready")
+
+    assert speech == 'OK, at 11 PM I\'ll announce "dinner is ready" in Office.'
+    assert announce_calls == []
+    freezer.tick(timedelta(hours=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert [call.data["message"] for call in announce_calls] == ["dinner is ready"]
+
+
+async def test_announcement_to_a_floor_later(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    home: Assist,
+    manager: JobManager,
+    announce_calls: list[ServiceCall],
+    area_registry: ar.AreaRegistry,
+    floor_registry: fr.FloorRegistry,
+) -> None:
+    upstairs = floor_registry.async_create("Upstairs")
+    office = area_registry.async_get_area_by_name("Office")
+    assert office is not None
+    area_registry.async_update(office.id, floor_id=upstairs.floor_id)
+
+    speech = await say(hass, home, "at 11pm announce upstairs dinner is ready")
+
+    assert speech == 'OK, at 11 PM I\'ll announce "dinner is ready" on Upstairs.'
+    freezer.tick(timedelta(hours=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert [(call.data["entity_id"], call.data["message"]) for call in announce_calls] == [
+        (["assist_satellite.office_speaker"], "dinner is ready")
+    ]
+
+
+@pytest.mark.usefixtures("manager")
+async def test_announcement_to_an_area_with_its_time_last_is_said_now(
+    hass: HomeAssistant, home: Assist, manager: JobManager, announce_calls: list[ServiceCall]
+) -> None:
+    await say(hass, home, "announce in the office dinner is at 6")
+
+    assert manager.pending() == []
+    assert [call.data["message"] for call in announce_calls] == ["dinner is at 6"]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "tell everyone dinner is ready",
+        "let everybody know that dinner is ready",
+        "announce to the whole house dinner is ready",
+    ],
+)
+async def test_broadcast_in_other_words(
+    hass: HomeAssistant, home: Assist, manager: JobManager, broadcast: RecordingBroadcastHandler, sentence: str
+) -> None:
+    assert await say(hass, home, sentence) == "Done"
+    assert manager.pending() == []
+    assert broadcast.messages == ["dinner is ready"]
+
+
+async def test_broadcast_in_other_words_with_its_time_last_is_said_now(
+    hass: HomeAssistant, home: Assist, manager: JobManager, broadcast: RecordingBroadcastHandler
+) -> None:
+    await say(hass, home, "tell everyone dinner is at 6")
+
+    assert manager.pending() == []
+    assert broadcast.messages == ["dinner is at 6"]
 
 
 class StubLlmAgent(conversation.AbstractConversationAgent):

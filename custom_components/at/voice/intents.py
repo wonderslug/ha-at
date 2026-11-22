@@ -5,11 +5,12 @@ from zoneinfo import ZoneInfo
 
 import probatio
 
-from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN
+from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, INTENT_PLACE_ANNOUNCE
 from custom_components.at.core.models import Job, Via
 from custom_components.at.core.timeparse import TimeParseError, parse_time_text
 from custom_components.at.lang import LanguagePack, get_language_pack, message
 from custom_components.at.lang.en import UNSUPPORTED_LANGUAGE
+from custom_components.at.voice.announce import PlaceAnnounceHandler
 from custom_components.at.voice.automation import AutomationRunHandler
 from custom_components.at.voice.queries import (
     CancelQuery,
@@ -234,13 +235,19 @@ class AtCancelHandler(_AtHandler):
         return _speak(intent_obj, cancel_one_speech(pack, job, now, tz))
 
 
-HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL, INTENT_AUTOMATION_RUN)
+HANDLER_TYPES = (INTENT_SCHEDULE, INTENT_LIST, INTENT_CANCEL, INTENT_AUTOMATION_RUN, INTENT_PLACE_ANNOUNCE)
 
 
 @callback
 def async_register_intents(hass: HomeAssistant) -> None:
-    """Register the three at handlers and the automation one."""
-    for handler in (AtScheduleHandler(), AtListHandler(), AtCancelHandler(), AutomationRunHandler()):
+    """Register the three at handlers, the automation one and the place announcement."""
+    for handler in (
+        AtScheduleHandler(),
+        AtListHandler(),
+        AtCancelHandler(),
+        AutomationRunHandler(),
+        PlaceAnnounceHandler(),
+    ):
         intent.async_register(hass, handler)
 
 

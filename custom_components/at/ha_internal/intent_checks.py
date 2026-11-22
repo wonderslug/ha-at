@@ -12,29 +12,30 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
+from custom_components.at.const import INTENT_PLACE_ANNOUNCE
+from custom_components.at.voice.announce import Place, announcing_satellites, find_place, no_satellite_error
 from homeassistant.components.climate.const import ClimateEntityFeature
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.components.vacuum.const import VacuumEntityFeature
 from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import area_registry as ar, entity_registry as er, intent
+from homeassistant.helpers import area_registry as ar, floor_registry as fr, intent
 
 ASSISTANT = "conversation"
-# Mirrors EXCLUDED_DOMAINS in homeassistant/components/assist_satellite/intent.py.
-_BROADCAST_EXCLUDED_DOMAINS = frozenset({"voip"})
+_NO_PREFERENCES = intent.MatchTargetsPreferences()
 
 
 @dataclass
 class TargetCheck:
     """
-    The constraints and preferences to match, and the areas a vacuum is asked to clean.
+    The constraints and preferences to match, and the areas or floors the command acts on, such as those to clean.
 
     ``states`` is set when the handler picks its targets itself rather than by matching.
     """
 
     constraints: intent.MatchTargetsConstraints
     preferences: intent.MatchTargetsPreferences
-    cleaning_areas: list[ar.AreaEntry] = field(default_factory=list)
+    areas: list[ar.AreaEntry] = field(default_factory=list)
+    floors: list[fr.FloorEntry] = field(default_factory=list)
     states: list[State] | None = None
 
 
@@ -138,7 +139,7 @@ def _clean_area(hass: HomeAssistant, slots: dict[str, Any], _device_id: str | No
             name=_name(slots), domains={"vacuum"}, features=VacuumEntityFeature.CLEAN_AREA, assistant=ASSISTANT
         ),
         preferences=intent.MatchTargetsPreferences(area_id=areas[0].id, floor_id=areas[0].floor_id),
-        cleaning_areas=areas,
+        areas=areas,
     )
 
 
@@ -150,31 +151,36 @@ def _broadcast(hass: HomeAssistant, _slots: dict[str, Any], device_id: str | Non
         intent.MatchFailedError: no satellite would hear the broadcast.
 
     """
-    registry = er.async_get(hass)
-    constraints = intent.MatchTargetsConstraints(
-        domains={"assist_satellite"}, features=AssistSatelliteEntityFeature.ANNOUNCE
+    whole_house = Place()
+    if not (states := announcing_satellites(hass, skip_device_id=device_id)):
+        raise no_satellite_error(whole_house)
+    return TargetCheck(
+        constraints=no_satellite_error(whole_house).constraints, preferences=_NO_PREFERENCES, states=states
     )
-    states: list[State] = []
-    for entity_id in hass.states.async_entity_ids("assist_satellite"):
-        entry = registry.async_get(entity_id)
-        if entry is None or not entry.supported_features & AssistSatelliteEntityFeature.ANNOUNCE:
-            continue
-        if device_id and entry.device_id == device_id:
-            continue
-        config_entry = hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
-        if config_entry is not None and config_entry.domain in _BROADCAST_EXCLUDED_DOMAINS:
-            continue
-        if (state := hass.states.get(entity_id)) is not None:
-            states.append(state)
-    if not states:
-        raise intent.MatchFailedError(
-            result=intent.MatchTargetsResult(is_match=False, no_match_reason=intent.MatchFailedReason.DOMAIN),
-            constraints=constraints,
-        )
-    return TargetCheck(constraints=constraints, preferences=intent.MatchTargetsPreferences(), states=states)
+
+
+def _place_announce(hass: HomeAssistant, slots: dict[str, Any], _device_id: str | None) -> TargetCheck:
+    """
+    Check an announcement to one area or floor: it reaches the satellites there, the one spoken to included.
+
+    Raises:
+        intent.MatchFailedError: the place doesn't exist, or no satellite there can announce.
+
+    """
+    place = find_place(hass, slots)
+    if not (states := announcing_satellites(hass, **place.satellites_filter)):
+        raise no_satellite_error(place)
+    return TargetCheck(
+        constraints=no_satellite_error(place).constraints,
+        preferences=_NO_PREFERENCES,
+        areas=[place.area] if place.area else [],
+        floors=[place.floor] if place.floor else [],
+        states=states,
+    )
 
 
 _BUILDERS: dict[str, Callable[[HomeAssistant, dict[str, Any], str | None], TargetCheck]] = {
+    INTENT_PLACE_ANNOUNCE: _place_announce,
     "HassBroadcast": _broadcast,
     "HassClimateSetFanMode": _one_entity("climate", ClimateEntityFeature.FAN_MODE, single_target=True),
     "HassClimateSetTemperature": _one_entity("climate", ClimateEntityFeature.TARGET_TEMPERATURE, single_target=True),
