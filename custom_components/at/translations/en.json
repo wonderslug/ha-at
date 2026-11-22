@@ -160,5 +160,20 @@
         "name": "Pending jobs"
       }
     }
+  },
+  "config_panel": {
+    "panel": {
+      "title": "Scheduled Jobs",
+      "update_needed": "This panel needs an update for this Home Assistant version.",
+      "missing_elements": "Missing: {elements}",
+      "more_options": "More options",
+      "cancel_all": "Cancel all",
+      "confirm_cancel_all": "Confirm cancel all?",
+      "clear_history": "Clear history",
+      "reconnecting": "Reconnecting…",
+      "request_failed": "Request failed",
+      "dismiss": "Dismiss",
+      "add_job": "Add job"
+    }
   }
 }

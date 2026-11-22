@@ -1697,13 +1697,18 @@ var Q = class extends P {
 	}
 };
 U([I({ attribute: !1 })], Q.prototype, "hass", void 0), U([I({ attribute: !1 })], Q.prototype, "pending", void 0), U([I({ attribute: !1 })], Q.prototype, "running", void 0), U([I({ type: Number })], Q.prototype, "now", void 0), U([I({ type: Boolean })], Q.prototype, "isAdmin", void 0), U([I({ type: Boolean })], Q.prototype, "narrow", void 0), Q = U([F("at-upcoming-table")], Q);
+// src/localize.ts
+var Kt = "component.at.config_panel.";
+function qt(e) {
+	return (t, n) => e.localize(`${Kt}${t}`, n) || t;
+}
 // src/reconnect.ts
-var Kt = 1e3, qt = 3e4;
-function Jt(e) {
-	return Math.min(Kt * 2 ** Math.min(e, 10), qt);
+var Jt = 1e3, Yt = 3e4;
+function Xt(e) {
+	return Math.min(Jt * 2 ** Math.min(e, 10), Yt);
 }
 // src/at-panel.ts
-var Yt = "Scheduled Jobs", $ = class extends P {
+var $ = class extends P {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.data = {
 			pending: [],
@@ -1727,7 +1732,19 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 		super.disconnectedCallback(), this.gone = !0, this.generation++, window.clearInterval(this.tick), window.clearTimeout(this.retryTimer), this.subscribed = !1, this.unsub?.().catch(() => void 0), this.unsub = void 0;
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
+		e.has("hass") && this.hass && this.hass.language !== this.translationsLanguage && this.loadTranslations(this.hass), e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
+	}
+	async loadTranslations(e) {
+		this.translationsLanguage = e.language;
+		try {
+			await e.loadBackendTranslation("config_panel", "at");
+		} catch {
+			return;
+		}
+		this.requestUpdate();
+	}
+	get localize() {
+		return this.hass ? qt(this.hass) : (e) => e;
 	}
 	async start() {
 		this.hass && !this.subscribed && (this.subscribed = !0, Ge(this.hass).then((e) => this.atInfo = e, () => void 0), pt().then((e) => this.missing = e), await this.subscribe());
@@ -1758,7 +1775,7 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 	}
 	scheduleRetry() {
 		if (this.reconnecting = !0, this.gone) return;
-		let e = Jt(this.attempt++);
+		let e = Xt(this.attempt++);
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	async call(e) {
@@ -1766,7 +1783,7 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 			await e();
 		} catch (e) {
 			let t = e?.message;
-			this.error = t || "Request failed";
+			this.error = t || this.localize("panel.request_failed");
 		}
 	}
 	cancelAll() {
@@ -1790,15 +1807,15 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : Yt;
+		return typeof e == "string" && e ? e : this.localize("panel.title");
 	}
 	render() {
 		if (this.missing === void 0) return O;
 		if (this.missing.length) return E`<div class="missing">
-        <p>This panel needs an update for this Home Assistant version.</p>
-        <p>Missing: ${this.missing.join(", ")}</p>
+        <p>${this.localize("panel.update_needed")}</p>
+        <p>${this.localize("panel.missing_elements", { elements: this.missing.join(", ") })}</p>
       </div>`;
-		let e = this.atInfo?.is_admin ?? !1;
+		let e = this.localize, t = this.atInfo?.is_admin ?? !1;
 		return E`
       <hass-subpage main-page .hass=${this.hass} .narrow=${this.narrow} .header=${this.title_}>
         <ha-dropdown
@@ -1807,30 +1824,30 @@ var Yt = "Scheduled Jobs", $ = class extends P {
           @wa-select=${this.onMenuSelect}
           @wa-after-hide=${() => this.confirmCancelAll = !1}
         >
-          <ha-icon-button slot="trigger" .label=${"More options"} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"}></ha-icon-button>
-          <ha-dropdown-item value="cancel-all">${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</ha-dropdown-item>
-          <ha-dropdown-item value="clear-history">Clear history</ha-dropdown-item>
+          <ha-icon-button slot="trigger" .label=${e("panel.more_options")} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"}></ha-icon-button>
+          <ha-dropdown-item value="cancel-all">${e(this.confirmCancelAll ? "panel.confirm_cancel_all" : "panel.cancel_all")}</ha-dropdown-item>
+          <ha-dropdown-item value="clear-history">${e("panel.clear_history")}</ha-dropdown-item>
         </ha-dropdown>
         <div class="content" @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
-          ${this.reconnecting ? E`<div class="notice">Reconnecting…</div>` : O}
-          ${this.error ? E`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => this.error = ""}>✕</button></div>` : O}
+          ${this.reconnecting ? E`<div class="notice">${e("panel.reconnecting")}</div>` : O}
+          ${this.error ? E`<div class="error" role="alert">${this.error}<button aria-label=${e("panel.dismiss")} @click=${() => this.error = ""}>✕</button></div>` : O}
           <at-upcoming-table
-            .hass=${this.hass}
+            .hass=${this.hass} .localize=${e}
             .pending=${this.data.pending}
             .running=${this.data.running}
             .now=${this.now}
-            .isAdmin=${e}
+            .isAdmin=${t}
             .narrow=${this.narrow}
           ></at-upcoming-table>
-          <at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
+          <at-history-table .hass=${this.hass} .localize=${e} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
         </div>
         <ha-button slot="fab" size="l" @click=${() => this.addOpen = !0}>
           <ha-svg-icon slot="start" .path=${"M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"}></ha-svg-icon>
-          Add job
+          ${e("panel.add_job")}
         </ha-button>
       </hass-subpage>
-      <at-add-job-dialog .hass=${this.hass} .isAdmin=${e} .open=${this.addOpen} @close-add-job=${() => this.addOpen = !1}></at-add-job-dialog>
-      <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => this.details = void 0}></at-job-details>
+      <at-add-job-dialog .hass=${this.hass} .localize=${e} .isAdmin=${t} .open=${this.addOpen} @close-add-job=${() => this.addOpen = !1}></at-add-job-dialog>
+      <at-job-details .hass=${this.hass} .localize=${e} .job=${this.details} @close-details=${() => this.details = void 0}></at-job-details>
     `;
 	}
 	static {

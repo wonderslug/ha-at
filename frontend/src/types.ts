@@ -89,6 +89,8 @@ export interface HomeAssistant {
     ): Promise<() => Promise<void>>;
   };
   language: string;
+  localize(key: string, values?: Record<string, string | number>): string;
+  loadBackendTranslation(category: string, integration?: string): Promise<unknown>;
   locale?: { language: string };
   config: { time_zone: string };
   themes?: { darkMode?: boolean };

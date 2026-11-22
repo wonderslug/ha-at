@@ -7,11 +7,10 @@ import "./components/history-table";
 import "./components/job-details";
 import "./components/upcoming-table";
 import { loadHaElements } from "./ha-elements";
+import { type Localize, makeLocalize } from "./localize";
 import { nextRetryDelay } from "./reconnect";
 import { applyChange, normalize, type PanelState } from "./state";
 import type { AtInfo, HomeAssistant, Job, PanelInfo, SubscribeEvent } from "./types";
-
-const DEFAULT_TITLE = "Scheduled Jobs";
 
 @customElement("at-panel")
 export class AtPanel extends LitElement {
@@ -37,6 +36,7 @@ export class AtPanel extends LitElement {
   private subscribed = false;
   private gone = false;
   private generation = 0;
+  private translationsLanguage?: string;
 
   override connectedCallback() {
     super.connectedCallback();
@@ -59,9 +59,26 @@ export class AtPanel extends LitElement {
   }
 
   protected override updated(changed: Map<string, unknown>) {
+    if (changed.has("hass") && this.hass && this.hass.language !== this.translationsLanguage) {
+      void this.loadTranslations(this.hass);
+    }
     if (changed.has("hass") && this.hass && !this.subscribed && !this.gone) {
       void this.start();
     }
+  }
+
+  private async loadTranslations(hass: HomeAssistant) {
+    this.translationsLanguage = hass.language;
+    try {
+      await hass.loadBackendTranslation("config_panel", "at");
+    } catch {
+      return;
+    }
+    this.requestUpdate();
+  }
+
+  private get localize(): Localize {
+    return this.hass ? makeLocalize(this.hass) : (key) => key;
   }
 
   private async start() {
@@ -117,7 +134,7 @@ export class AtPanel extends LitElement {
       await fn();
     } catch (err) {
       const message = (err as { message?: string })?.message;
-      this.error = message || "Request failed";
+      this.error = message || this.localize("panel.request_failed");
     }
   }
 
@@ -166,17 +183,18 @@ export class AtPanel extends LitElement {
 
   private get title_(): string {
     const title = this.panel?.config?.title;
-    return typeof title === "string" && title ? title : DEFAULT_TITLE;
+    return typeof title === "string" && title ? title : this.localize("panel.title");
   }
 
   protected override render() {
     if (this.missing === undefined) return nothing;
     if (this.missing.length) {
       return html`<div class="missing">
-        <p>This panel needs an update for this Home Assistant version.</p>
-        <p>Missing: ${this.missing.join(", ")}</p>
+        <p>${this.localize("panel.update_needed")}</p>
+        <p>${this.localize("panel.missing_elements", { elements: this.missing.join(", ") })}</p>
       </div>`;
     }
+    const localize = this.localize;
     const isAdmin = this.atInfo?.is_admin ?? false;
     return html`
       <hass-subpage main-page .hass=${this.hass} .narrow=${this.narrow} .header=${this.title_}>
@@ -186,32 +204,32 @@ export class AtPanel extends LitElement {
           @wa-select=${this.onMenuSelect}
           @wa-after-hide=${() => (this.confirmCancelAll = false)}
         >
-          <ha-icon-button slot="trigger" .label=${"More options"} .path=${mdiDotsVertical}></ha-icon-button>
-          <ha-dropdown-item value="cancel-all">${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</ha-dropdown-item>
-          <ha-dropdown-item value="clear-history">Clear history</ha-dropdown-item>
+          <ha-icon-button slot="trigger" .label=${localize("panel.more_options")} .path=${mdiDotsVertical}></ha-icon-button>
+          <ha-dropdown-item value="cancel-all">${localize(this.confirmCancelAll ? "panel.confirm_cancel_all" : "panel.cancel_all")}</ha-dropdown-item>
+          <ha-dropdown-item value="clear-history">${localize("panel.clear_history")}</ha-dropdown-item>
         </ha-dropdown>
         <div class="content" @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
-          ${this.reconnecting ? html`<div class="notice">Reconnecting…</div>` : nothing}
+          ${this.reconnecting ? html`<div class="notice">${localize("panel.reconnecting")}</div>` : nothing}
           ${this.error
-            ? html`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => (this.error = "")}>✕</button></div>`
+            ? html`<div class="error" role="alert">${this.error}<button aria-label=${localize("panel.dismiss")} @click=${() => (this.error = "")}>✕</button></div>`
             : nothing}
           <at-upcoming-table
-            .hass=${this.hass}
+            .hass=${this.hass} .localize=${localize}
             .pending=${this.data.pending}
             .running=${this.data.running}
             .now=${this.now}
             .isAdmin=${isAdmin}
             .narrow=${this.narrow}
           ></at-upcoming-table>
-          <at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
+          <at-history-table .hass=${this.hass} .localize=${localize} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
         </div>
         <ha-button slot="fab" size="l" @click=${() => (this.addOpen = true)}>
           <ha-svg-icon slot="start" .path=${mdiPlus}></ha-svg-icon>
-          Add job
+          ${localize("panel.add_job")}
         </ha-button>
       </hass-subpage>
-      <at-add-job-dialog .hass=${this.hass} .isAdmin=${isAdmin} .open=${this.addOpen} @close-add-job=${() => (this.addOpen = false)}></at-add-job-dialog>
-      <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => (this.details = undefined)}></at-job-details>
+      <at-add-job-dialog .hass=${this.hass} .localize=${localize} .isAdmin=${isAdmin} .open=${this.addOpen} @close-add-job=${() => (this.addOpen = false)}></at-add-job-dialog>
+      <at-job-details .hass=${this.hass} .localize=${localize} .job=${this.details} @close-details=${() => (this.details = undefined)}></at-job-details>
     `;
   }
 
