@@ -6,7 +6,7 @@ pull request is untrusted: it is validated, size-capped and never passed through
 only.
 
 Usage:
-    translation_triage.py run --artifact DIR --run-head-sha SHA
+    translation_triage.py run --artifact DIR --run-head-sha SHA --run-conclusion CONCLUSION
     translation_triage.py daily
 """
 
@@ -34,7 +34,10 @@ NEEDS_REVIEW = "translation: needs native review"
 VERIFIED = "translation: verified"
 UNVERIFIED = "translation: unverified"
 BOT_LOGIN = "github-actions[bot]"
-COMMENT_LIMIT = 65_536
+COMMENT_LIMIT = 60_000
+MAX_LANGUAGES = 100
+MAX_LISTED_MAINTAINERS = 10
+BEYOND_NOTE = "This pull request also changes code beyond translations — confirm by hand."
 MAINTAINERS_PATH = ".github/translation-maintainers.yml"
 
 _SHA = re.compile(r"[0-9a-f]{40}")
@@ -42,6 +45,12 @@ _CODE = re.compile(r"[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*")
 _REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 _STATE_LINE = re.compile(r"^<!-- at-translation-state (\{.*\}) -->$", re.MULTILINE)
 _REVIEW_HEADING = "\n### Review\n"
+_SURFACES = (
+    re.compile(r"custom_components/at/translations/([^/]+)\.json"),
+    re.compile(r"custom_components/at/lang/([^/]+)\.py"),
+    re.compile(r"tests/translations/examples/([^/]+)\.yaml"),
+)
+_ENGLISH_STRINGS = "custom_components/at/translations/en.json"
 _MAX_ARTIFACT_BYTES = 1_000_000
 _COUNTED_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
 
@@ -126,7 +135,7 @@ def validate_report(report: Any) -> dict[str, Any] | None:
     if not isinstance(report, dict) or not isinstance(report.get("failed"), bool):
         return None
     languages = report.get("languages")
-    if not isinstance(languages, dict):
+    if not isinstance(languages, dict) or len(languages) > MAX_LANGUAGES:
         return None
     for code, entry in languages.items():
         if not isinstance(code, str) or not _CODE.fullmatch(code) or not isinstance(entry, dict):
@@ -135,8 +144,7 @@ def validate_report(report: Any) -> dict[str, Any] | None:
 
 
 def _sanitise_markdown(markdown: str) -> str:
-    cleaned = markdown.replace(MARKER, "").replace(STATE_PREFIX, "")
-    return cleaned.replace("@", "@\u200b")
+    return re.sub("@\u200b*", "@\u200b", markdown.replace("<", "&lt;"))
 
 
 def _review_line(
@@ -145,14 +153,23 @@ def _review_line(
     others: list[str],
     maintainers: Mapping[str, list[str]],
     day: int | None,
+    *,
+    failed: bool,
+    reported: bool,
 ) -> str:
-    if approvers:
+    if failed:
+        line = f"`{code}`  Review  waiting for the checks to pass"
+    elif approvers:
         line = f"`{code}`  Review  verified by {', '.join(f'@{a}' for a in approvers)}"
     else:
         listed = maintainers.get(code.lower(), [])
-        names = ", ".join(f"@{m}" for m in listed) if listed else "(none yet)"
+        names = ", ".join(f"@{m}" for m in listed[:MAX_LISTED_MAINTAINERS]) if listed else "(none yet)"
+        if len(listed) > MAX_LISTED_MAINTAINERS:
+            names += ", …"
         line = f"`{code}`  Review  needs native review · maintainer: {names} · day {day or 0} of {WAIT_DAYS}"
-    if others:
+    if not reported:
+        line += " · no report"
+    if others and not failed:
         line += f" · approved by {', '.join(f'@{o}' for o in others)} — not a listed maintainer, needs confirmation"
     return f"- {line}"
 
@@ -167,52 +184,86 @@ def decide(
     now: datetime,
     report_markdown: str,
     head_sha: str,
+    languages: Sequence[str] | None = None,
+    *,
+    beyond: bool = False,
 ) -> Decision:
-    """Work out label changes and the comment for a validated report."""
-    codes = sorted(report["languages"])
+    """Work out label changes and the comment; `languages` overrides the report's own language list."""
+    codes = sorted(report["languages"] if languages is None else languages)
     if not codes:
         return Decision(set(), set(), "", False)
     reviews = list(reviews)
-    day = waiting_day(applied_at, now)
+    failed = report["failed"]
+    day = waiting_day(applied_at, now) if NEEDS_REVIEW in current_labels else None
+    unreported = [code for code in codes if code not in report["languages"]]
     review_lines: list[str] = []
-    verified = True
+    approved = True
     for code in codes:
         approvers = qualifying_approvers(reviews, author, code, maintainers, head_sha)
         others = other_approvers(reviews, author, code, maintainers, head_sha)
-        verified = verified and bool(approvers)
-        review_lines.append(_review_line(code, approvers, others, maintainers, day))
+        approved = approved and bool(approvers)
+        review_lines.append(
+            _review_line(code, approvers, others, maintainers, day, failed=failed, reported=code not in unreported)
+        )
+    if beyond:
+        review_lines.append(f"- {BEYOND_NOTE}")
 
     add = {BASE}
     remove: set[str] = set()
     notice = False
-    if verified:
+    if failed:
+        remove |= {NEEDS_REVIEW, UNVERIFIED, VERIFIED}
+    elif beyond:
+        add.add(NEEDS_REVIEW)
+    elif approved:
         add.add(VERIFIED)
         remove |= {NEEDS_REVIEW, UNVERIFIED}
     else:
         add.add(NEEDS_REVIEW)
         remove.add(VERIFIED)
-        if day is not None and day >= WAIT_DAYS and not report["failed"]:
+        if day is not None and day >= WAIT_DAYS:
             add.add(UNVERIFIED)
             notice = UNVERIFIED not in current_labels
 
-    state = {"languages": codes, "failed": report["failed"], "head_sha": head_sha}
+    state = {"languages": codes, "failed": failed, "head_sha": head_sha, "beyond": beyond, "no_report": unreported}
     head = f"{MARKER}\n{STATE_PREFIX}{json.dumps(state)} -->\n"
     tail = _REVIEW_HEADING + "\n".join(review_lines) + "\n"
     body = _sanitise_markdown(report_markdown)
-    budget = COMMENT_LIMIT - len(head) - len(tail) - 100
-    if len(body) > budget:
-        body = body[:budget] + "\n\n_(report truncated)_"
+    budget = max(COMMENT_LIMIT - len(head.encode()) - len(tail.encode()) - 100, 0)
+    if len(body.encode()) > budget:
+        body = body.encode()[:budget].decode("utf-8", errors="ignore") + "\n\n_(report truncated)_"
     return Decision(add, remove, head + body + tail, notice)
+
+
+def classify_files(filenames: Iterable[str]) -> tuple[list[str], bool]:
+    """Return the languages whose translation surfaces changed, and whether anything else changed."""
+    languages: set[str] = set()
+    beyond = False
+    for name in filenames:
+        if name == _ENGLISH_STRINGS:
+            continue
+        codes = [m.group(1) for pattern in _SURFACES if (m := pattern.fullmatch(name))]
+        if codes and codes[0].lower() != "en" and _CODE.fullmatch(codes[0]):
+            languages.add(codes[0])
+        else:
+            beyond = True
+    return sorted(languages), beyond
 
 
 def validate_artifact_pr(raw: str, pr_head_sha: str, run_head_sha: str) -> int:
     """Return the pull request number from the artifact, or raise ValueError when it cannot be trusted."""
+    number = parse_pr_number(raw)
+    if not _SHA.fullmatch(pr_head_sha) or pr_head_sha != run_head_sha:
+        msg = "pull request head does not match the workflow run"
+        raise ValueError(msg)
+    return number
+
+
+def parse_pr_number(raw: str) -> int:
+    """Return a positive integer from untrusted text, or raise ValueError."""
     text = raw.strip()
     if not (text.isascii() and text.isdigit()) or int(text) <= 0:
         msg = "pr.txt is not a positive integer"
-        raise ValueError(msg)
-    if not _SHA.fullmatch(pr_head_sha) or pr_head_sha != run_head_sha:
-        msg = "pull request head does not match the workflow run"
         raise ValueError(msg)
     return int(text)
 
@@ -233,9 +284,10 @@ def parse_maintainers(text: str) -> dict[str, list[str]]:
     return {code: logins for code, logins in result.items() if logins}
 
 
-def _gh(*args: str) -> Any:
-    """Call `gh api` with an argument list and return the decoded JSON output."""
-    result = subprocess.run(["gh", "api", *args], capture_output=True, text=True, check=False)
+def _gh(*args: str, stdin: str | None = None) -> Any:
+    """Call `gh api` with an argument list and return the decoded JSON output; `stdin` is the request body."""
+    command = ["gh", "api", *args] + (["--input", "-"] if stdin is not None else [])
+    result = subprocess.run(command, input=stdin, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         msg = f"gh api {args[0]} failed: {result.stderr.strip()}"
         raise RuntimeError(msg)
@@ -296,15 +348,15 @@ def _state_from_comment(body: str) -> tuple[dict[str, Any], str] | None:
         state = json.loads(match.group(1))
     except ValueError:
         return None
-    codes = state.get("languages") if isinstance(state, dict) else None
-    if not (
-        isinstance(codes, list)
-        and all(isinstance(c, str) and _CODE.fullmatch(c) for c in codes)
-        and isinstance(state.get("failed"), bool)
-        and isinstance(state.get("head_sha"), str)
-    ):
+    if not isinstance(state, dict):
         return None
-    markdown = body[match.end() :].split(_REVIEW_HEADING, maxsplit=1)[0].strip("\n")
+    for key in ("languages", "no_report"):
+        codes = state.get(key, [])
+        if not (isinstance(codes, list) and all(isinstance(c, str) and _CODE.fullmatch(c) for c in codes)):
+            return None
+    if not (isinstance(state.get("failed"), bool) and isinstance(state.get("head_sha"), str)):
+        return None
+    markdown = body[match.end() :].rsplit(_REVIEW_HEADING, 1)[0].strip("\n")
     return state, markdown
 
 
@@ -312,21 +364,31 @@ def _apply(repo: str, pr: dict[str, Any], decision: Decision, existing: list[dic
     number = pr["number"]
     current = {label["name"] for label in pr.get("labels", [])}
     for label in sorted(decision.add - current):
-        _gh("-X", "POST", f"repos/{repo}/issues/{number}/labels", "-f", f"labels[]={label}")
+        _gh("-X", "POST", f"repos/{repo}/issues/{number}/labels", stdin=json.dumps({"labels": [label]}))
     for label in sorted(decision.remove & current):
         _gh("-X", "DELETE", f"repos/{repo}/issues/{number}/labels/{quote(label, safe='')}")
     if not decision.comment:
         return
+    body = json.dumps({"body": decision.comment})
     if existing:
-        _gh("-X", "PATCH", f"repos/{repo}/issues/comments/{existing[0]['id']}", "-f", f"body={decision.comment}")
+        _gh("-X", "PATCH", f"repos/{repo}/issues/comments/{existing[0]['id']}", stdin=body)
     else:
-        _gh("-X", "POST", f"repos/{repo}/issues/{number}/comments", "-f", f"body={decision.comment}")
+        _gh("-X", "POST", f"repos/{repo}/issues/{number}/comments", stdin=body)
     if decision.post_unverified_notice:
         notice = (
             f"No listed native speaker has approved these translations within {WAIT_DAYS} days, so they are labelled "
             "unverified. They can still be merged; a listed maintainer's approval will verify them."
         )
-        _gh("-X", "POST", f"repos/{repo}/issues/{number}/comments", "-f", f"body={notice}")
+        _gh("-X", "POST", f"repos/{repo}/issues/{number}/comments", stdin=json.dumps({"body": notice}))
+
+
+def _changed_files(repo: str, number: int) -> list[str]:
+    names: list[str] = []
+    for item in _paged(f"repos/{repo}/pulls/{number}/files"):
+        names.append(str(item["filename"]))
+        if item.get("previous_filename"):
+            names.append(str(item["previous_filename"]))
+    return names
 
 
 def _triage(
@@ -337,6 +399,10 @@ def _triage(
     maintainers: Mapping[str, list[str]],
 ) -> None:
     number = pr["number"]
+    languages, beyond = classify_files(_changed_files(repo, number))
+    if len(languages) > MAX_LANGUAGES:
+        print(f"#{number}: too many languages; no action taken", file=sys.stderr)
+        return
     labels = {label["name"] for label in pr.get("labels", [])}
     decision = decide(
         report,
@@ -348,6 +414,8 @@ def _triage(
         datetime.now(UTC),
         markdown,
         pr["head"]["sha"],
+        languages,
+        beyond=beyond,
     )
     _apply(repo, pr, decision, _bot_comments(repo, number))
 
@@ -357,14 +425,13 @@ def _read_artifact(path: Path) -> str:
         return handle.read(_MAX_ARTIFACT_BYTES).decode("utf-8", errors="replace")
 
 
-def _run(repo: str, artifact: Path, run_head_sha: str, maintainers: Mapping[str, list[str]]) -> int:
+def _run(
+    repo: str, artifact: Path, run_head_sha: str, run_conclusion: str, maintainers: Mapping[str, list[str]]
+) -> int:
     raw = _read_artifact(artifact / "pr.txt")
-    text = raw.strip()
-    if not (text.isascii() and text.isdigit()) or int(text) <= 0:
-        print("pr.txt is not a positive integer", file=sys.stderr)
-        return 1
-    pr = _gh(f"repos/{repo}/pulls/{int(text)}")
     try:
+        number = parse_pr_number(raw)
+        pr = _gh(f"repos/{repo}/pulls/{number}")
         validate_artifact_pr(raw, pr["head"]["sha"], run_head_sha)
     except ValueError as err:
         print(f"artifact rejected: {err}", file=sys.stderr)
@@ -378,23 +445,30 @@ def _run(repo: str, artifact: Path, run_head_sha: str, maintainers: Mapping[str,
     if report is None:
         print("report.json has an unexpected shape; no action taken", file=sys.stderr)
         return 0
+    report = {**report, "failed": report["failed"] or run_conclusion != "success"}
     _triage(repo, pr, report, _read_artifact(artifact / "report.md"), maintainers)
     return 0
 
 
 def _daily(repo: str, maintainers: Mapping[str, list[str]]) -> int:
+    status = 0
     for pr in _paged(f"repos/{repo}/pulls?state=open&per_page=100"):
         if BASE not in {label["name"] for label in pr.get("labels", [])}:
             continue
-        comments = _bot_comments(repo, pr["number"])
-        parsed = _state_from_comment(comments[0]["body"]) if comments else None
-        if parsed is None or parsed[0]["head_sha"] != pr["head"]["sha"]:
-            print(f"#{pr['number']}: no current report state; skipped", file=sys.stderr)
-            continue
-        state, markdown = parsed
-        report = {"failed": state["failed"], "languages": {code: {} for code in state["languages"]}}
-        _triage(repo, pr, report, markdown, maintainers)
-    return 0
+        try:
+            comments = _bot_comments(repo, pr["number"])
+            parsed = _state_from_comment(comments[0]["body"]) if comments else None
+            if parsed is None or parsed[0]["head_sha"] != pr["head"]["sha"]:
+                print(f"#{pr['number']}: no current report state; skipped", file=sys.stderr)
+                continue
+            state, markdown = parsed
+            reported = set(state["languages"]) - set(state.get("no_report", []))
+            report = {"failed": state["failed"], "languages": {code: {} for code in sorted(reported)}}
+            _triage(repo, pr, report, markdown, maintainers)
+        except Exception as err:  # noqa: BLE001
+            print(f"#{pr.get('number')}: {type(err).__name__}: {err}", file=sys.stderr)
+            status = 1
+    return status
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -404,6 +478,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     run = sub.add_parser("run")
     run.add_argument("--artifact", type=Path, required=True)
     run.add_argument("--run-head-sha", required=True)
+    run.add_argument("--run-conclusion", required=True)
     sub.add_parser("daily")
     args = parser.parse_args(argv)
 
@@ -414,7 +489,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     default_branch = _gh(f"repos/{repo}")["default_branch"]
     maintainers = _fetch_maintainers(repo, default_branch)
     if args.mode == "run":
-        return _run(repo, args.artifact, args.run_head_sha, maintainers)
+        return _run(repo, args.artifact, args.run_head_sha, args.run_conclusion, maintainers)
     return _daily(repo, maintainers)
 
 

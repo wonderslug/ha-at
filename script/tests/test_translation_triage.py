@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import importlib.util
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -155,7 +156,7 @@ def test_comment_structure() -> None:
     lines = d.comment.split("\n")
     assert lines[0] == tt.MARKER
     state = json.loads(lines[1].removeprefix("<!-- at-translation-state ").removesuffix(" -->"))
-    assert state == {"languages": ["de"], "failed": False, "head_sha": HEAD}
+    assert state == {"languages": ["de"], "failed": False, "head_sha": HEAD, "beyond": False, "no_report": []}
     assert "REPORT BODY" in d.comment
     assert "### Review" in d.comment
 
@@ -206,8 +207,11 @@ class FakeGh:
     def __init__(self, *, maint: str = "languages: {de: [bob]}", comments: list | None = None) -> None:
         """Create the fake with canned maintainers and comments."""
         self.calls: list[tuple[str, ...]] = []
+        self.stdins: list[str] = []
         self.maint = maint
         self.comments = comments or []
+        self.fail: set[int] = set()
+        self.files = [{"filename": "custom_components/at/translations/de.json"}]
         self.reviews = [
             {"user": {"login": "bob"}, "state": "APPROVED", "submitted_at": "2026-11-28T00:00:00Z", "commit_id": HEAD}
         ]
@@ -218,29 +222,38 @@ class FakeGh:
             "head": {"sha": HEAD},
             "labels": [{"name": tt.NEEDS_REVIEW}],
         }
+        self.extra_prs: list[dict] = []
 
-    def __call__(self, *args: str) -> Any:
+    def __call__(self, *args: str, stdin: str | None = None) -> Any:
         """Record and answer one gh call."""
-        self.calls.append(args)
+        self.calls.append(args if stdin is None else (*args, stdin))
+        if stdin is not None:
+            self.stdins.append(stdin)
         path = next(a for a in args if a.startswith("repos/"))
+        number = re.search(r"/(?:pulls|issues)/(\d+)/", path)
+        if number and int(number.group(1)) in self.fail and "-X" not in args:
+            msg = "boom"
+            raise RuntimeError(msg)
         if path == "repos/o/r":
             return {"default_branch": "main"}
         if "contents/.github/translation-maintainers.yml" in path:
             return {"content": base64.b64encode(self.maint.encode()).decode()}
         if path.endswith("/reviews"):
             return [self.reviews]
+        if path.endswith("/files"):
+            return [self.files]
         if path.endswith("/events"):
             return [[{"event": "labeled", "label": {"name": tt.NEEDS_REVIEW}, "created_at": "2026-10-01T00:00:00Z"}]]
         if path.endswith("/comments") and "-X" not in args:
             return [self.comments]
         if path.startswith("repos/o/r/pulls?"):
-            return [[self.pr]]
-        if path == "repos/o/r/pulls/12":
+            return [[self.pr, *self.extra_prs]]
+        if re.fullmatch(r"repos/o/r/pulls/\d+", path):
             return self.pr
         return None
 
     def writes(self) -> list[tuple[str, ...]]:
-        """Writes."""
+        """Return the mutating calls."""
         return [c for c in self.calls if "-X" in c]
 
 
@@ -262,7 +275,10 @@ def test_run_reads_maintainers_from_default_branch(env: None, monkeypatch: pytes
     """Run reads maintainers from default branch."""
     gh = FakeGh()
     monkeypatch.setattr(tt, "_gh", gh)
-    assert tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", HEAD]) == 0
+    assert (
+        tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", HEAD, "--run-conclusion", "success"])
+        == 0
+    )
     fetches = [c for c in gh.calls if any("translation-maintainers.yml" in a for a in c)]
     assert len(fetches) == 1
     assert "ref=main" in " ".join(fetches[0])
@@ -273,7 +289,7 @@ def test_run_creates_comment_when_none_exists(env: None, monkeypatch: pytest.Mon
     """Run creates comment when none exists."""
     gh = FakeGh()
     monkeypatch.setattr(tt, "_gh", gh)
-    tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", HEAD])
+    tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", HEAD, "--run-conclusion", "success"])
     assert any("repos/o/r/issues/12/comments" in c and "POST" in c for c in gh.writes())
 
 
@@ -281,7 +297,10 @@ def test_run_rejects_head_mismatch_without_writing(env: None, monkeypatch: pytes
     """Run rejects head mismatch without writing."""
     gh = FakeGh()
     monkeypatch.setattr(tt, "_gh", gh)
-    assert tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", OLD]) == 1
+    assert (
+        tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", OLD, "--run-conclusion", "success"])
+        == 1
+    )
     assert gh.writes() == []
 
 
@@ -289,7 +308,20 @@ def test_run_malformed_report_takes_no_action(env: None, monkeypatch: pytest.Mon
     """Run malformed report takes no action."""
     gh = FakeGh()
     monkeypatch.setattr(tt, "_gh", gh)
-    assert tt.main(["run", "--artifact", str(artifact(tmp_path, report={"languages": 3})), "--run-head-sha", HEAD]) == 0
+    assert (
+        tt.main(
+            [
+                "run",
+                "--artifact",
+                str(artifact(tmp_path, report={"languages": 3})),
+                "--run-head-sha",
+                HEAD,
+                "--run-conclusion",
+                "success",
+            ]
+        )
+        == 0
+    )
     assert gh.writes() == []
 
 
@@ -326,3 +358,193 @@ def test_daily_skips_when_head_moved_since_report(env: None, monkeypatch: pytest
     monkeypatch.setattr(tt, "_gh", gh)
     assert tt.main(["daily"]) == 0
     assert gh.writes() == []
+
+
+def run(gh: FakeGh, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, conclusion: str = "success", **kw: Any) -> int:
+    """Run the privileged mode against the fake."""
+    monkeypatch.setattr(tt, "_gh", gh)
+    argv = ["run", "--artifact", str(artifact(tmp_path, **kw)), "--run-head-sha", HEAD, "--run-conclusion", conclusion]
+    return tt.main(argv)
+
+
+def posted_comment(gh: FakeGh) -> str:
+    """Return the body of the first comment write."""
+    return json.loads(next(s for s in gh.stdins if '"body"' in s))["body"]
+
+
+def test_bodies_go_through_stdin_not_argv(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Bodies are JSON on stdin."""
+    gh = FakeGh()
+    run(gh, monkeypatch, tmp_path)
+    assert not any("body=" in a or "labels[]=" in a for c in gh.calls for a in c)
+    assert tt.MARKER in posted_comment(gh)
+
+
+def test_gh_helper_sends_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real helper passes --input - and the data on stdin."""
+    seen: dict[str, Any] = {}
+
+    def fake_run(argv: list[str], **kwargs: Any) -> Any:
+        seen.update(argv=argv, **kwargs)
+        return type("R", (), {"returncode": 0, "stdout": "{}", "stderr": ""})()
+
+    monkeypatch.setattr(tt.subprocess, "run", fake_run)
+    tt._gh("-X", "POST", "repos/o/r/issues/1/comments", stdin='{"body": "x"}')  # noqa: SLF001
+    assert seen["argv"][-2:] == ["--input", "-"]
+    assert seen["input"] == '{"body": "x"}'
+
+
+def test_sanitiser_is_idempotent() -> None:
+    """Sanitising twice changes nothing more."""
+    once = tt._sanitise_markdown("@a <b> @@c")  # noqa: SLF001
+    assert tt._sanitise_markdown(once) == once  # noqa: SLF001
+
+
+def test_comment_is_capped_in_bytes() -> None:
+    """Multibyte and mention-heavy text stays well under the limit in bytes."""
+    for text in ("é" * 100_000, "@" * 40_000):
+        assert len(decide(report_markdown=text).comment.encode()) < 62_000
+
+
+def test_huge_maintainer_list_cannot_break_the_budget() -> None:
+    """The tail is bounded, so the body budget never goes negative."""
+    d = decide(maintainers={"de": [f"user{i}" for i in range(20000)]}, report_markdown="x" * 1000)
+    assert len(d.comment.encode()) < 65_536
+
+
+def test_nested_payload_cannot_rebuild_marker() -> None:
+    """Escaping defeats nested comment payloads."""
+    d = decide(report_markdown="<!-- at-translation-" + tt.MARKER + "report -->")
+    assert d.comment.count(tt.MARKER) == 1
+    assert d.comment.count(tt.STATE_PREFIX) == 1
+    assert d.comment.count("<!--") == 2
+
+
+def test_unterminated_comment_cannot_hide_review() -> None:
+    """An unterminated HTML comment is escaped."""
+    d = decide(report_markdown="<!-- hidden")
+    assert d.comment.count("<!--") == 2
+    assert "### Review" in d.comment
+
+
+def test_failed_then_green_restarts_the_clock() -> None:
+    """Needs-review is removed while failed, and the wait restarts when green."""
+    old = NOW - timedelta(days=40)
+    failed = decide({**REPORT, "failed": True}, applied_at=old, current_labels={tt.BASE, tt.NEEDS_REVIEW})
+    assert tt.NEEDS_REVIEW in failed.remove
+    assert tt.NEEDS_REVIEW not in failed.add
+    green = decide(applied_at=old, current_labels={tt.BASE})
+    assert tt.UNVERIFIED not in green.add
+    assert tt.NEEDS_REVIEW in green.add
+    assert "day 0 of 30" in green.comment
+
+
+def test_failed_run_is_never_verified() -> None:
+    """Approval does not verify a failing run."""
+    d = decide({**REPORT, "failed": True}, reviews=[review("bob")])
+    assert tt.VERIFIED not in d.add
+
+
+def test_classify_files() -> None:
+    """Translation surfaces yield languages; anything else is beyond."""
+    langs, beyond = tt.classify_files(
+        [
+            "custom_components/at/translations/de.json",
+            "custom_components/at/lang/de.py",
+            "tests/translations/examples/fr.yaml",
+            "custom_components/at/translations/en.json",
+        ]
+    )
+    assert (langs, beyond) == (["de", "fr"], False)
+    for other in (
+        "custom_components/at/lang/__init__.py",
+        "custom_components/at/lang/en.py",
+        "custom_components/at/__init__.py",
+        "custom_components/at/translations/de.json.bak",
+        "tests/translations/examples/en.yaml",
+    ):
+        assert tt.classify_files([other])[1] is True
+    assert tt.classify_files([{"x": 1}][0:0]) == ([], False)
+
+
+def test_languages_come_from_changed_files_not_the_report(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A language without a report entry still needs approval; invented ones are ignored."""
+    gh = FakeGh()
+    gh.files = [
+        {"filename": "custom_components/at/translations/de.json"},
+        {"filename": "tests/translations/examples/fr.yaml"},
+    ]
+    report = {"failed": False, "languages": {"de": {}, "xx": {}}}
+    run(gh, monkeypatch, tmp_path, report=report)
+    body = posted_comment(gh)
+    state = json.loads(body.split("\n")[1].removeprefix(tt.STATE_PREFIX).removesuffix(" -->"))
+    assert state["languages"] == ["de", "fr"]
+    assert state["no_report"] == ["fr"]
+    assert "no report" in body
+    assert not any(tt.VERIFIED in " ".join(c) for c in gh.writes())
+
+
+def test_run_conclusion_failure_counts_as_failed(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A non-success run conclusion fails the report even if report.json says otherwise."""
+    gh = FakeGh()
+    run(gh, monkeypatch, tmp_path, conclusion="cancelled")
+    body = posted_comment(gh)
+    assert '"failed": true' in body
+    assert not any(tt.VERIFIED in " ".join(c) for c in gh.writes() if "labels" in " ".join(c))
+
+
+def test_changes_beyond_translations_block_automatic_verification() -> None:
+    """Extra code changes never get verified or unverified automatically."""
+    d = decide(
+        reviews=[review("bob")],
+        beyond=True,
+        applied_at=NOW - timedelta(days=40),
+        current_labels={tt.NEEDS_REVIEW},
+    )
+    assert not d.add & {tt.VERIFIED, tt.UNVERIFIED}
+    assert "This pull request also changes code beyond translations — confirm by hand." in d.comment
+    assert '"beyond": true' in d.comment
+
+
+def test_daily_honours_beyond_from_files(env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Daily re-fetches the files and still refuses to verify."""
+    gh = FakeGh(comments=[bot_comment(decide().comment)])
+    gh.pr["labels"] = [{"name": tt.BASE}, {"name": tt.NEEDS_REVIEW}]
+    gh.files.append({"filename": "custom_components/at/__init__.py"})
+    monkeypatch.setattr(tt, "_gh", gh)
+    assert tt.main(["daily"]) == 0
+    assert not any(tt.VERIFIED in " ".join(c) for c in gh.writes() if "labels" in " ".join(c))
+
+
+def test_daily_continues_after_one_pr_fails(env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One broken PR does not stop the others, but the exit code reports it."""
+    gh = FakeGh(comments=[bot_comment(decide().comment)])
+    gh.pr["labels"] = [{"name": tt.BASE}]
+    gh.extra_prs = [{**gh.pr, "number": 13}]
+    gh.fail = {12}
+    monkeypatch.setattr(tt, "_gh", gh)
+    assert tt.main(["daily"]) == 1
+    assert len([c for c in gh.writes() if "PATCH" in c]) == 1
+
+
+def test_parse_pr_number() -> None:
+    """The shared parser accepts only positive ASCII integers."""
+    assert tt.parse_pr_number("7\n") == 7
+    for raw in ("", "0", "7;", "-1", "٣"):
+        with pytest.raises(ValueError):
+            tt.parse_pr_number(raw)
+
+
+def test_language_count_is_capped() -> None:
+    """More than 100 languages is rejected."""
+    assert tt.validate_report(
+        {"failed": False, "languages": {f"a{chr(97 + i % 26)}{chr(97 + i // 26)}": {} for i in range(100)}}
+    )
+    assert (
+        tt.validate_report(
+            {"failed": False, "languages": {f"a{chr(97 + i % 26)}{chr(97 + i // 26)}": {} for i in range(101)}}
+        )
+        is None
+    )
