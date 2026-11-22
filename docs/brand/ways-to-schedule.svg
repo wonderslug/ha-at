@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+<title id="title">Ways to schedule a job with at</title>
+<desc id="desc">Voice, Assist text, LLM agents, the Add job panel, the to-do list and automations all add jobs to the at queue. At the due time at runs the command, makes announcements, and reports back through events, sensors and history.</desc>
+<rect width="1200" height="650" rx="24" fill="#F4F5F7"/>
+<text x="600.0" y="48" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1A1D23" text-anchor="middle">Say it once. at runs it later.</text>
+<text x="600.0" y="78" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5C6370" text-anchor="middle">Every way into Home Assistant leads to the same job queue.</text>
+<text x="40" y="112" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#364FC7" text-anchor="start" letter-spacing="1.6">ASK ANY WAY</text>
+<text x="1160" y="112" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#364FC7" text-anchor="end" letter-spacing="1.6">AT THE RIGHT TIME</text>
+<path d="M400 160.0 C 440 160.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="124" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="160.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 148.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></g>
+<text x="114" y="155.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">Voice</text>
+<text x="114" y="177.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5C6370" text-anchor="start">“At 6 am, turn on the coffee maker”</text>
+<circle cx="400" cy="160.0" r="4" fill="#F59F00"/>
+<path d="M400 244.0 C 440 244.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="208" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="244.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 232.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-6 4z"/><path d="M8 10h8"/></g>
+<text x="114" y="239.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">Assist text</text>
+<text x="114" y="261.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5C6370" text-anchor="start">turn off the porch light in 20 minutes</text>
+<circle cx="400" cy="244.0" r="4" fill="#F59F00"/>
+<path d="M400 328.0 C 440 328.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="292" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="328.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 316.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18 16v4M16 18h4"/></g>
+<text x="114" y="323.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">LLM agents</text>
+<text x="114" y="345.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5C6370" text-anchor="start">“Turn the heater off at 10 tonight”</text>
+<circle cx="400" cy="328.0" r="4" fill="#F59F00"/>
+<path d="M400 412.0 C 440 412.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="376" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="412.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 400.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 9v6M9 12h6"/></g>
+<text x="114" y="407.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">Add job panel</text>
+<text x="114" y="429.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5C6370" text-anchor="start">Type it · Pick it · Sequence</text>
+<circle cx="400" cy="412.0" r="4" fill="#F59F00"/>
+<path d="M400 496.0 C 440 496.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="460" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="496.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 484.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11"/><circle cx="5" cy="18" r="1.4"/></g>
+<text x="114" y="491.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">To-do list</text>
+<text x="114" y="513.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#5C6370" text-anchor="start">Add an item, give it a due date</text>
+<circle cx="400" cy="496.0" r="4" fill="#F59F00"/>
+<path d="M400 580.0 C 440 580.0, 430 370, 470 370" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="40" y="544" width="360" height="72" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="78" cy="580.0" r="22" fill="#E7EBFB"/>
+<g transform="translate(66 568.0) scale(1.0)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/></g>
+<text x="114" y="575.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1A1D23" text-anchor="start">Automations</text>
+<text x="114" y="597.0" font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" font-size="12.5" font-weight="400" fill="#5C6370" text-anchor="start">at.schedule · delay: 00:30:00</text>
+<circle cx="400" cy="580.0" r="4" fill="#F59F00"/>
+<path d="M730 370 C 770 370, 760 238.0, 800 238.0" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="800" y="180.0" width="360" height="116" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="842" cy="238.0" r="24" fill="#E7EBFB"/>
+<g transform="translate(828 224.0) scale(1.1666666666666667)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></g>
+<text x="882" y="222.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1A1D23" text-anchor="start">Runs your command</text>
+<text x="882" y="246.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">Lights, climate, covers, locks,</text>
+<text x="882" y="266.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">scripts and automations</text>
+<circle cx="800" cy="238.0" r="4" fill="#F59F00"/>
+<path d="M730 370 C 770 370, 760 370.0, 800 370.0" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="800" y="312.0" width="360" height="116" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="842" cy="370.0" r="24" fill="#E7EBFB"/>
+<g transform="translate(828 356.0) scale(1.1666666666666667)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></g>
+<text x="882" y="354.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1A1D23" text-anchor="start">Speaks up</text>
+<text x="882" y="378.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">Announce to the whole house,</text>
+<text x="882" y="398.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">one area or one floor</text>
+<circle cx="800" cy="370.0" r="4" fill="#F59F00"/>
+<path d="M730 370 C 770 370, 760 502.0, 800 502.0" fill="none" stroke="#9AA7E0" stroke-width="2"/>
+<rect x="800" y="444.0" width="360" height="116" rx="14" fill="#FFFFFF" stroke="#DDE1EA"/>
+<circle cx="842" cy="502.0" r="24" fill="#E7EBFB"/>
+<g transform="translate(828 488.0) scale(1.1666666666666667)" fill="none" stroke="#364FC7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></g>
+<text x="882" y="486.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1A1D23" text-anchor="start">Tells you about it</text>
+<text x="882" y="510.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">Events, sensors, the to-do list</text>
+<text x="882" y="530.0" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5C6370" text-anchor="start">and a full history</text>
+<circle cx="800" cy="502.0" r="4" fill="#F59F00"/>
+<rect x="470" y="190" width="260" height="360" rx="24" fill="#1B2559"/>
+<g transform="translate(552.0 224) scale(1.411764705882353) translate(-16 -16)"><g fill="none" stroke="#BAC8FF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="50" r="14"/><path d="M64 38V56a8 8 0 0 0 16 0V50a30 30 0 1 0-15 26"/></g><path d="M50 50V43M50 50l5 3" fill="none" stroke="#FFD43B" stroke-width="4" stroke-linecap="round"/></g>
+<text x="600.0" y="360" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#FFFFFF" text-anchor="middle">The job queue</text>
+<path d="M516 391 l4 4 8 -8" fill="none" stroke="#FFD43B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="536" y="396" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#C5CEF5" text-anchor="start">Stored in Home Assistant</text>
+<path d="M516 417 l4 4 8 -8" fill="none" stroke="#FFD43B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="536" y="422" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#C5CEF5" text-anchor="start">Survives restarts</text>
+<path d="M516 443 l4 4 8 -8" fill="none" stroke="#FFD43B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="536" y="448" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#C5CEF5" text-anchor="start">Late jobs catch up</text>
+<path d="M506 510 H694" stroke="#C5CEF5" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round"/>
+<circle cx="506.0" cy="510" r="5" fill="#BAC8FF"/>
+<circle cx="577.44" cy="510" r="6" fill="#FFD43B"/>
+<circle cx="637.6" cy="510" r="6" fill="#FFD43B"/>
+<circle cx="694.0" cy="510" r="6" fill="#FFD43B"/>
+<text x="506" y="534" font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" font-size="12" font-weight="400" fill="#C5CEF5" text-anchor="start">now</text>
+<text x="694" y="534" font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" font-size="12" font-weight="400" fill="#C5CEF5" text-anchor="end">later</text>
+</svg>

@@ -46,6 +46,19 @@ turn on the porch light at 11 pm
 
 Assist answers with the time it will run. To check it, say "what's scheduled", or open the **Scheduled Jobs** panel in the sidebar and look at the **Upcoming** tab.
 
+## More to try
+
+```text
+at 6:30 tomorrow turn on the coffee maker
+close the garage door in 20 minutes
+run the bedtime script in half an hour
+at 6 announce in the kitchen that dinner is ready
+what's scheduled for tonight
+cancel the porch light job
+```
+
+You can also schedule without a sentence: open the **Scheduled Jobs** panel, select **+ Add job**, and use **Pick it** to choose an action and a time. Or add an item with a due date to the `todo.at_scheduled` to-do list.
+
 The [configuration page](CONFIGURATION.md) lists every phrase, the panel, the entities, and the actions.
 
 ## Removing the integration

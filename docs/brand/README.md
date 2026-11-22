@@ -119,17 +119,18 @@ whenever it changes.
 
 ## Files
 
-| File                                              | Size                  | Purpose                                                |
-| ------------------------------------------------- | --------------------- | ------------------------------------------------------ |
-| `custom_components/at/brand/icon.png`             | 256 × 256             | Integration icon in Home Assistant and the Marketplace |
-| `custom_components/at/brand/icon@2x.png`          | 512 × 512             | High-density icon                                      |
-| `custom_components/at/brand/dark_icon.png`, `@2x` | 256, 512              | Icon for dark themes                                   |
-| `custom_components/at/brand/logo.png`, `@2x`      | 656 × 128, 1313 × 256 | Logo with wordmark                                     |
-| `custom_components/at/brand/dark_logo.png`, `@2x` | same                  | Logo for dark themes                                   |
-| `docs/brand/icon.svg`, `icon-dark.svg`            | vector                | Source of the icon                                     |
-| `docs/brand/logo.svg`, `logo-dark.svg`            | vector                | Source of the logo; the README header uses these       |
-| `docs/brand/social-preview.svg`, `.png`           | 1280 × 640            | GitHub social preview                                  |
-| `docs/brand/archive/`                             | vector                | The 14 options that weren't chosen, light and dark     |
+| File                                              | Size                  | Purpose                                                 |
+| ------------------------------------------------- | --------------------- | ------------------------------------------------------- |
+| `custom_components/at/brand/icon.png`             | 256 × 256             | Integration icon in Home Assistant and the Marketplace  |
+| `custom_components/at/brand/icon@2x.png`          | 512 × 512             | High-density icon                                       |
+| `custom_components/at/brand/dark_icon.png`, `@2x` | 256, 512              | Icon for dark themes                                    |
+| `custom_components/at/brand/logo.png`, `@2x`      | 656 × 128, 1313 × 256 | Logo with wordmark                                      |
+| `custom_components/at/brand/dark_logo.png`, `@2x` | same                  | Logo for dark themes                                    |
+| `docs/brand/icon.svg`, `icon-dark.svg`            | vector                | Source of the icon                                      |
+| `docs/brand/logo.svg`, `logo-dark.svg`            | vector                | Source of the logo; the README header uses these        |
+| `docs/brand/social-preview.svg`, `.png`           | 1280 × 640            | GitHub social preview                                   |
+| `docs/brand/ways-to-schedule.svg`, `-dark.svg`    | 1200 × 650            | README infographic: the ways in, the queue, the results |
+| `docs/brand/archive/`                             | vector                | The 14 options that weren't chosen, light and dark      |
 
 Home Assistant's requirements for the `brand/` folder: PNG, square icon, transparent background, cropped to the
 artwork. See [brand images for custom integrations](https://contributors.home-assistant.io/core/integrations/brands/#brand-images-for-custom-integrations).
