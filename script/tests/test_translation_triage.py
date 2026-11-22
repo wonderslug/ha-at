@@ -65,7 +65,7 @@ def test_unlisted_approval_does_not_verify() -> None:
     d = decide(reviews=[review("y")])
     assert tt.VERIFIED not in d.add
     assert tt.NEEDS_REVIEW in d.add
-    assert "@y — not a listed maintainer" in d.comment
+    assert "@\u200by — not a listed maintainer" in d.comment
 
 
 def test_listed_maintainer_approval_verifies_case_insensitively() -> None:
@@ -712,3 +712,53 @@ def test_permission_checked_only_for_current_head_approvers(
     run(gh, monkeypatch, tmp_path)
     called = [a for c in gh.calls for a in c if "/collaborators/" in a]
     assert called == ["repos/o/r/collaborators/sam/permission"]
+
+
+def review_line(d: Any, code: str = "de") -> str:
+    """The comment's Review line for one language."""
+    (line,) = [line for line in d.comment.splitlines() if line.startswith(f"- `{code}`")]
+    return line
+
+
+@pytest.mark.parametrize(
+    ("reviews", "privileged", "expected"),
+    [
+        pytest.param(["bob"], set(), "- `de`  Review  verified by @bob", id="listed-maintainer"),
+        pytest.param(
+            ["rob", "sam"],
+            {"rob"},
+            "- `de`  Review  confirmed by @\u200brob (repository maintainer) with @\u200bsam",
+            id="repository-maintainer-with-approver",
+        ),
+        pytest.param(
+            ["rob"],
+            {"rob"},
+            "- `de`  Review  needs native review · maintainer: @Anna, @bob · day 0 of 30"
+            " · repository maintainer approved — a native speaker's approval is still needed"
+            " · approved by @\u200brob — not a listed maintainer, needs confirmation",
+            id="repository-maintainer-alone",
+        ),
+        pytest.param(
+            ["y"],
+            set(),
+            "- `de`  Review  needs native review · maintainer: @Anna, @bob · day 0 of 30"
+            " · approved by @\u200by — not a listed maintainer, needs confirmation",
+            id="unlisted-approver",
+        ),
+        pytest.param(
+            [], set(), "- `de`  Review  needs native review · maintainer: @Anna, @bob · day 0 of 30", id="none"
+        ),
+    ],
+)
+def test_review_line_in_each_state(reviews: list[str], privileged: set[str], expected: str) -> None:
+    """Each Review line reads exactly as intended and mentions only listed maintainers."""
+    d = decide(reviews=[review(login) for login in reviews], privileged=privileged)
+    assert review_line(d) == expected
+
+
+def test_unlisted_approver_beside_listed_maintainer_is_not_mentioned() -> None:
+    """A non-maintainer approver is never mentioned, even on a verified line."""
+    d = decide(reviews=[review("bob"), review("y")])
+    assert review_line(d) == (
+        "- `de`  Review  verified by @bob · approved by @\u200by — not a listed maintainer, needs confirmation"
+    )

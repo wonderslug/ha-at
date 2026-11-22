@@ -177,8 +177,9 @@ def _review_line(
         line += " · repository maintainer approved — a native speaker's approval is still needed"
     if not reported:
         line += " · no report"
-    if others and not failed:
-        line += f" · approved by {', '.join(f'@{o}' for o in others)} — not a listed maintainer, needs confirmation"
+    if others and not failed and not (confirmation and not approvers):
+        names = ", ".join(f"@\u200b{o}" for o in others)
+        line += f" · approved by {names} — not a listed maintainer, needs confirmation"
     return f"- {line}"
 
 
