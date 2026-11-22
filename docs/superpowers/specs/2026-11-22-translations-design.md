@@ -42,10 +42,14 @@ second native speaker.
 - **Review policy:** a second native speaker approves; if nobody does within **30 days**, the maintainer may merge with
   the language marked unverified. A later qualifying review flips it to verified. Updates to a language with a listed
   maintainer go to that maintainer, with the same 30-day fallback.
-- **Whose approval qualifies:** a language's first reviewer is confirmed by the repository maintainer, who applies
-  `translation: verified` by hand and adds that reviewer to the language's maintainer list in the same pull request.
-  From then on, an approving review from a listed maintainer of that language (not the author) flips the label
-  automatically. Any other approval is reported ("approved by X, not a listed maintainer") and changes nothing.
+- **Whose approval qualifies:** a language's first reviewer is confirmed by the repository maintainer, who approves
+  the pull request themselves (after the native reviewer approved) and adds that reviewer to the language's maintainer
+  list in the same pull request. A repository maintainer's approval (write access or more, not the author) on the
+  current head together with at least one other non-author approval on that head verifies every language in it — a
+  review is tied to a commit, a hand-applied label is not, so the bot owns the `translation: verified` label and removes
+  one it did not derive. From then on, an approving review from a listed maintainer of that language (not the author)
+  flips the label automatically. Any other approval is reported ("approved by X, not a listed maintainer") and changes
+  nothing.
 - **Pull request templates and labels** drive the process, with a path-based labeler so labelling never depends on the
   contributor choosing a template.
 - **CI approach:** pytest checks plus a dedicated translation workflow that posts a report (option 2 of three).
