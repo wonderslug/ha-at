@@ -50,6 +50,44 @@ automation:
           name: Porch light off
 ```
 
+## Remind the kitchen about the laundry
+
+Announces in the kitchen an hour after the washer finishes. The time is given by `delay`, so the message can say anything.
+
+```yaml
+automation:
+  - alias: Laundry reminder
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.washer_running
+        to: "off"
+    actions:
+      - action: at.schedule
+        data:
+          command: announce in the kitchen that the laundry is still in the washer
+          delay: "01:00:00"
+          name: Laundry reminder
+```
+
+## Confirm a scheduled job on your phone
+
+`at.schedule` returns the job's `due` time and `summary`, so a script can tell you what it set up.
+
+```yaml
+script:
+  porch_light_tonight:
+    alias: Porch light at sunset tonight
+    sequence:
+      - action: at.schedule
+        data:
+          command: turn on the porch light
+          at: "{{ states('sensor.sun_next_setting') }}"
+        response_variable: job
+      - action: notify.notify
+        data:
+          message: "{{ job.summary }} at {{ as_timestamp(job.due) | timestamp_custom('%-I:%M %p') }}"
+```
+
 ## Cancel everything when you leave
 
 `at.cancel` with `all: true` cancels every pending job, including ones created by automations.

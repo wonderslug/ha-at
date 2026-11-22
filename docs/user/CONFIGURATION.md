@@ -56,6 +56,28 @@ An hour after 12 needs its minutes or a 24-hour wording: `at 18` and `at twenty`
 
 When two jobs match, `at` names their times and asks you to say "cancel the 6 pm job".
 
+### Announcements
+
+`at` can schedule an announcement on your voice satellites, to the whole house or to one area or floor:
+
+| Say                                                 | Who hears it                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| `at 6 broadcast dinner is ready`                    | Every announcing satellite except the one you spoke to           |
+| `in 10 minutes tell everyone the car is here`       | The same, also as `let everyone know` or `announce to the house` |
+| `at 6 announce in the kitchen that dinner is ready` | The announcing satellites in the kitchen area                    |
+| `at 8 pm tell everyone upstairs it's time for bed`  | The announcing satellites on the floor named "Upstairs"          |
+| `in 5 minutes let the garage know the car is ready` | The announcing satellites in the garage area                     |
+
+The area or floor is matched against the names and aliases of your areas and floors. When an area and a floor share a name, the area is used. A place nobody knows stays part of the message, and the announcement goes to the whole house.
+
+Put the time **first**. A time after the message is part of the message: "tell everyone dinner is at 6" is announced right away, with "at 6" in it. The `at__AtSchedule` tool and the `at.schedule` action take the time separately, so this does not apply to them.
+
+An announcement to a place with no announcing satellite is refused when you schedule it, not when it is due.
+
+### Scripts and automations
+
+`run`, `trigger` and `fire` start a script or an automation that is exposed to Assist: "run the bedtime script in 30 minutes", "at 10 pm trigger the lock up automation". Home Assistant's own sentences only turn an automation on or off; `at` adds running it, now or later.
+
 ### What can be scheduled
 
 `at` stores the command only if Home Assistant's built-in agent can understand it right now and the target is exposed to Assist. Timers, questions, and chit-chat are refused, and so are targets that are not exposed or do not exist. Exposure is checked again when the job runs.
@@ -204,6 +226,7 @@ The events also show in the logbook.
 - Commands must be ones the built-in agent understands. Anything else is refused.
 - Canceling a job by its time by voice needs digits, such as "cancel the 7:30 job". Scheduling accepts words such as "at seven thirty".
 - Exchanges forwarded to another conversation agent start a new conversation.
+- An area or floor at the end of an announcement, as in "announce dinner is ready in the kitchen", is read as part of the message, and the announcement goes to the whole house. Name the place first: "announce in the kitchen that dinner is ready".
 - Running jobs do not appear in the to-do list.
 
 ## Troubleshooting
