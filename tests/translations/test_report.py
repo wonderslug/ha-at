@@ -119,3 +119,32 @@ def test_main_writes_both_files(tmp_path: Path) -> None:
     assert main(["--all", "--json", str(out), "--markdown", str(md)]) == 0
     assert json.loads(out.read_text(encoding="utf-8"))["failed"] is False
     assert md.exists()
+
+
+@pytest.mark.usefixtures("german_strings")
+def test_invalid_json_fails_the_surface(tmp_path: Path) -> None:
+    (tmp_path / "de.json").write_text("{not json", encoding="utf-8")
+    data = build_report(["de"])
+    assert data["languages"]["de"]["strings"]["status"] == "fail"
+    assert data["languages"]["de"]["strings"]["findings"][0]["kind"] == "unreadable"
+    assert data["failed"] is True
+    assert "unreadable" in render_markdown(data)
+
+
+@pytest.mark.parametrize(
+    ("content", "kind"),
+    [
+        pytest.param("a: [unclosed", "unreadable", id="invalid-yaml"),
+        pytest.param("- just\n- a list\n", "bad_examples", id="list"),
+        pytest.param("plain text\n", "bad_examples", id="scalar"),
+        pytest.param("", "no_examples", id="empty"),
+    ],
+)
+def test_malformed_examples_fail_the_surface(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, content: str, kind: str
+) -> None:
+    (tmp_path / "en.yaml").write_text(content, encoding="utf-8")
+    monkeypatch.setattr(report, "EXAMPLES_DIR", tmp_path)
+    voice = build_report(["en"])["languages"]["en"]["voice"]
+    assert voice["status"] == "fail"
+    assert kind in {item["kind"] for item in voice["findings"]}

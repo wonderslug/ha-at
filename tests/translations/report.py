@@ -46,11 +46,20 @@ def _status(findings: Sequence[Finding]) -> str:
     return "fail" if any(item.severity == "fail" for item in findings) else "pass"
 
 
+def _unreadable(err: Exception) -> list[dict[str, Any]]:
+    return [asdict(Finding("fail", "unreadable", "", str(err)))]
+
+
 def _strings_section(code: str) -> dict[str, Any]:
     path = TRANSLATIONS_DIR / f"{code}.json"
     if not path.exists():
         return {"status": "absent", "keys_total": 0, "keys_present": 0, "findings": []}
-    result = check_strings(load_json(TRANSLATIONS_DIR / "en.json"), load_json(path), code)
+    english = load_json(TRANSLATIONS_DIR / "en.json")
+    try:
+        other = load_json(path)
+    except (ValueError, UnicodeDecodeError) as err:
+        return {"status": "fail", "keys_total": 0, "keys_present": 0, "findings": _unreadable(err)}
+    result = check_strings(english, other, code)
     return {
         "status": _status(result.findings),
         "keys_total": result.keys_total,
@@ -79,7 +88,16 @@ def _voice_section(code: str) -> dict[str, Any]:
             "categories_missing": [],
             "findings": [asdict(item) for item in findings],
         }
-    examples = yaml.safe_load(examples_path.read_text(encoding="utf-8")) if examples_path.exists() else None
+    try:
+        examples = yaml.safe_load(examples_path.read_text(encoding="utf-8")) if examples_path.exists() else None
+    except (yaml.YAMLError, UnicodeDecodeError) as err:
+        return {
+            "status": "fail",
+            "examples_total": 0,
+            "examples_passed": 0,
+            "categories_missing": [],
+            "findings": _unreadable(err),
+        }
     result = check_pack(pack, examples, EN)
     return {
         "status": _status(result.findings),
