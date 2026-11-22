@@ -1,3 +1,4 @@
+import type { Localize } from "./localize";
 import type { Job, JobChangeKind, JobStatus, Snapshot } from "./types";
 
 export type PanelState = Snapshot;
@@ -37,8 +38,8 @@ export function applyChange(state: PanelState, change: { kind: JobChangeKind; jo
 }
 
 /** The Upcoming card's heading, with the number of pending jobs (spec 7.5). */
-export function upcomingLabel(state: PanelState): string {
-  return `Upcoming (${state.pending.length})`;
+export function upcomingLabel(state: PanelState, localize: Localize): string {
+  return localize("upcoming_table.title", { count: state.pending.length });
 }
 
 /** How many History rows show before "Show all" (spec 2026-11-19). */

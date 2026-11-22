@@ -4,6 +4,7 @@ import "../src/components/add-job-dialog";
 import type { PickAction } from "../src/components/pick-action";
 import type { AddJobDialog } from "../src/components/add-job-dialog";
 import type { HomeAssistant } from "../src/types";
+import { enHass, enLocalize } from "./en-localize";
 
 const loader = vi.hoisted(() => ({ next: () => Promise.resolve<string[]>([]), defined: true }));
 vi.mock("../src/ha-elements", () => ({ loadPickerElements: () => loader.next(), pickerElementsDefined: () => loader.defined }));
@@ -29,7 +30,8 @@ const PARSED = (summary: string) => ({ ok: true, due: "2026-11-20T12:00:00Z", su
 
 async function openDialog(send: Send): Promise<AddJobDialog> {
   const el = document.createElement("at-add-job-dialog");
-  el.hass = { config: { time_zone: "UTC" }, language: "en", states: {}, connection: { sendMessagePromise: send } } as unknown as HomeAssistant;
+  el.hass = enHass({ states: {}, connection: { sendMessagePromise: send } } as unknown as Partial<HomeAssistant>);
+  el.localize = enLocalize;
   document.body.append(el);
   el.open = true;
   await el.updateComplete;

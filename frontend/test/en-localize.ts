@@ -1,4 +1,5 @@
 import en from "../../custom_components/at/translations/en.json";
+import { type Localize, makeLocalize } from "../src/localize";
 import type { HomeAssistant } from "../src/types";
 
 const PREFIX = "component.at.config_panel.";
@@ -30,3 +31,6 @@ export function enHass(partial: Partial<HomeAssistant> = {}): HomeAssistant {
     ...partial,
   } as HomeAssistant;
 }
+
+/** The English `Localize`, for components and helpers mounted without a panel. */
+export const enLocalize: Localize = makeLocalize(enHass());

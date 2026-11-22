@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/components/pick-action";
 import type { PickAction } from "../src/components/pick-action";
 import type { HomeAssistant } from "../src/types";
+import { enHass, enLocalize } from "./en-localize";
 
 class StubServiceControl extends HTMLElement {
   hass?: unknown;
@@ -10,15 +11,12 @@ class StubServiceControl extends HTMLElement {
 }
 customElements.define("ha-service-control", StubServiceControl);
 
-const HASS = {
-  config: { time_zone: "UTC" },
-  language: "en",
-  states: { "light.a": { attributes: { friendly_name: "A" } } },
-} as unknown as HomeAssistant;
+const HASS = enHass({ states: { "light.a": { attributes: { friendly_name: "A" } } } } as unknown as Partial<HomeAssistant>);
 
 async function mount(ready: boolean): Promise<{ el: PickAction; changed: ReturnType<typeof vi.fn> }> {
   const el = document.createElement("at-pick-action");
   el.hass = HASS;
+  el.localize = enLocalize;
   el.ready = ready;
   const changed = vi.fn();
   el.addEventListener("action-changed", (e) => changed((e as CustomEvent).detail.action));

@@ -77,8 +77,13 @@ export class AtPanel extends LitElement {
     this.requestUpdate();
   }
 
+  private localizeFor?: { hass: HomeAssistant; localize: Localize };
+
   private get localize(): Localize {
-    return this.hass ? makeLocalize(this.hass) : (key) => key;
+    const hass = this.hass;
+    if (!hass) return (key) => key;
+    if (this.localizeFor?.hass !== hass) this.localizeFor = { hass, localize: makeLocalize(hass) };
+    return this.localizeFor.localize;
   }
 
   private async start() {

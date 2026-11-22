@@ -174,6 +174,96 @@
       "request_failed": "Request failed",
       "dismiss": "Dismiss",
       "add_job": "Add job"
+    },
+    "upcoming_table": {
+      "title": "Upcoming ({count})",
+      "column_when": "When",
+      "column_job": "Job",
+      "column_source": "Source",
+      "running": "Running…",
+      "run_now": "Run now",
+      "cancel": "Cancel",
+      "empty": "Nothing scheduled."
+    },
+    "history_table": {
+      "title": "History",
+      "column_time": "Time",
+      "column_job": "Job",
+      "column_details": "Details",
+      "filter_all": "All",
+      "filter_done": "Done",
+      "filter_failed": "Failed",
+      "filter_missed": "Missed",
+      "filter_cancelled": "Cancelled",
+      "reschedule": "Re-schedule",
+      "save": "Save",
+      "cancel": "Cancel",
+      "empty_filtered": "No jobs match this filter.",
+      "empty": "No history yet.",
+      "show_all": "Show all ({count})"
+    },
+    "job_details": {
+      "title": "Job details",
+      "intent": "Intent",
+      "action": "Action",
+      "created_by": "Created by",
+      "created": "Created",
+      "id": "ID",
+      "close": "Close"
+    },
+    "add_job_dialog": {
+      "title": "Add job",
+      "tab_type": "Type it",
+      "tab_pick": "Pick it",
+      "tab_sequence": "Sequence",
+      "type_label": "What should happen, and when?",
+      "type_placeholder": "turn on the porch light at 11pm",
+      "when": "When",
+      "chip_15m": "+15m",
+      "chip_1h": "+1h",
+      "date_time": "Date and time",
+      "time_in_past": "Time must be in the future",
+      "choose_time": "Choose a time",
+      "choose_action": "Choose an action",
+      "loading": "Loading…",
+      "parse_failed": "Could not parse",
+      "add_failed": "Could not add the job",
+      "cancel": "Cancel",
+      "add": "Add"
+    },
+    "pick_fallback": {
+      "action": "Action",
+      "op_turn_on": "Turn on",
+      "op_turn_off": "Turn off",
+      "op_toggle": "Toggle",
+      "op_script": "Run script",
+      "op_automation": "Trigger automation",
+      "target": "Target",
+      "choose": "Choose…",
+      "variables": "Variables (JSON, optional)"
+    },
+    "sequence_editor": {
+      "action_list": "Action list (JSON)"
+    },
+    "add_job": {
+      "must_be_json_object": "Must be a JSON object, like {example}",
+      "invalid_json": "Invalid JSON",
+      "must_be_action_list": "Must be a non-empty JSON list of action objects"
+    },
+    "source": {
+      "assist": "Assist",
+      "add_job": "Add job",
+      "reschedule": "Reschedule",
+      "todo": "To-do list",
+      "action": "Action",
+      "cancelled": "Cancelled",
+      "from_assist": "from Assist",
+      "in_panel": "in the panel",
+      "from_todo": "from the to-do list",
+      "by_action": "by an action",
+      "by_origin": "by {domain} {name}",
+      "by_user": "by {name}",
+      "missed": "Home Assistant was off when it was due"
     }
   }
 }

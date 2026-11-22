@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPickedAction, fromServiceControl, isFuture, parseJsonObject, parseRawAction, quickDue, type PickedInput } from "../src/add-job";
 import shapes from "./picked-shapes.json";
+import { enLocalize } from "./en-localize";
 
 describe("shared picked shapes", () => {
   it.each(shapes)("builds $expected", ({ input, expected }) => {
@@ -59,27 +60,27 @@ describe("quickDue", () => {
 
 describe("parseJsonObject", () => {
   it("treats blank as empty", () => {
-    expect(parseJsonObject("  ")).toEqual({ ok: true, value: {} });
+    expect(parseJsonObject("  ", enLocalize)).toEqual({ ok: true, value: {} });
   });
   it("accepts an object", () => {
-    expect(parseJsonObject('{"a": 1}')).toEqual({ ok: true, value: { a: 1 } });
+    expect(parseJsonObject('{"a": 1}', enLocalize)).toEqual({ ok: true, value: { a: 1 } });
   });
   it("rejects bad JSON and non-objects", () => {
-    expect(parseJsonObject("{").ok).toBe(false);
-    expect(parseJsonObject("[1]").ok).toBe(false);
-    expect(parseJsonObject("5").ok).toBe(false);
+    expect(parseJsonObject("{", enLocalize).ok).toBe(false);
+    expect(parseJsonObject("[1]", enLocalize).ok).toBe(false);
+    expect(parseJsonObject("5", enLocalize).ok).toBe(false);
   });
 });
 
 describe("parseRawAction", () => {
   it("accepts a list of objects", () => {
-    expect(parseRawAction('[{"action": "light.turn_on"}]')).toEqual({ ok: true, value: [{ action: "light.turn_on" }] });
+    expect(parseRawAction('[{"action": "light.turn_on"}]', enLocalize)).toEqual({ ok: true, value: [{ action: "light.turn_on" }] });
   });
   it("rejects an empty list, non-lists and bad JSON", () => {
-    expect(parseRawAction("[]").ok).toBe(false);
-    expect(parseRawAction('{"a":1}').ok).toBe(false);
-    expect(parseRawAction("[1]").ok).toBe(false);
-    expect(parseRawAction("nope").ok).toBe(false);
+    expect(parseRawAction("[]", enLocalize).ok).toBe(false);
+    expect(parseRawAction('{"a":1}', enLocalize).ok).toBe(false);
+    expect(parseRawAction("[1]", enLocalize).ok).toBe(false);
+    expect(parseRawAction("nope", enLocalize).ok).toBe(false);
   });
 });
 

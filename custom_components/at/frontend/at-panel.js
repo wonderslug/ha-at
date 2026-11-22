@@ -497,7 +497,7 @@ var Ne = (e, t, n) => {
 		r._$litPart$ = i = new M(t.insertBefore(b(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Pe = globalThis, P = class extends h {
+}, P = globalThis, F = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -519,21 +519,21 @@ var Ne = (e, t, n) => {
 		return D;
 	}
 };
-P._$litElement$ = !0, P.finalized = !0, Pe.litElementHydrateSupport?.({ LitElement: P });
-var Fe = Pe.litElementPolyfillSupport;
-Fe?.({ LitElement: P }), (Pe.litElementVersions ??= []).push("4.2.2");
+F._$litElement$ = !0, F.finalized = !0, P.litElementHydrateSupport?.({ LitElement: F });
+var Pe = P.litElementPolyfillSupport;
+Pe?.({ LitElement: F }), (P.litElementVersions ??= []).push("4.2.2");
 // node_modules/@lit/reactive-element/decorators/custom-element.js
-var F = (e) => (t, n) => {
+var I = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
 		customElements.define(e, t);
 	});
-}, Ie = {
+}, Fe = {
 	attribute: !0,
 	type: String,
 	converter: m,
 	reflect: !1,
 	hasChanged: ue
-}, Le = (e = Ie, t, n) => {
+}, Ie = (e = Fe, t, n) => {
 	let { kind: r, metadata: i } = n, a = globalThis.litPropertyMetadata.get(i);
 	if (a === void 0 && globalThis.litPropertyMetadata.set(i, a = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), a.set(n.name, e), r === "accessor") {
 		let { name: r } = n;
@@ -556,63 +556,63 @@ var F = (e) => (t, n) => {
 	}
 	throw Error("Unsupported decorator location: " + r);
 };
-function I(e) {
-	return (t, n) => typeof n == "object" ? Le(e, t, n) : ((e, t, n) => {
+function L(e) {
+	return (t, n) => typeof n == "object" ? Ie(e, t, n) : ((e, t, n) => {
 		let r = t.hasOwnProperty(n);
 		return t.constructor.createProperty(n, e), r ? Object.getOwnPropertyDescriptor(t, n) : void 0;
 	})(e, t, n);
 }
 // node_modules/@lit/reactive-element/decorators/state.js
-function L(e) {
-	return I({
+function R(e) {
+	return L({
 		...e,
 		state: !0,
 		attribute: !1
 	});
 }
 // src/api.ts
-function Re(e, t) {
+function Le(e, t) {
 	return e.connection.subscribeMessage(t, { type: "at/subscribe" });
 }
-function ze(e, t) {
+function Re(e, t) {
 	return e.connection.sendMessagePromise({
 		type: "at/parse",
 		text: t
 	});
 }
-function Be(e, t) {
+function ze(e, t) {
 	return e.connection.sendMessagePromise({
 		type: "at/schedule",
 		...t
 	});
 }
-function Ve(e, t) {
+function Be(e, t) {
 	return e.connection.sendMessagePromise({
 		type: "at/cancel",
 		job_ids: t
 	});
 }
-function He(e, t) {
+function Ve(e, t) {
 	return e.connection.sendMessagePromise({
 		type: "at/run_now",
 		job_id: t
 	});
 }
-function Ue(e, t, n) {
+function He(e, t, n) {
 	return e.connection.sendMessagePromise({
 		type: "at/reschedule",
 		job_id: t,
 		due: n
 	});
 }
-function We(e) {
+function Ue(e) {
 	return e.connection.sendMessagePromise({ type: "at/clear_history" });
 }
-function Ge(e) {
+function We(e) {
 	return e.connection.sendMessagePromise({ type: "at/info" });
 }
 // src/add-job.ts
-function Ke(e) {
+function Ge(e) {
 	if ("verb" in e) return [{
 		action: `homeassistant.${e.verb}`,
 		target: { entity_id: [...e.targetEntityIds] }
@@ -629,64 +629,64 @@ function Ke(e) {
 		target: { entity_id: e.automation }
 	}];
 }
-function qe(e) {
+function Ke(e) {
 	if (!e?.action) return;
 	let t = { action: e.action }, n = Object.fromEntries(Object.entries(e.target ?? {}).filter(([, e]) => !(e == null || e === "" || Array.isArray(e) && e.length === 0)));
 	return Object.keys(n).length > 0 && (t.target = n), e.data && Object.keys(e.data).length > 0 && (t.data = e.data), [t];
 }
-function Je(e, t) {
+function qe(e, t) {
 	return { delay_seconds: e === "+15m" ? 900 : 3600 };
 }
-function Ye(e) {
+function Je(e, t) {
 	if (!e.trim()) return {
 		ok: !0,
 		value: {}
 	};
 	try {
-		let t = JSON.parse(e);
-		return t && typeof t == "object" && !Array.isArray(t) ? {
+		let n = JSON.parse(e);
+		return n && typeof n == "object" && !Array.isArray(n) ? {
 			ok: !0,
-			value: t
+			value: n
 		} : {
 			ok: !1,
-			error: "Must be a JSON object, like {\"key\": \"value\"}"
+			error: t("add_job.must_be_json_object", { example: "{\"key\": \"value\"}" })
 		};
 	} catch {
 		return {
 			ok: !1,
-			error: "Invalid JSON"
+			error: t("add_job.invalid_json")
 		};
 	}
 }
-function Xe(e) {
+function Ye(e, t) {
 	try {
-		let t = JSON.parse(e);
-		return Array.isArray(t) && t.length > 0 && t.every((e) => e && typeof e == "object" && !Array.isArray(e)) ? {
+		let n = JSON.parse(e);
+		return Array.isArray(n) && n.length > 0 && n.every((e) => e && typeof e == "object" && !Array.isArray(e)) ? {
 			ok: !0,
-			value: t
+			value: n
 		} : {
 			ok: !1,
-			error: "Must be a non-empty JSON list of action objects"
+			error: t("add_job.must_be_action_list")
 		};
 	} catch {
 		return {
 			ok: !1,
-			error: "Invalid JSON"
+			error: t("add_job.invalid_json")
 		};
 	}
 }
-function Ze(e, t) {
+function Xe(e, t) {
 	return !Number.isNaN(e.getTime()) && e.getTime() > t.getTime();
 }
 // src/format.ts
-var Qe = 36e5, $e = 864e5;
-function et(e, t) {
+var Ze = 36e5, Qe = 864e5;
+function $e(e, t) {
 	let n = e - t;
-	if (n < 0 || n >= Qe) return "";
+	if (n < 0 || n >= Ze) return "";
 	let r = Math.floor(n / 1e3), i = Math.floor(r / 60), a = r % 60;
 	return `${String(i).padStart(2, "0")}:${String(a).padStart(2, "0")}`;
 }
-function tt(e, t, n) {
+function et(e, t, n) {
 	return new Intl.DateTimeFormat(t, {
 		timeZone: n,
 		year: "numeric",
@@ -694,15 +694,15 @@ function tt(e, t, n) {
 		day: "numeric"
 	}).format(e);
 }
-function R(e, t, n, r) {
+function tt(e, t, n, r) {
 	let i = new Intl.DateTimeFormat(n, {
 		timeZone: r,
 		hour: "numeric",
 		minute: "2-digit"
 	}).format(e);
-	if (tt(e, n, r) === tt(t, n, r)) return i;
+	if (et(e, n, r) === et(t, n, r)) return i;
 	let a = e.getTime() - t.getTime();
-	return a > 0 && a < 7 * $e ? `${new Intl.DateTimeFormat(n, {
+	return a > 0 && a < 7 * Qe ? `${new Intl.DateTimeFormat(n, {
 		timeZone: r,
 		weekday: "short"
 	}).format(e)} ${i}` : `${new Intl.DateTimeFormat(n, {
@@ -854,9 +854,9 @@ var _t = [
 	"humidifier",
 	"siren",
 	"vacuum"
-], W = class extends P {
+], W = class extends F {
 	constructor(...e) {
-		super(...e), this.op = "turn_on", this.entity = "", this.varsText = "";
+		super(...e), this.localize = (e) => e, this.op = "turn_on", this.entity = "", this.varsText = "";
 	}
 	get domains() {
 		return this.op === "script" ? ["script"] : this.op === "automation" ? ["automation"] : _t;
@@ -869,17 +869,17 @@ var _t = [
 		})).sort((e, t) => e.name.localeCompare(t.name));
 	}
 	get vars() {
-		return this.op === "script" ? Ye(this.varsText) : {
+		return this.op === "script" ? Je(this.varsText, this.localize) : {
 			ok: !0,
 			value: {}
 		};
 	}
 	get action() {
 		let e = this.vars;
-		if (this.entity !== "" && e.ok) return this.op === "script" ? Ke({
+		if (this.entity !== "" && e.ok) return this.op === "script" ? Ge({
 			script: this.entity,
 			variables: e.value
-		}) : this.op === "automation" ? Ke({ automation: this.entity }) : Ke({
+		}) : this.op === "automation" ? Ge({ automation: this.entity }) : Ge({
 			targetEntityIds: [this.entity],
 			verb: this.op
 		});
@@ -891,26 +891,26 @@ var _t = [
 		let e = this.vars;
 		return E`
       <div class="field">
-        <label class="label" for="op">Action</label>
+        <label class="label" for="op">${this.localize("pick_fallback.action")}</label>
         <select id="op" .value=${this.op} @change=${(e) => {
 			this.op = e.target.value, this.entity = "";
 		}}>
-          <option value="turn_on">Turn on</option>
-          <option value="turn_off">Turn off</option>
-          <option value="toggle">Toggle</option>
-          <option value="script">Run script</option>
-          <option value="automation">Trigger automation</option>
+          <option value="turn_on">${this.localize("pick_fallback.op_turn_on")}</option>
+          <option value="turn_off">${this.localize("pick_fallback.op_turn_off")}</option>
+          <option value="toggle">${this.localize("pick_fallback.op_toggle")}</option>
+          <option value="script">${this.localize("pick_fallback.op_script")}</option>
+          <option value="automation">${this.localize("pick_fallback.op_automation")}</option>
         </select>
       </div>
       <div class="field">
-        <label class="label" for="entity">Target</label>
+        <label class="label" for="entity">${this.localize("pick_fallback.target")}</label>
         <select id="entity" .value=${this.entity} @change=${(e) => this.entity = e.target.value}>
-          <option value="">Choose…</option>
+          <option value="">${this.localize("pick_fallback.choose")}</option>
           ${this.entities.map((e) => E`<option value=${e.id} ?selected=${e.id === this.entity}>${e.name}</option>`)}
         </select>
       </div>
       ${this.op === "script" ? E`<div class="field">
-            <label class="label" for="vars">Variables (JSON, optional)</label>
+            <label class="label" for="vars">${this.localize("pick_fallback.variables")}</label>
             <textarea id="vars" rows="3" placeholder='{"brightness": 80}' .value=${this.varsText} @input=${(e) => this.varsText = e.target.value}></textarea>
             ${e.ok ? O : E`<div class="inline-error">${e.error}</div>`}
           </div>` : O}
@@ -924,23 +924,23 @@ var _t = [
     `];
 	}
 };
-U([I({ attribute: !1 })], W.prototype, "hass", void 0), U([L()], W.prototype, "op", void 0), U([L()], W.prototype, "entity", void 0), U([L()], W.prototype, "varsText", void 0), W = U([F("at-pick-fallback")], W);
+U([L({ attribute: !1 })], W.prototype, "hass", void 0), U([L({ attribute: !1 })], W.prototype, "localize", void 0), U([R()], W.prototype, "op", void 0), U([R()], W.prototype, "entity", void 0), U([R()], W.prototype, "varsText", void 0), W = U([I("at-pick-fallback")], W);
 // src/components/pick-action.ts
-var G = class extends P {
+var G = class extends F {
 	constructor(...e) {
-		super(...e), this.ready = !1;
+		super(...e), this.localize = (e) => e, this.ready = !1;
 	}
 	emit(e) {
 		this.dispatchEvent(new CustomEvent("action-changed", { detail: { action: e } }));
 	}
 	onValue(e) {
-		e.stopPropagation(), this.value = e.detail.value, this.emit(qe(this.value));
+		e.stopPropagation(), this.value = e.detail.value, this.emit(Ke(this.value));
 	}
 	onFallback(e) {
 		this.emit(e.detail.action);
 	}
 	render() {
-		return this.ready ? E`<ha-service-control .hass=${this.hass} .value=${this.value} narrow @value-changed=${this.onValue}></ha-service-control>` : E`<at-pick-fallback .hass=${this.hass} @action-changed=${this.onFallback}></at-pick-fallback>`;
+		return this.ready ? E`<ha-service-control .hass=${this.hass} .value=${this.value} narrow @value-changed=${this.onValue}></ha-service-control>` : E`<at-pick-fallback .hass=${this.hass} .localize=${this.localize} @action-changed=${this.onFallback}></at-pick-fallback>`;
 	}
 	static {
 		this.styles = u`
@@ -953,11 +953,11 @@ var G = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], G.prototype, "hass", void 0), U([I({ type: Boolean })], G.prototype, "ready", void 0), U([L()], G.prototype, "value", void 0), G = U([F("at-pick-action")], G);
+U([L({ attribute: !1 })], G.prototype, "hass", void 0), U([L({ attribute: !1 })], G.prototype, "localize", void 0), U([L({ type: Boolean })], G.prototype, "ready", void 0), U([R()], G.prototype, "value", void 0), G = U([I("at-pick-action")], G);
 // src/components/sequence-editor.ts
-var K = class extends P {
+var K = class extends F {
 	constructor(...e) {
-		super(...e), this.ready = !1, this.value = [], this.rawText = "";
+		super(...e), this.localize = (e) => e, this.ready = !1, this.value = [], this.rawText = "";
 	}
 	emit(e) {
 		this.dispatchEvent(new CustomEvent("action-changed", { detail: { action: e } }));
@@ -969,13 +969,13 @@ var K = class extends P {
 	}
 	onRaw(e) {
 		this.rawText = e;
-		let t = Xe(e);
+		let t = Ye(e, this.localize);
 		this.emit(t.ok ? t.value : void 0);
 	}
 	fallback() {
-		let e = this.rawText.trim() ? Xe(this.rawText) : void 0;
+		let e = this.rawText.trim() ? Ye(this.rawText, this.localize) : void 0;
 		return E`<div class="field">
-      <label class="label" for="raw">Action list (JSON)</label>
+      <label class="label" for="raw">${this.localize("sequence_editor.action_list")}</label>
       <textarea id="raw" rows="6" placeholder='[{"action": "light.turn_on", "target": {"entity_id": "light.porch"}}]' .value=${this.rawText} @input=${(e) => this.onRaw(e.target.value)}></textarea>
       ${e && !e.ok ? E`<div class="inline-error">${e.error}</div>` : O}
     </div>`;
@@ -994,11 +994,11 @@ var K = class extends P {
     `];
 	}
 };
-U([I({ attribute: !1 })], K.prototype, "hass", void 0), U([I({ type: Boolean })], K.prototype, "ready", void 0), U([L()], K.prototype, "value", void 0), U([L()], K.prototype, "rawText", void 0), K = U([F("at-sequence-editor")], K);
+U([L({ attribute: !1 })], K.prototype, "hass", void 0), U([L({ attribute: !1 })], K.prototype, "localize", void 0), U([L({ type: Boolean })], K.prototype, "ready", void 0), U([R()], K.prototype, "value", void 0), U([R()], K.prototype, "rawText", void 0), K = U([I("at-sequence-editor")], K);
 // src/components/add-job-dialog.ts
-var q = class extends P {
+var q = class extends F {
 	constructor(...e) {
-		super(...e), this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.chip = "+15m", this.when = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.openSeq = 0, this.onKey = (e) => {
+		super(...e), this.localize = (e) => e, this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.chip = "+15m", this.when = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.openSeq = 0, this.onKey = (e) => {
 			this.open && (e.key === "Escape" && !e.defaultPrevented && !this.inPopup(e) ? this.close() : e.key === "Tab" && !this.inOverlay(e) && this.trapFocus(e));
 		};
 	}
@@ -1047,10 +1047,10 @@ var q = class extends P {
 		if (!e.trim() || !this.hass) return;
 		let n = this.hass;
 		this.debounce = window.setTimeout(() => {
-			ze(n, e).then((e) => {
+			Re(n, e).then((e) => {
 				if (t === this.parseSeq) {
 					if (e.ok) {
-						let t = R(new Date(e.due), /* @__PURE__ */ new Date(), this.locale, n.config.time_zone);
+						let t = tt(new Date(e.due), /* @__PURE__ */ new Date(), this.locale, n.config.time_zone);
 						this.preview = {
 							ok: !0,
 							text: `${e.summary} · ${t} ✓`
@@ -1063,7 +1063,7 @@ var q = class extends P {
 			}, (e) => {
 				t === this.parseSeq && (this.preview = {
 					ok: !1,
-					message: e?.message || "Could not parse"
+					message: e?.message || this.localize("add_job_dialog.parse_failed")
 				});
 			});
 		}, 300);
@@ -1072,7 +1072,7 @@ var q = class extends P {
 		return this.hass?.locale?.language ?? this.hass?.language ?? "en";
 	}
 	get whenValid() {
-		return this.chip !== "" || Ze(this.dueDate(), /* @__PURE__ */ new Date());
+		return this.chip !== "" || Xe(this.dueDate(), /* @__PURE__ */ new Date());
 	}
 	dueDate() {
 		return nt(this.when, this.hass?.config.time_zone ?? "UTC");
@@ -1085,11 +1085,11 @@ var q = class extends P {
 		let e = this.mode === "sequence" ? this.sequenceAction : this.pickedAction;
 		return e ? this.chip ? {
 			action: e,
-			...Je(this.chip, /* @__PURE__ */ new Date())
+			...qe(this.chip, /* @__PURE__ */ new Date())
 		} : {
 			action: e,
 			due: this.dueDate().toISOString()
-		} : "Choose an action";
+		} : this.localize("add_job_dialog.choose_action");
 	}
 	async submit() {
 		let e = this.hass;
@@ -1099,9 +1099,9 @@ var q = class extends P {
 		else {
 			this.busy = !0, this.error = "";
 			try {
-				await Be(e, t), this.busy = !1, this.close();
+				await ze(e, t), this.busy = !1, this.close();
 			} catch (e) {
-				this.error = e?.message || "Could not add the job";
+				this.error = e?.message || this.localize("add_job_dialog.add_failed");
 			} finally {
 				this.busy = !1;
 			}
@@ -1119,27 +1119,28 @@ var q = class extends P {
 	whenSection() {
 		let e = this.hass?.config.time_zone ?? "UTC", t = rt(/* @__PURE__ */ new Date(), e);
 		return E`<div class="field">
-      <span class="label">When</span>
+      <span class="label">${this.localize("add_job_dialog.when")}</span>
       <div class="row">
-        ${["+15m", "+1h"].map((e) => E`<button class="chip ${this.chip === e ? "on" : ""}" @click=${() => this.onChip(e)}>${e}</button>`)}
-        <input type="datetime-local" aria-label="Date and time" .value=${this.when} min=${t} @input=${(e) => this.onWhen(e.target.value)} />
+        ${["+15m", "+1h"].map((e) => E`<button class="chip ${this.chip === e ? "on" : ""}" @click=${() => this.onChip(e)}>${this.localize(e === "+15m" ? "add_job_dialog.chip_15m" : "add_job_dialog.chip_1h")}</button>`)}
+        <input type="datetime-local" aria-label=${this.localize("add_job_dialog.date_time")} .value=${this.when} min=${t} @input=${(e) => this.onWhen(e.target.value)} />
       </div>
-      ${this.chip === "" && !this.whenValid ? E`<div class="inline-error">${this.when ? "Time must be in the future" : "Choose a time"}</div>` : O}
+      ${this.chip === "" && !this.whenValid ? E`<div class="inline-error">${this.localize(this.when ? "add_job_dialog.time_in_past" : "add_job_dialog.choose_time")}</div>` : O}
     </div>`;
 	}
 	pickSection() {
 		let e = this.mode === "pick";
-		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">Loading…</div>` : O : E`<at-pick-action
+		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : O : E`<at-pick-action
       ?hidden=${!e}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e) => this.pickedAction = e.detail.action}
     ></at-pick-action>`;
 	}
 	typeSection() {
 		return E`<div class="field">
-      <label class="label" for="text">What should happen, and when?</label>
-      <input id="text" type="text" placeholder="turn on the porch light at 11pm" .value=${this.text} @input=${(e) => this.onText(e.target.value)} />
+      <label class="label" for="text">${this.localize("add_job_dialog.type_label")}</label>
+      <input id="text" type="text" placeholder=${this.localize("add_job_dialog.type_placeholder")} .value=${this.text} @input=${(e) => this.onText(e.target.value)} />
       <div class=${this.preview ? this.preview.ok ? "preview ok" : "preview bad" : "preview"} aria-live="polite">
         ${this.preview ? this.preview.ok ? this.preview.text : this.preview.message : O}
       </div>
@@ -1147,10 +1148,11 @@ var q = class extends P {
 	}
 	sequenceSection() {
 		let e = this.mode === "sequence";
-		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">Loading…</div>` : O : E`<at-sequence-editor
+		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : O : E`<at-sequence-editor
       ?hidden=${!e}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e) => this.sequenceAction = e.detail.action}
     ></at-sequence-editor>`;
 	}
@@ -1160,17 +1162,17 @@ var q = class extends P {
 	render() {
 		return this.open ? E`
       <div class="backdrop" @click=${() => this.close()}></div>
-      <div class="dialog" role="dialog" aria-modal="true" aria-label="Add job">
-        <h2>Add job</h2>
+      <div class="dialog" role="dialog" aria-modal="true" aria-label=${this.localize("add_job_dialog.title")}>
+        <h2>${this.localize("add_job_dialog.title")}</h2>
         <div class="modes" role="tablist">
-          ${this.tabBtn("type", "Type it")} ${this.tabBtn("pick", "Pick it")} ${this.isAdmin ? this.tabBtn("sequence", "Sequence") : O}
+          ${this.tabBtn("type", this.localize("add_job_dialog.tab_type"))} ${this.tabBtn("pick", this.localize("add_job_dialog.tab_pick"))} ${this.isAdmin ? this.tabBtn("sequence", this.localize("add_job_dialog.tab_sequence")) : O}
         </div>
         ${this.mode === "type" ? this.typeSection() : O} ${this.pickSection()} ${this.isAdmin ? this.sequenceSection() : O}
         ${this.mode === "type" ? O : this.whenSection()}
         ${this.error ? E`<div class="error" role="alert">${this.error}</div>` : O}
         <div class="actions">
-          <button ?disabled=${this.busy} @click=${() => this.close()}>Cancel</button>
-          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>Add</button>
+          <button ?disabled=${this.busy} @click=${() => this.close()}>${this.localize("add_job_dialog.cancel")}</button>
+          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>${this.localize("add_job_dialog.add")}</button>
         </div>
       </div>
     ` : O;
@@ -1270,10 +1272,10 @@ var q = class extends P {
     `];
 	}
 };
-U([I({ attribute: !1 })], q.prototype, "hass", void 0), U([I({ type: Boolean })], q.prototype, "isAdmin", void 0), U([I({
+U([L({ attribute: !1 })], q.prototype, "hass", void 0), U([L({ attribute: !1 })], q.prototype, "localize", void 0), U([L({ type: Boolean })], q.prototype, "isAdmin", void 0), U([L({
 	type: Boolean,
 	reflect: !0
-})], q.prototype, "open", void 0), U([L()], q.prototype, "mode", void 0), U([L()], q.prototype, "text", void 0), U([L()], q.prototype, "preview", void 0), U([L()], q.prototype, "pickerReady", void 0), U([L()], q.prototype, "pickedAction", void 0), U([L()], q.prototype, "sequenceAction", void 0), U([L()], q.prototype, "chip", void 0), U([L()], q.prototype, "when", void 0), U([L()], q.prototype, "error", void 0), U([L()], q.prototype, "busy", void 0), q = U([F("at-add-job-dialog")], q);
+})], q.prototype, "open", void 0), U([R()], q.prototype, "mode", void 0), U([R()], q.prototype, "text", void 0), U([R()], q.prototype, "preview", void 0), U([R()], q.prototype, "pickerReady", void 0), U([R()], q.prototype, "pickedAction", void 0), U([R()], q.prototype, "sequenceAction", void 0), U([R()], q.prototype, "chip", void 0), U([R()], q.prototype, "when", void 0), U([R()], q.prototype, "error", void 0), U([R()], q.prototype, "busy", void 0), q = U([I("at-add-job-dialog")], q);
 function vt() {
 	let e = document.activeElement;
 	for (; e?.shadowRoot?.activeElement;) e = e.shadowRoot.activeElement;
@@ -1323,17 +1325,17 @@ var J = {
 		return wt(e), t;
 	}
 }), Et = {
-	voice: "Assist",
-	llm: "Assist",
-	panel: "Add job",
-	reschedule: "Reschedule",
-	todo: "To-do list"
+	voice: "assist",
+	llm: "assist",
+	panel: "add_job",
+	reschedule: "reschedule",
+	todo: "todo"
 }, Dt = {
-	voice: "from Assist",
-	llm: "from Assist",
-	panel: "in the panel",
-	todo: "from the to-do list",
-	service: "by an action"
+	voice: "from_assist",
+	llm: "from_assist",
+	panel: "in_panel",
+	todo: "from_todo",
+	service: "by_action"
 }, Ot = (e) => e === "voice" || e === "llm";
 function kt(e, t) {
 	if (!e) return;
@@ -1348,27 +1350,30 @@ function jt(e, t) {
 	return t?.states?.[e]?.attributes.friendly_name ?? e;
 }
 var Mt = (e) => e.charAt(0).toUpperCase() + e.slice(1);
-function Nt(e, t) {
-	let { via: n, device_id: r, user_id: i, origin: a } = e.source, o = a ? [Mt(a.split(".")[0]), jt(a, t)] : [Et[n] ?? "Action"], s = Ot(n) ? At(r, t) : void 0;
+function Nt(e, t, n) {
+	let { via: r, device_id: i, user_id: a, origin: o } = e.source, s = o ? [Mt(o.split(".")[0]), jt(o, t)] : [n(`source.${Et[r] ?? "action"}`)], c = Ot(r) ? At(i, t) : void 0;
 	return [
-		...o,
-		s,
-		kt(i, t)
+		...s,
+		c,
+		kt(a, t)
 	].filter(Boolean).join(" · ");
 }
-function Pt(e, t) {
-	let n = e.cancelled_origin, r = Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, i = n ? `by ${n.split(".")[0]} ${jt(n, t)}` : [Dt[e.cancelled_by ?? ""], r].filter(Boolean).join(" · "), a = kt(e.cancelled_user_id, t);
+function Pt(e, t, n) {
+	let r = e.cancelled_origin, i = Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, a = r ? n("source.by_origin", {
+		domain: r.split(".")[0],
+		name: jt(r, t)
+	}) : [Dt[e.cancelled_by ?? ""] && n(`source.${Dt[e.cancelled_by ?? ""]}`), i].filter(Boolean).join(" · "), o = kt(e.cancelled_user_id, t);
 	return [
-		"Cancelled",
-		i,
-		a && `by ${a}`
+		n("source.cancelled"),
+		a,
+		o && n("source.by_user", { name: o })
 	].filter(Boolean).join(" ");
 }
-function Ft(e, t) {
+function Ft(e, t, n) {
 	switch (e.status) {
 		case "failed": return e.result.error ?? "";
-		case "missed": return "Home Assistant was off when it was due";
-		case "cancelled": return Pt(e.result, t);
+		case "missed": return n("source.missed");
+		case "cancelled": return Pt(e.result, t, n);
 		default: return "";
 	}
 }
@@ -1407,8 +1412,8 @@ function Vt(e, t) {
 	};
 	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), Bt(i);
 }
-function Ht(e) {
-	return `Upcoming (${e.pending.length})`;
+function Ht(e, t) {
+	return t("upcoming_table.title", { count: e.pending.length });
 }
 function Ut(e, t, n, r = 15) {
 	let i = t === "all" ? e : e.filter((e) => e.status === t);
@@ -1424,29 +1429,14 @@ var Wt = {
 	missed: r,
 	cancelled: t
 }, Gt = [
-	{
-		value: "all",
-		label: "All"
-	},
-	{
-		value: "done",
-		label: "Done"
-	},
-	{
-		value: "failed",
-		label: "Failed"
-	},
-	{
-		value: "missed",
-		label: "Missed"
-	},
-	{
-		value: "cancelled",
-		label: "Cancelled"
-	}
-], X = class extends P {
+	"all",
+	"done",
+	"failed",
+	"missed",
+	"cancelled"
+], X = class extends F {
 	constructor(...e) {
-		super(...e), this.history = [], this.now = Date.now(), this.narrow = !1, this.filter = "all", this.expanded = !1, this.editing = null, this.value = "";
+		super(...e), this.localize = (e) => e, this.history = [], this.now = Date.now(), this.narrow = !1, this.filter = "all", this.expanded = !1, this.editing = null, this.value = "";
 	}
 	fire(e, t) {
 		this.dispatchEvent(new CustomEvent(e, {
@@ -1473,9 +1463,9 @@ var Wt = {
 		let t = (e) => e.stopPropagation();
 		return this.editing === e.id ? E`<div class="edit" @click=${t}>
       <input type="datetime-local" .value=${this.value} @input=${(e) => this.value = e.target.value} />
-      <ha-button appearance="plain" size="s" @click=${() => this.submit(e.job)}>Save</ha-button>
-      <ha-button appearance="plain" size="s" @click=${() => this.editing = null}>Cancel</ha-button>
-    </div>` : E`<ha-button appearance="plain" size="s" @click=${(n) => (t(n), this.startEditing(e.job))}>Re-schedule</ha-button>`;
+      <ha-button appearance="plain" size="s" @click=${() => this.submit(e.job)}>${this.localize("history_table.save")}</ha-button>
+      <ha-button appearance="plain" size="s" @click=${() => this.editing = null}>${this.localize("history_table.cancel")}</ha-button>
+    </div>` : E`<ha-button appearance="plain" size="s" @click=${(n) => (t(n), this.startEditing(e.job))}>${this.localize("history_table.reschedule")}</ha-button>`;
 	}
 	get columns() {
 		return {
@@ -1483,19 +1473,19 @@ var Wt = {
 				title: "",
 				type: "icon",
 				showNarrow: !0,
-				template: (e) => E`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${Wt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
+				template: (e) => E`<ha-svg-icon class="status ${e.job.status}" title=${this.localize(`history_table.filter_${e.job.status}`)} .path=${Wt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
 			},
 			when: {
-				title: "Time",
+				title: this.localize("history_table.column_time"),
 				minWidth: "120px"
 			},
 			summary: {
-				title: "Job",
+				title: this.localize("history_table.column_job"),
 				main: !0,
 				flex: 2
 			},
 			details: {
-				title: "Details",
+				title: this.localize("history_table.column_details"),
 				flex: 2
 			},
 			actions: {
@@ -1514,24 +1504,24 @@ var Wt = {
 		let { rows: e, matching: t } = Ut(this.history, this.filter, this.expanded), n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = this.hass?.config.time_zone ?? "UTC", i = e.map((e) => ({
 			id: e.id,
 			job: e,
-			when: R(new Date(e.finished_at ?? e.due), new Date(this.now), n, r),
+			when: tt(new Date(e.finished_at ?? e.due), new Date(this.now), n, r),
 			summary: e.summary,
-			details: Ft(e, this.hass)
+			details: Ft(e, this.hass, this.localize)
 		}));
-		return E`<ha-card header="History">
+		return E`<ha-card .header=${this.localize("history_table.title")}>
       <div class="chips">
-        ${Gt.map((e) => E`<ha-filter-chip .label=${e.label} .selected=${Tt(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
+        ${Gt.map((e) => E`<ha-filter-chip .label=${this.localize(`history_table.filter_${e}`)} .selected=${Tt(this.filter === e)} @click=${(t) => this.selectFilter(t, e)}></ha-filter-chip>`)}
       </div>
       <ha-data-table
         .columns=${this.columns}
         .data=${i}
         .narrow=${this.narrow}
-        .noDataText=${this.history.length ? "No jobs match this filter." : "No history yet."}
+        .noDataText=${this.localize(this.history.length ? "history_table.empty_filtered" : "history_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}
       ></ha-data-table>
-      ${!this.expanded && t > 15 ? E`<div class="footer"><ha-button appearance="plain" @click=${() => this.expanded = !0}>Show all (${t})</ha-button></div>` : O}
+      ${!this.expanded && t > 15 ? E`<div class="footer"><ha-button appearance="plain" @click=${() => this.expanded = !0}>${this.localize("history_table.show_all", { count: t })}</ha-button></div>` : O}
     </ha-card>`;
 	}
 	static {
@@ -1570,9 +1560,12 @@ var Wt = {
   `;
 	}
 };
-U([I({ attribute: !1 })], X.prototype, "hass", void 0), U([I({ attribute: !1 })], X.prototype, "history", void 0), U([I({ type: Number })], X.prototype, "now", void 0), U([I({ type: Boolean })], X.prototype, "narrow", void 0), U([L()], X.prototype, "filter", void 0), U([L()], X.prototype, "expanded", void 0), U([L()], X.prototype, "editing", void 0), U([L()], X.prototype, "value", void 0), X = U([F("at-history-table")], X);
+U([L({ attribute: !1 })], X.prototype, "hass", void 0), U([L({ attribute: !1 })], X.prototype, "localize", void 0), U([L({ attribute: !1 })], X.prototype, "history", void 0), U([L({ type: Number })], X.prototype, "now", void 0), U([L({ type: Boolean })], X.prototype, "narrow", void 0), U([R()], X.prototype, "filter", void 0), U([R()], X.prototype, "expanded", void 0), U([R()], X.prototype, "editing", void 0), U([R()], X.prototype, "value", void 0), X = U([I("at-history-table")], X);
 // src/components/job-details.ts
-var Z = class extends P {
+var Z = class extends F {
+	constructor(...e) {
+		super(...e), this.localize = (e) => e;
+	}
 	close() {
 		this.dispatchEvent(new CustomEvent("close-details", {
 			bubbles: !0,
@@ -1588,19 +1581,19 @@ var Z = class extends P {
 			timeStyle: "medium"
 		}).format(new Date(e.created_at)), i = e.intent ? `${e.intent.type}\n${Y(e.intent.slots)}` : Y(e.action ?? []);
 		return E`<div class="backdrop" @click=${() => this.close()}>
-      <div class="card" role="dialog" aria-label="Job details" @click=${(e) => e.stopPropagation()}>
+      <div class="card" role="dialog" aria-label=${this.localize("job_details.title")} @click=${(e) => e.stopPropagation()}>
         <h2>${e.summary}</h2>
         <dl>
-          <dt>${e.intent ? "Intent" : "Action"}</dt>
+          <dt>${this.localize(e.intent ? "job_details.intent" : "job_details.action")}</dt>
           <dd><pre>${i}</pre></dd>
-          <dt>Created by</dt>
-          <dd>${Nt(e, this.hass)}</dd>
-          <dt>Created</dt>
+          <dt>${this.localize("job_details.created_by")}</dt>
+          <dd>${Nt(e, this.hass, this.localize)}</dd>
+          <dt>${this.localize("job_details.created")}</dt>
           <dd>${r}</dd>
-          <dt>ID</dt>
+          <dt>${this.localize("job_details.id")}</dt>
           <dd><code>${e.id}</code></dd>
         </dl>
-        <button @click=${() => this.close()}>Close</button>
+        <button @click=${() => this.close()}>${this.localize("job_details.close")}</button>
       </div>
     </div>`;
 	}
@@ -1616,11 +1609,11 @@ var Z = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], Z.prototype, "hass", void 0), U([I({ attribute: !1 })], Z.prototype, "job", void 0), Z = U([F("at-job-details")], Z);
+U([L({ attribute: !1 })], Z.prototype, "hass", void 0), U([L({ attribute: !1 })], Z.prototype, "localize", void 0), U([L({ attribute: !1 })], Z.prototype, "job", void 0), Z = U([I("at-job-details")], Z);
 // src/components/upcoming-table.ts
-var Q = class extends P {
+var Q = class extends F {
 	constructor(...e) {
-		super(...e), this.pending = [], this.running = [], this.now = Date.now(), this.isAdmin = !1, this.narrow = !1;
+		super(...e), this.localize = (e) => e, this.pending = [], this.running = [], this.now = Date.now(), this.isAdmin = !1, this.narrow = !1;
 	}
 	fire(e, t, n) {
 		n?.stopPropagation(), this.dispatchEvent(new CustomEvent(e, {
@@ -1631,24 +1624,24 @@ var Q = class extends P {
 	}
 	when(e) {
 		let t = new Date(e.due);
-		return et(t.getTime(), this.now) || R(t, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
+		return $e(t.getTime(), this.now) || tt(t, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
 	}
 	actions(e) {
-		return e.running ? O : E`${this.isAdmin || !e.job.raw_action ? E`<ha-icon-button .label=${"Run now"} .path=${"M8,5.14V19.14L19,12.14L8,5.14Z"} @click=${(t) => this.fire("run-job", e.job, t)}></ha-icon-button>` : O}
-      <ha-icon-button .label=${"Cancel"} .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"} @click=${(t) => this.fire("cancel-job", e.job, t)}></ha-icon-button>`;
+		return e.running ? O : E`${this.isAdmin || !e.job.raw_action ? E`<ha-icon-button .label=${this.localize("upcoming_table.run_now")} .path=${"M8,5.14V19.14L19,12.14L8,5.14Z"} @click=${(t) => this.fire("run-job", e.job, t)}></ha-icon-button>` : O}
+      <ha-icon-button .label=${this.localize("upcoming_table.cancel")} .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"} @click=${(t) => this.fire("cancel-job", e.job, t)}></ha-icon-button>`;
 	}
 	get columns() {
 		return {
 			when: {
-				title: "When",
+				title: this.localize("upcoming_table.column_when"),
 				main: !0,
 				minWidth: "120px"
 			},
 			summary: {
-				title: "Job",
+				title: this.localize("upcoming_table.column_job"),
 				flex: 2
 			},
-			source: { title: "Source" },
+			source: { title: this.localize("upcoming_table.column_source") },
 			actions: {
 				title: "",
 				type: "icon-button",
@@ -1668,20 +1661,20 @@ var Q = class extends P {
 			id: e.id,
 			job: e,
 			running: t,
-			when: t ? "Running…" : this.when(e),
+			when: t ? this.localize("upcoming_table.running") : this.when(e),
 			summary: e.summary,
-			source: Nt(e, this.hass)
+			source: Nt(e, this.hass, this.localize)
 		}), t = [...this.running.map((t) => e(t, !0)), ...this.pending.map((t) => e(t, !1))];
 		return E`<ha-card .header=${Ht({
 			pending: this.pending,
 			running: this.running,
 			history: []
-		})}>
+		}, this.localize)}>
       <ha-data-table
         .columns=${this.columns}
         .data=${t}
         .narrow=${this.narrow}
-        .noDataText=${"Nothing scheduled."}
+        .noDataText=${this.localize("upcoming_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}
@@ -1696,7 +1689,7 @@ var Q = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], Q.prototype, "hass", void 0), U([I({ attribute: !1 })], Q.prototype, "pending", void 0), U([I({ attribute: !1 })], Q.prototype, "running", void 0), U([I({ type: Number })], Q.prototype, "now", void 0), U([I({ type: Boolean })], Q.prototype, "isAdmin", void 0), U([I({ type: Boolean })], Q.prototype, "narrow", void 0), Q = U([F("at-upcoming-table")], Q);
+U([L({ attribute: !1 })], Q.prototype, "hass", void 0), U([L({ attribute: !1 })], Q.prototype, "localize", void 0), U([L({ attribute: !1 })], Q.prototype, "pending", void 0), U([L({ attribute: !1 })], Q.prototype, "running", void 0), U([L({ type: Number })], Q.prototype, "now", void 0), U([L({ type: Boolean })], Q.prototype, "isAdmin", void 0), U([L({ type: Boolean })], Q.prototype, "narrow", void 0), Q = U([I("at-upcoming-table")], Q);
 // src/localize.ts
 var Kt = "component.at.config_panel.";
 function qt(e) {
@@ -1708,7 +1701,7 @@ function Xt(e) {
 	return Math.min(Jt * 2 ** Math.min(e, 10), Yt);
 }
 // src/at-panel.ts
-var $ = class extends P {
+var $ = class extends F {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.data = {
 			pending: [],
@@ -1716,13 +1709,13 @@ var $ = class extends P {
 			history: []
 		}, this.now = Date.now(), this.reconnecting = !0, this.error = "", this.confirmCancelAll = !1, this.addOpen = !1, this.attempt = 0, this.subscribed = !1, this.gone = !1, this.generation = 0, this.onRun = (e) => {
 			let t = this.hass;
-			t && this.call(() => He(t, e.detail.job.id));
+			t && this.call(() => Ve(t, e.detail.job.id));
 		}, this.onCancel = (e) => {
 			let t = this.hass;
-			t && this.call(() => Ve(t, [e.detail.job.id]));
+			t && this.call(() => Be(t, [e.detail.job.id]));
 		}, this.onReschedule = (e) => {
 			let t = this.hass;
-			t && this.call(() => Ue(t, e.detail.job.id, e.detail.due));
+			t && this.call(() => He(t, e.detail.job.id, e.detail.due));
 		}, this.onOpen = (e) => this.details = e.detail.job;
 	}
 	connectedCallback() {
@@ -1744,16 +1737,20 @@ var $ = class extends P {
 		this.requestUpdate();
 	}
 	get localize() {
-		return this.hass ? qt(this.hass) : (e) => e;
+		let e = this.hass;
+		return e ? (this.localizeFor?.hass !== e && (this.localizeFor = {
+			hass: e,
+			localize: qt(e)
+		}), this.localizeFor.localize) : (e) => e;
 	}
 	async start() {
-		this.hass && !this.subscribed && (this.subscribed = !0, Ge(this.hass).then((e) => this.atInfo = e, () => void 0), pt().then((e) => this.missing = e), await this.subscribe());
+		this.hass && !this.subscribed && (this.subscribed = !0, We(this.hass).then((e) => this.atInfo = e, () => void 0), pt().then((e) => this.missing = e), await this.subscribe());
 	}
 	async subscribe() {
 		if (!this.hass || this.gone) return;
 		let e = this.generation;
 		try {
-			let t = await Re(this.hass, (t) => {
+			let t = await Le(this.hass, (t) => {
 				e === this.generation && this.onEvent(t);
 			});
 			if (e !== this.generation) {
@@ -1795,11 +1792,11 @@ var $ = class extends P {
 		}
 		this.confirmCancelAll = !1;
 		let t = this.data.pending.map((e) => e.id);
-		t.length && this.call(() => Ve(e, t));
+		t.length && this.call(() => Be(e, t));
 	}
 	clearHistory() {
 		let e = this.hass;
-		this.confirmCancelAll = !1, e && this.call(() => We(e));
+		this.confirmCancelAll = !1, e && this.call(() => Ue(e));
 	}
 	onMenuSelect(e) {
 		let t = e.detail.item.value;
@@ -1892,5 +1889,5 @@ var $ = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], $.prototype, "hass", void 0), U([I({ type: Boolean })], $.prototype, "narrow", void 0), U([I({ attribute: !1 })], $.prototype, "panel", void 0), U([I({ attribute: !1 })], $.prototype, "route", void 0), U([L()], $.prototype, "missing", void 0), U([L()], $.prototype, "data", void 0), U([L()], $.prototype, "now", void 0), U([L()], $.prototype, "reconnecting", void 0), U([L()], $.prototype, "error", void 0), U([L()], $.prototype, "confirmCancelAll", void 0), U([L()], $.prototype, "details", void 0), U([L()], $.prototype, "atInfo", void 0), U([L()], $.prototype, "addOpen", void 0), $ = U([F("at-panel")], $);
+U([L({ attribute: !1 })], $.prototype, "hass", void 0), U([L({ type: Boolean })], $.prototype, "narrow", void 0), U([L({ attribute: !1 })], $.prototype, "panel", void 0), U([L({ attribute: !1 })], $.prototype, "route", void 0), U([R()], $.prototype, "missing", void 0), U([R()], $.prototype, "data", void 0), U([R()], $.prototype, "now", void 0), U([R()], $.prototype, "reconnecting", void 0), U([R()], $.prototype, "error", void 0), U([R()], $.prototype, "confirmCancelAll", void 0), U([R()], $.prototype, "details", void 0), U([R()], $.prototype, "atInfo", void 0), U([R()], $.prototype, "addOpen", void 0), $ = U([I("at-panel")], $);
 export { $ as AtPanel };

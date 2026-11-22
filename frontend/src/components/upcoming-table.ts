@@ -2,6 +2,7 @@ import { mdiClose, mdiPlay } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { formatCountdown, formatWhen } from "../format";
+import type { Localize } from "../localize";
 import { sourceLabel } from "../source";
 import { upcomingLabel } from "../state";
 import type { DataTableColumns, HomeAssistant, Job } from "../types";
@@ -18,6 +19,7 @@ interface Row {
 @customElement("at-upcoming-table")
 export class UpcomingTable extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ attribute: false }) pending: Job[] = [];
   @property({ attribute: false }) running: Job[] = [];
   @property({ type: Number }) now = Date.now();
@@ -40,16 +42,16 @@ export class UpcomingTable extends LitElement {
     if (row.running) return nothing;
     const canRun = this.isAdmin || !row.job.raw_action;
     return html`${canRun
-        ? html`<ha-icon-button .label=${"Run now"} .path=${mdiPlay} @click=${(e: Event) => this.fire("run-job", row.job, e)}></ha-icon-button>`
+        ? html`<ha-icon-button .label=${this.localize("upcoming_table.run_now")} .path=${mdiPlay} @click=${(e: Event) => this.fire("run-job", row.job, e)}></ha-icon-button>`
         : nothing}
-      <ha-icon-button .label=${"Cancel"} .path=${mdiClose} @click=${(e: Event) => this.fire("cancel-job", row.job, e)}></ha-icon-button>`;
+      <ha-icon-button .label=${this.localize("upcoming_table.cancel")} .path=${mdiClose} @click=${(e: Event) => this.fire("cancel-job", row.job, e)}></ha-icon-button>`;
   }
 
   private get columns(): DataTableColumns {
     return {
-      when: { title: "When", main: true, minWidth: "120px" },
-      summary: { title: "Job", flex: 2 },
-      source: { title: "Source" },
+      when: { title: this.localize("upcoming_table.column_when"), main: true, minWidth: "120px" },
+      summary: { title: this.localize("upcoming_table.column_job"), flex: 2 },
+      source: { title: this.localize("upcoming_table.column_source") },
       actions: { title: "", type: "icon-button", showNarrow: true, minWidth: "96px", maxWidth: "96px", template: (r: Row) => this.actions(r) },
     };
   }
@@ -64,17 +66,17 @@ export class UpcomingTable extends LitElement {
       id: job.id,
       job,
       running,
-      when: running ? "Running…" : this.when(job),
+      when: running ? this.localize("upcoming_table.running") : this.when(job),
       summary: job.summary,
-      source: sourceLabel(job, this.hass),
+      source: sourceLabel(job, this.hass, this.localize),
     });
     const rows = [...this.running.map((j) => row(j, true)), ...this.pending.map((j) => row(j, false))];
-    return html`<ha-card .header=${upcomingLabel({ pending: this.pending, running: this.running, history: [] })}>
+    return html`<ha-card .header=${upcomingLabel({ pending: this.pending, running: this.running, history: [] }, this.localize)}>
       <ha-data-table
         .columns=${this.columns}
         .data=${rows}
         .narrow=${this.narrow}
-        .noDataText=${"Nothing scheduled."}
+        .noDataText=${this.localize("upcoming_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}

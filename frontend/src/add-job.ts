@@ -1,5 +1,7 @@
 /** Pure helpers for the Add job dialog. Shapes must match the backend's `validate_picked_action`. */
 
+import type { Localize } from "./localize";
+
 export type Verb = "turn_on" | "turn_off" | "toggle";
 
 export type PickedInput =
@@ -46,21 +48,21 @@ export function quickDue(chip: "+15m" | "+1h", _now: Date): { delay_seconds: num
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /** Blank is an empty object; anything else must be a JSON object. */
-export function parseJsonObject(text: string): Parsed<Record<string, unknown>> {
+export function parseJsonObject(text: string, localize: Localize): Parsed<Record<string, unknown>> {
   if (!text.trim()) return { ok: true, value: {} };
   try {
     const value: unknown = JSON.parse(text);
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return { ok: true, value: value as Record<string, unknown> };
     }
-    return { ok: false, error: "Must be a JSON object, like {\"key\": \"value\"}" };
+    return { ok: false, error: localize("add_job.must_be_json_object", { example: '{"key": "value"}' }) };
   } catch {
-    return { ok: false, error: "Invalid JSON" };
+    return { ok: false, error: localize("add_job.invalid_json") };
   }
 }
 
 /** A JSON list of action objects, for the admin-only raw mode. */
-export function parseRawAction(text: string): Parsed<Record<string, unknown>[]> {
+export function parseRawAction(text: string, localize: Localize): Parsed<Record<string, unknown>[]> {
   try {
     const value: unknown = JSON.parse(text);
     if (
@@ -70,9 +72,9 @@ export function parseRawAction(text: string): Parsed<Record<string, unknown>[]> 
     ) {
       return { ok: true, value: value as Record<string, unknown>[] };
     }
-    return { ok: false, error: "Must be a non-empty JSON list of action objects" };
+    return { ok: false, error: localize("add_job.must_be_action_list") };
   } catch {
-    return { ok: false, error: "Invalid JSON" };
+    return { ok: false, error: localize("add_job.invalid_json") };
   }
 }
 

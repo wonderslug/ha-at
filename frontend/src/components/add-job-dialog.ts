@@ -4,6 +4,7 @@ import * as api from "../api";
 import { isFuture, quickDue } from "../add-job";
 import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
 import { loadPickerElements, pickerElementsDefined } from "../ha-elements";
+import type { Localize } from "../localize";
 import type { HomeAssistant, SchedulePayload } from "../types";
 import { fieldStyles } from "./field-styles";
 import "./pick-action";
@@ -19,6 +20,7 @@ type Preview = { ok: true; text: string } | { ok: false; message: string };
 @customElement("at-add-job-dialog")
 export class AddJobDialog extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ type: Boolean }) isAdmin = false;
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -158,7 +160,7 @@ export class AddJobDialog extends LitElement {
           }
         },
         (err: { message?: string }) => {
-          if (seq === this.parseSeq) this.preview = { ok: false, message: err?.message || "Could not parse" };
+          if (seq === this.parseSeq) this.preview = { ok: false, message: err?.message || this.localize("add_job_dialog.parse_failed") };
         },
       );
     }, 300);
@@ -188,7 +190,7 @@ export class AddJobDialog extends LitElement {
   private buildPayload(): SchedulePayload | string {
     if (this.mode === "type") return { text: this.text };
     const action = this.mode === "sequence" ? this.sequenceAction : this.pickedAction;
-    if (!action) return "Choose an action";
+    if (!action) return this.localize("add_job_dialog.choose_action");
     if (this.chip) return { action, ...quickDue(this.chip, new Date()) };
     return { action, due: this.dueDate().toISOString() };
   }
@@ -208,7 +210,7 @@ export class AddJobDialog extends LitElement {
       this.busy = false;
       this.close();
     } catch (err) {
-      this.error = (err as { message?: string })?.message || "Could not add the job";
+      this.error = (err as { message?: string })?.message || this.localize("add_job_dialog.add_failed");
     } finally {
       this.busy = false;
     }
@@ -233,33 +235,34 @@ export class AddJobDialog extends LitElement {
     const tz = this.hass?.config.time_zone ?? "UTC";
     const min = dateToWallTime(new Date(), tz);
     return html`<div class="field">
-      <span class="label">When</span>
+      <span class="label">${this.localize("add_job_dialog.when")}</span>
       <div class="row">
         ${(["+15m", "+1h"] as const).map(
-          (c) => html`<button class="chip ${this.chip === c ? "on" : ""}" @click=${() => this.onChip(c)}>${c}</button>`,
+          (c) => html`<button class="chip ${this.chip === c ? "on" : ""}" @click=${() => this.onChip(c)}>${this.localize(c === "+15m" ? "add_job_dialog.chip_15m" : "add_job_dialog.chip_1h")}</button>`,
         )}
-        <input type="datetime-local" aria-label="Date and time" .value=${this.when} min=${min} @input=${(e: Event) => this.onWhen((e.target as HTMLInputElement).value)} />
+        <input type="datetime-local" aria-label=${this.localize("add_job_dialog.date_time")} .value=${this.when} min=${min} @input=${(e: Event) => this.onWhen((e.target as HTMLInputElement).value)} />
       </div>
-      ${this.chip === "" && !this.whenValid ? html`<div class="inline-error">${this.when ? "Time must be in the future" : "Choose a time"}</div>` : nothing}
+      ${this.chip === "" && !this.whenValid ? html`<div class="inline-error">${this.localize(this.when ? "add_job_dialog.time_in_past" : "add_job_dialog.choose_time")}</div>` : nothing}
     </div>`;
   }
 
   /** Kept rendered while another tab shows, so switching tabs keeps what was picked. */
   private pickSection() {
     const shown = this.mode === "pick";
-    if (this.pickerReady === undefined) return shown ? html`<div class="field label" role="status">Loading…</div>` : nothing;
+    if (this.pickerReady === undefined) return shown ? html`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : nothing;
     return html`<at-pick-action
       ?hidden=${!shown}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e: CustomEvent<{ action?: Record<string, unknown>[] }>) => (this.pickedAction = e.detail.action)}
     ></at-pick-action>`;
   }
 
   private typeSection() {
     return html`<div class="field">
-      <label class="label" for="text">What should happen, and when?</label>
-      <input id="text" type="text" placeholder="turn on the porch light at 11pm" .value=${this.text} @input=${(e: Event) => this.onText((e.target as HTMLInputElement).value)} />
+      <label class="label" for="text">${this.localize("add_job_dialog.type_label")}</label>
+      <input id="text" type="text" placeholder=${this.localize("add_job_dialog.type_placeholder")} .value=${this.text} @input=${(e: Event) => this.onText((e.target as HTMLInputElement).value)} />
       <div class=${this.preview ? (this.preview.ok ? "preview ok" : "preview bad") : "preview"} aria-live="polite">
         ${this.preview ? (this.preview.ok ? this.preview.text : this.preview.message) : nothing}
       </div>
@@ -269,11 +272,12 @@ export class AddJobDialog extends LitElement {
   /** Kept rendered while another tab shows, so a half-built sequence survives a tab switch. */
   private sequenceSection() {
     const shown = this.mode === "sequence";
-    if (this.pickerReady === undefined) return shown ? html`<div class="field label" role="status">Loading…</div>` : nothing;
+    if (this.pickerReady === undefined) return shown ? html`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : nothing;
     return html`<at-sequence-editor
       ?hidden=${!shown}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e: CustomEvent<{ action?: Record<string, unknown>[] }>) => (this.sequenceAction = e.detail.action)}
     ></at-sequence-editor>`;
   }
@@ -286,17 +290,17 @@ export class AddJobDialog extends LitElement {
     if (!this.open) return nothing;
     return html`
       <div class="backdrop" @click=${() => this.close()}></div>
-      <div class="dialog" role="dialog" aria-modal="true" aria-label="Add job">
-        <h2>Add job</h2>
+      <div class="dialog" role="dialog" aria-modal="true" aria-label=${this.localize("add_job_dialog.title")}>
+        <h2>${this.localize("add_job_dialog.title")}</h2>
         <div class="modes" role="tablist">
-          ${this.tabBtn("type", "Type it")} ${this.tabBtn("pick", "Pick it")} ${this.isAdmin ? this.tabBtn("sequence", "Sequence") : nothing}
+          ${this.tabBtn("type", this.localize("add_job_dialog.tab_type"))} ${this.tabBtn("pick", this.localize("add_job_dialog.tab_pick"))} ${this.isAdmin ? this.tabBtn("sequence", this.localize("add_job_dialog.tab_sequence")) : nothing}
         </div>
         ${this.mode === "type" ? this.typeSection() : nothing} ${this.pickSection()} ${this.isAdmin ? this.sequenceSection() : nothing}
         ${this.mode === "type" ? nothing : this.whenSection()}
         ${this.error ? html`<div class="error" role="alert">${this.error}</div>` : nothing}
         <div class="actions">
-          <button ?disabled=${this.busy} @click=${() => this.close()}>Cancel</button>
-          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>Add</button>
+          <button ?disabled=${this.busy} @click=${() => this.close()}>${this.localize("add_job_dialog.cancel")}</button>
+          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>${this.localize("add_job_dialog.add")}</button>
         </div>
       </div>
     `;
