@@ -46,14 +46,19 @@ export function sourceLabel(job: Job, hass: HomeAssistant | undefined, localize:
   return [...where, device, userName(user_id, hass)].filter(Boolean).join(" · ");
 }
 
+/** One whole-sentence key per combination, so a translation can order the pieces its own way. */
 function cancelDetail(result: Job["result"], hass: HomeAssistant | undefined, localize: Localize): string {
   const origin = result.cancelled_origin;
-  const device = isAssist(result.cancelled_by) ? deviceName(result.cancelled_device_id, hass) : undefined;
-  const where = origin
-    ? localize("source.by_origin", { domain: origin.split(".")[0], name: originName(origin, hass) })
-    : [CANCEL_WHERE[result.cancelled_by ?? ""] && localize(`source.${CANCEL_WHERE[result.cancelled_by ?? ""]}`), device].filter(Boolean).join(" · ");
+  const channel = origin ? "by_origin" : CANCEL_WHERE[result.cancelled_by ?? ""];
+  const device = !origin && isAssist(result.cancelled_by) ? deviceName(result.cancelled_device_id, hass) : undefined;
   const who = userName(result.cancelled_user_id, hass);
-  return [localize("source.cancelled"), where, who && localize("source.by_user", { name: who })].filter(Boolean).join(" ");
+  const key = `cancelled${channel ? `_${channel}` : ""}${device ? "_device" : ""}${who ? "_by_user" : ""}`;
+  return localize(`source.${key}`, {
+    domain: origin?.split(".")[0] ?? "",
+    origin: origin ? originName(origin, hass) : "",
+    device: device ?? "",
+    name: who ?? "",
+  });
 }
 
 /** The History "Details" text: why a job failed, was missed, or who cancelled it and from where. */

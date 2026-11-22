@@ -257,13 +257,20 @@
       "todo": "To-do list",
       "action": "Action",
       "cancelled": "Cancelled",
-      "from_assist": "from Assist",
-      "in_panel": "in the panel",
-      "from_todo": "from the to-do list",
-      "by_action": "by an action",
-      "by_origin": "by {domain} {name}",
-      "by_user": "by {name}",
-      "missed": "Home Assistant was off when it was due"
+      "missed": "Home Assistant was off when it was due",
+      "cancelled_by_user": "Cancelled by {name}",
+      "cancelled_from_assist": "Cancelled from Assist",
+      "cancelled_from_assist_by_user": "Cancelled from Assist by {name}",
+      "cancelled_in_panel": "Cancelled in the panel",
+      "cancelled_in_panel_by_user": "Cancelled in the panel by {name}",
+      "cancelled_from_todo": "Cancelled from the to-do list",
+      "cancelled_from_todo_by_user": "Cancelled from the to-do list by {name}",
+      "cancelled_by_action": "Cancelled by an action",
+      "cancelled_by_action_by_user": "Cancelled by an action by {name}",
+      "cancelled_by_origin": "Cancelled by {domain} {origin}",
+      "cancelled_by_origin_by_user": "Cancelled by {domain} {origin} by {name}",
+      "cancelled_from_assist_device": "Cancelled from Assist · {device}",
+      "cancelled_from_assist_device_by_user": "Cancelled from Assist · {device} by {name}"
     }
   }
 }

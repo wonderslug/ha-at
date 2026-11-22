@@ -1359,15 +1359,13 @@ function Nt(e, t, n) {
 	].filter(Boolean).join(" · ");
 }
 function Pt(e, t, n) {
-	let r = e.cancelled_origin, i = Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, a = r ? n("source.by_origin", {
-		domain: r.split(".")[0],
-		name: jt(r, t)
-	}) : [Dt[e.cancelled_by ?? ""] && n(`source.${Dt[e.cancelled_by ?? ""]}`), i].filter(Boolean).join(" · "), o = kt(e.cancelled_user_id, t);
-	return [
-		n("source.cancelled"),
-		a,
-		o && n("source.by_user", { name: o })
-	].filter(Boolean).join(" ");
+	let r = e.cancelled_origin, i = r ? "by_origin" : Dt[e.cancelled_by ?? ""], a = !r && Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, o = kt(e.cancelled_user_id, t);
+	return n(`source.${`cancelled${i ? `_${i}` : ""}${a ? "_device" : ""}${o ? "_by_user" : ""}`}`, {
+		domain: r?.split(".")[0] ?? "",
+		origin: r ? jt(r, t) : "",
+		device: a ?? "",
+		name: o ?? ""
+	});
 }
 function Ft(e, t, n) {
 	switch (e.status) {

@@ -140,3 +140,25 @@ describe("sourceLabel", () => {
     expect(src({ via: "panel", user_id: "me" })).toBe("Add job · Me");
   });
 });
+
+describe("cancel sentences", () => {
+  it("resolves every channel, device and user combination to a whole-sentence key", () => {
+    const channels = [null, "voice", "llm", "panel", "todo", "service"];
+    for (const by of channels) {
+      for (const user of [null, "u-brian"]) {
+        for (const device of [null, "sat-1"]) {
+          for (const origin of [null, "automation.bedtime"]) {
+            const text = historyDetail(
+              job("cancelled", { cancelled_by: by, cancelled_user_id: user, cancelled_device_id: device, cancelled_origin: origin }),
+              hass,
+              enLocalize,
+            );
+            expect(text).toMatch(/^Cancelled/);
+            expect(text).not.toContain("source.");
+            expect(text).not.toMatch(/[{}]/);
+          }
+        }
+      }
+    }
+  });
+});
