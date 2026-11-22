@@ -73,6 +73,7 @@ TriggerCallback = Callable[[TriggerInput], Awaitable[str]]
 class SentenceGroup:
     """Sentence templates that share one callback."""
 
+    name: str
     sentences: list[str]
     callback: TriggerCallback
 
@@ -112,6 +113,38 @@ def _parser(language: LanguageSentences) -> Intents:
             },
             "lists": {**language.lists, **{name: {"wildcard": True} for name in wildcards}},
         }
+    )
+
+
+@dataclass(frozen=True)
+class SentenceMatch:
+    """The group a sentence fell into, with its slot values and their character spans."""
+
+    group: SentenceGroup
+    wildcards: dict[str, str]
+    spans: dict[str, tuple[int, int]]
+
+
+def match_sentence(language: LanguageSentences, text: str, parser: Intents | None = None) -> SentenceMatch | None:
+    """
+    Parse a sentence against one language's groups, the way the registered trigger does.
+
+    Args:
+        language: The language whose groups and lists parse the sentence.
+        text: The sentence as spoken or typed.
+        parser: The prebuilt parser for ``language``; built here when omitted.
+
+    Returns:
+        The best-matching group with its slot values, or None when no group fits.
+
+    """
+    result = recognize_best(text, parser or _parser(language))
+    if result is None:
+        return None
+    return SentenceMatch(
+        group=language.groups[int(result.intent.name.removeprefix(_GROUP_PREFIX))],
+        wildcards={name: _value_text(entity.value) for name, entity in result.entities.items()},
+        spans={name: entity.text_span for name, entity in result.entities.items() if entity.text_span is not None},
     )
 
 
@@ -224,15 +257,13 @@ def async_register_sentence_triggers(
             LOGGER.debug("Sentence trigger matched %r, but at has no sentences for %s", given.sentence, given.language)
             return await other_language(given)
         language, parser = parsers[codes[0]]
-        match = recognize_best(user_input.text, parser)
+        match = match_sentence(language, user_input.text, parser)
         if match is None:
             LOGGER.debug("Sentence trigger matched but at could not parse %r", user_input.text)
             return await language.unparsed(given)
-        given.wildcards = {name: _value_text(entity.value) for name, entity in match.entities.items()}
-        given.spans = {
-            name: entity.text_span for name, entity in match.entities.items() if entity.text_span is not None
-        }
-        return await language.groups[int(match.intent.name.removeprefix(_GROUP_PREFIX))].callback(given)
+        given.wildcards = match.wildcards
+        given.spans = match.spans
+        return await match.group.callback(given)
 
     manager = get_agent_manager(hass)
     sentences = [sentence for language in languages for group in language.groups for sentence in group.sentences]
