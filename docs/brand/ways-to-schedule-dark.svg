@@ -2,7 +2,7 @@
 <title id="title">Ways to schedule a job with at</title>
 <desc id="desc">Voice, Assist text, LLM agents, the Add job panel, the to-do list and automations all add jobs to the at queue. At the due time at runs the command, makes announcements, and reports back through events, sensors and history.</desc>
 <rect width="1200" height="650" rx="24" fill="#14171C"/>
-<text x="600.0" y="48" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#F1F3F5" text-anchor="middle">Say it once. at runs it later.</text>
+<text x="600.0" y="48" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#F1F3F5" text-anchor="middle">Say it once. <tspan font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" font-weight="800" fill="#BAC8FF">at</tspan> runs it once, later.</text>
 <text x="600.0" y="78" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#AAB2BF" text-anchor="middle">Every way into Home Assistant leads to the same job queue.</text>
 <text x="40" y="112" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#BAC8FF" text-anchor="start" letter-spacing="1.6">ASK ANY WAY</text>
 <text x="1160" y="112" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#BAC8FF" text-anchor="end" letter-spacing="1.6">AT THE RIGHT TIME</text>
