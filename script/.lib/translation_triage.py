@@ -12,7 +12,7 @@ Usage:
 
 import argparse
 import base64
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
@@ -42,6 +42,8 @@ MAINTAINERS_PATH = ".github/translation-maintainers.yml"
 
 _SHA = re.compile(r"[0-9a-f]{40}")
 _CODE = re.compile(r"[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*")
+_LOGIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}")
+_WRITE_ROLES = {"admin", "maintain", "write"}
 _REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 _STATE_LINE = re.compile(r"^<!-- at-translation-state (\{.*\}) -->$", re.MULTILINE)
 _REVIEW_HEADING = "\n### Review\n"
@@ -156,9 +158,13 @@ def _review_line(
     *,
     failed: bool,
     reported: bool,
+    confirmation: tuple[str, str] | None = None,
+    privileged_alone: bool = False,
 ) -> str:
     if failed:
         line = f"`{code}`  Review  waiting for the checks to pass"
+    elif not approvers and confirmation:
+        line = f"`{code}`  Review  confirmed by @\u200b{confirmation[0]} (repository maintainer) with @\u200b{confirmation[1]}"
     elif approvers:
         line = f"`{code}`  Review  verified by {', '.join(f'@{a}' for a in approvers)}"
     else:
@@ -167,6 +173,8 @@ def _review_line(
         if len(listed) > MAX_LISTED_MAINTAINERS:
             names += ", …"
         line = f"`{code}`  Review  needs native review · maintainer: {names} · day {day or 0} of {WAIT_DAYS}"
+    if privileged_alone and not approvers and not confirmation and not failed:
+        line += " · repository maintainer approved — a native speaker's approval is still needed"
     if not reported:
         line += " · no report"
     if others and not failed:
@@ -187,6 +195,7 @@ def decide(
     languages: Sequence[str] | None = None,
     *,
     beyond: bool = False,
+    privileged: Collection[str] = frozenset(),
 ) -> Decision:
     """Work out label changes and the comment; `languages` overrides the report's own language list."""
     codes = sorted(report["languages"] if languages is None else languages)
@@ -196,14 +205,31 @@ def decide(
     failed = report["failed"]
     day = waiting_day(applied_at, now) if NEEDS_REVIEW in current_labels else None
     unreported = [code for code in codes if code not in report["languages"]]
+    on_head = _approvers(reviews, author, head_sha)
+    trusted = {login.lower() for login in privileged}
+    confirmation = next(
+        ((p, o) for p in on_head if p in trusted for o in on_head if o != p),
+        None,
+    )
+    privileged_alone = any(p in trusted for p in on_head)
     review_lines: list[str] = []
     approved = True
     for code in codes:
         approvers = qualifying_approvers(reviews, author, code, maintainers, head_sha)
         others = other_approvers(reviews, author, code, maintainers, head_sha)
-        approved = approved and bool(approvers)
+        approved = approved and bool(approvers or confirmation)
         review_lines.append(
-            _review_line(code, approvers, others, maintainers, day, failed=failed, reported=code not in unreported)
+            _review_line(
+                code,
+                approvers,
+                others,
+                maintainers,
+                day,
+                failed=failed,
+                reported=code not in unreported,
+                confirmation=confirmation,
+                privileged_alone=privileged_alone,
+            )
         )
     if beyond:
         review_lines.append(f"- {BEYOND_NOTE}")
@@ -390,6 +416,21 @@ def _drop_stale_labels(repo: str, pr: dict[str, Any]) -> None:
         _gh("-X", "DELETE", f"repos/{repo}/issues/{pr['number']}/labels/{quote(label, safe='')}")
 
 
+def _privileged_approvers(repo: str, reviews: list[Review], author: str, head_sha: str) -> set[str]:
+    """Return current-head approvers with write access or more; any API error counts as not privileged."""
+    result: set[str] = set()
+    for login in _approvers(reviews, author, head_sha):
+        if not _LOGIN.fullmatch(login):
+            continue
+        try:
+            data = _gh(f"repos/{repo}/collaborators/{login}/permission")
+        except RuntimeError:
+            continue
+        if isinstance(data, dict) and {data.get("permission"), data.get("role_name")} & _WRITE_ROLES:
+            result.add(login)
+    return result
+
+
 def _changed_files(repo: str, number: int) -> list[str]:
     names: list[str] = []
     for item in _paged(f"repos/{repo}/pulls/{number}/files"):
@@ -413,9 +454,10 @@ def _triage(
         _drop_stale_labels(repo, pr)
         return
     labels = {label["name"] for label in pr.get("labels", [])}
+    reviews = _fetch_reviews(repo, number)
     decision = decide(
         report,
-        _fetch_reviews(repo, number),
+        reviews,
         pr["user"]["login"],
         maintainers,
         labels,
@@ -425,6 +467,7 @@ def _triage(
         pr["head"]["sha"],
         languages,
         beyond=beyond,
+        privileged=_privileged_approvers(repo, reviews, pr["user"]["login"], pr["head"]["sha"]),
     )
     if not decision.comment:
         _drop_stale_labels(repo, pr)

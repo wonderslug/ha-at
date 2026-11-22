@@ -212,6 +212,8 @@ class FakeGh:
         self.maint = maint
         self.comments = comments or []
         self.fail: set[int] = set()
+        self.perms: dict[str, dict] = {}
+        self.perm_errors: set[str] = set()
         self.files = [{"filename": "custom_components/at/translations/de.json"}]
         self.reviews = [
             {"user": {"login": "bob"}, "state": "APPROVED", "submitted_at": "2026-11-28T00:00:00Z", "commit_id": HEAD}
@@ -237,6 +239,12 @@ class FakeGh:
             raise RuntimeError(msg)
         if path == "repos/o/r":
             return {"default_branch": "main"}
+        if "/collaborators/" in path:
+            login = path.split("/")[-2]
+            if login in self.perm_errors:
+                msg = "no access"
+                raise RuntimeError(msg)
+            return self.perms.get(login, {"permission": "read"})
         if "contents/.github/translation-maintainers.yml" in path:
             return {"content": base64.b64encode(self.maint.encode()).decode()}
         if path.endswith("/reviews"):
@@ -608,3 +616,99 @@ def test_daily_with_moved_head_removes_stale_verified(env: None, monkeypatch: py
     assert tt.main(["daily"]) == 0
     assert len(deleted_labels(gh)) == 2
     assert not [c for c in gh.writes() if "POST" in c or "PATCH" in c]
+
+
+def test_privileged_plus_other_approver_verifies() -> None:
+    """A repository maintainer and one other approver verify every language."""
+    d = decide(two_languages(), [review("rob"), review("sam")], privileged={"rob"})
+    assert tt.VERIFIED in d.add
+    assert "confirmed by @\u200brob (repository maintainer) with @\u200bsam" in d.comment
+
+
+def test_privileged_alone_does_not_verify() -> None:
+    """A repository maintainer alone is not enough."""
+    d = decide(reviews=[review("rob")], privileged={"rob"})
+    assert tt.VERIFIED not in d.add
+    assert "repository maintainer approved — a native speaker's approval is still needed" in d.comment
+
+
+def test_privileged_approval_on_older_commit_does_not_count() -> None:
+    """Stale approvals never count, privileged or not."""
+    d = decide(reviews=[review("rob", commit=OLD), review("sam")], privileged={"rob"})
+    assert tt.VERIFIED not in d.add
+
+
+def test_author_with_write_access_is_not_counted() -> None:
+    """The author's own approval is ignored even with admin rights."""
+    d = decide(reviews=[review("dev"), review("sam")], privileged={"dev"})
+    assert tt.VERIFIED not in d.add
+
+
+def test_beyond_blocks_privileged_verification() -> None:
+    """Code changes beyond translations still block automatic verification."""
+    d = decide(reviews=[review("rob"), review("sam")], privileged={"rob"}, beyond=True)
+    assert tt.VERIFIED not in d.add
+
+
+def two_reviewers(gh: FakeGh, *logins: str) -> None:
+    """Make the fake return approvals on the current head by the given logins."""
+    gh.reviews = [
+        {"user": {"login": login}, "state": "APPROVED", "submitted_at": "2026-11-28T00:00:00Z", "commit_id": HEAD}
+        for login in logins
+    ]
+
+
+def label_posts(gh: FakeGh) -> str:
+    """Return the label POST payloads joined."""
+    return " ".join(c[-1] for c in gh.writes() if "POST" in c and c[-2].endswith("/labels"))
+
+
+def test_triage_builds_privileged_from_permission_api(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Write access found through the API plus a second approver verifies."""
+    gh = FakeGh()
+    two_reviewers(gh, "rob", "sam")
+    gh.perms = {"rob": {"permission": "write"}}
+    run(gh, monkeypatch, tmp_path)
+    assert tt.VERIFIED in label_posts(gh)
+
+
+def test_role_name_is_accepted(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The role name may carry the privilege."""
+    gh = FakeGh()
+    two_reviewers(gh, "rob", "sam")
+    gh.perms = {"rob": {"permission": "read", "role_name": "maintain"}}
+    run(gh, monkeypatch, tmp_path)
+    assert tt.VERIFIED in label_posts(gh)
+
+
+def test_permission_api_error_fails_closed(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """An API error means not privileged."""
+    gh = FakeGh()
+    two_reviewers(gh, "rob", "sam")
+    gh.perms = {"rob": {"permission": "admin"}}
+    gh.perm_errors = {"rob"}
+    run(gh, monkeypatch, tmp_path)
+    assert tt.VERIFIED not in label_posts(gh)
+
+
+def test_invalid_login_is_never_put_in_a_url(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Only logins matching GitHub's pattern reach the permission endpoint."""
+    gh = FakeGh()
+    two_reviewers(gh, "../../x", "ok-user")
+    run(gh, monkeypatch, tmp_path)
+    called = [a for c in gh.calls for a in c if "/collaborators/" in a]
+    assert called == ["repos/o/r/collaborators/ok-user/permission"]
+
+
+def test_permission_checked_only_for_current_head_approvers(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Stale approvers and the author cost no API call."""
+    gh = FakeGh()
+    two_reviewers(gh, "dev", "sam")
+    gh.reviews.append({**gh.reviews[0], "user": {"login": "old"}, "commit_id": OLD})
+    run(gh, monkeypatch, tmp_path)
+    called = [a for c in gh.calls for a in c if "/collaborators/" in a]
+    assert called == ["repos/o/r/collaborators/sam/permission"]
