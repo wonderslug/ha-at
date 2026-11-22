@@ -12,7 +12,12 @@ from dataclasses import dataclass
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
-from custom_components.at.const import INTENT_AUTOMATION_RUN, REFUSED_INTENT_PREFIX, REFUSED_INTENT_TYPES
+from custom_components.at.const import (
+    INTENT_AUTOMATION_RUN,
+    REFUSED_INTENT_PREFIX,
+    REFUSED_INTENT_TYPES,
+    TIME_LAST_REFUSED_INTENT_TYPES,
+)
 from custom_components.at.core.models import IntentSpec, Targets
 from custom_components.at.ha_internal.intent_checks import target_check
 from custom_components.at.voice.automation import match_automations
@@ -153,7 +158,7 @@ def _target_name(
     return pack.place_target.format(place=place, things=things).strip() if things else place
 
 
-_DETAIL_SLOTS = ("item", "search_query")
+_DETAIL_SLOTS = ("item", "message", "search_query")
 
 
 def _summary(
@@ -167,8 +172,8 @@ def _summary(
     """
     Fill the first template whose fields are all known, else the generic summary.
 
-    Templates may use ``{name}``, the spoken ``{item}`` and ``{search_query}``, and ``{area}``,
-    the areas a vacuum is asked to clean.
+    Templates may use ``{name}``, the spoken ``{item}``, ``{message}`` and ``{search_query}``,
+    and ``{area}``, the areas a vacuum is asked to clean.
     """
     fields = {key: str(slots[key].get("text") or slots[key].get("value")) for key in _DETAIL_SLOTS if key in slots}
     if name:
@@ -261,9 +266,13 @@ async def async_recognize_command(
     satellite_id: str | None,
     context: Context,
     pack: LanguagePack,
+    time_last: bool = False,
 ) -> RecognizedCommand:
     """
     Recognize ``text`` as Assist would, without running it.
+
+    ``time_last`` says the time was spoken after ``text``; for an intent that ends in free
+    text, such as a broadcast message, that time belongs to the text and the command is refused.
 
     Returns:
         The intent to store, what it targets and a one-line summary.
@@ -296,7 +305,7 @@ async def async_recognize_command(
         raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
 
     intent_type = result.intent.name
-    if is_refused_intent(intent_type):
+    if is_refused_intent(intent_type) or (time_last and intent_type in TIME_LAST_REFUSED_INTENT_TYPES):
         raise RecognizeError("refused", pack.recognize_errors.get("refused", intent_type))
 
     if result.unmatched_entities:
@@ -308,12 +317,14 @@ async def async_recognize_command(
         slots["preferred_area_id"] = {"value": area_id}
 
     try:
-        check = target_check(hass, intent_type, slots)
+        check = target_check(hass, intent_type, slots, device_id)
     except intent.MatchFailedError as err:
         raise await _no_target_error(hass, agent, language, pack, text, err) from err
     constraints = check.constraints
     match: intent.MatchTargetsResult | None = None
-    if constraints.has_constraints:
+    if check.states is not None:
+        match = intent.MatchTargetsResult(is_match=True, states=check.states)
+    elif constraints.has_constraints:
         match = intent.async_match_targets(hass, constraints, check.preferences)
         if not match.is_match:
             raise await _no_target_error(

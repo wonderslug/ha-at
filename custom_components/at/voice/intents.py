@@ -21,7 +21,7 @@ from custom_components.at.voice.queries import (
     match_for_cancel,
     select_for_list,
 )
-from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command
+from custom_components.at.voice.scheduling import ScheduleRefused, async_schedule_command, command_comes_first
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import intent
 from homeassistant.util import dt as dt_util
@@ -145,11 +145,13 @@ class AtScheduleHandler(_AtHandler):
     async def _async_run(
         self, intent_obj: intent.Intent, pack: LanguagePack, manager: JobManager
     ) -> intent.IntentResponse:
+        command_text = _text_slot(intent_obj, "command") or ""
         outcome = await async_schedule_command(
             intent_obj.hass,
             manager,
-            command_text=_text_slot(intent_obj, "command") or "",
+            command_text=command_text,
             time_text=_text_slot(intent_obj, "time"),
+            time_last=intent_obj.text_input is not None and command_comes_first(intent_obj.text_input, command_text),
             language=intent_obj.language,
             via=self._via_for(intent_obj),
             user_id=intent_obj.context.user_id,

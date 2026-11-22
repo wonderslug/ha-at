@@ -308,6 +308,7 @@ EN = LanguagePack(
         "HassVacuumReturnToBase": "Send {name} back to base",
         "HassLawnMowerStartMowing": "Start {name}",
         "HassLawnMowerDock": "Dock {name}",
+        "HassBroadcast": 'Broadcast "{message}"',
         "HassMediaSearchAndPlay": "Play {search_query} on {name}",
         "HassVacuumCleanArea": "Clean {area}",
         "HassListAddItem": "Add {item} to {name}",

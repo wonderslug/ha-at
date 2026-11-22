@@ -24,11 +24,12 @@ from homeassistant.components.assist_pipeline import (
 from homeassistant.components.assist_pipeline.models import PipelineStage
 from homeassistant.components.assist_pipeline.pipeline import async_get_pipeline
 from homeassistant.components.assist_pipeline.run import PipelineInput, PipelineRun
+from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import chat_session, intent
+from homeassistant.helpers import chat_session, entity_registry as er, intent
 from homeassistant.setup import async_setup_component
 from tests.assist import LIGHT, Assist, say  # noqa: TID251  (plain module; see tests/assist.py)
 
@@ -417,16 +418,41 @@ class RecordingBroadcastHandler(intent.IntentHandler):
         return response
 
 
-async def test_full_sentence_handed_to_assist_intent(hass: HomeAssistant, home: Assist, manager: JobManager) -> None:
-    """A refused command part ("broadcast dinner is") goes back whole: HA broadcasts "dinner is at 6"."""
+@pytest.fixture
+def broadcast(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> RecordingBroadcastHandler:
+    """Stand in for the broadcast handler, with one satellite that takes announcements."""
+    entry = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        "kitchen_satellite",
+        suggested_object_id="kitchen_satellite",
+        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
+    )
+    hass.states.async_set(entry.entity_id, "idle")
     handler = RecordingBroadcastHandler()
     intent.async_register(hass, handler)
+    return handler
 
+
+async def test_full_sentence_handed_to_assist_intent(
+    hass: HomeAssistant, home: Assist, manager: JobManager, broadcast: RecordingBroadcastHandler
+) -> None:
+    """A time after the message is part of it: the whole sentence goes back and HA broadcasts "dinner is at 6"."""
     speech = await say(hass, home, "broadcast dinner is at 6")
 
     assert speech != UNRECOGNIZED
     assert manager.pending() == []
-    assert handler.messages == ["dinner is at 6"]
+    assert broadcast.messages == ["dinner is at 6"]
+
+
+async def test_broadcast_with_its_time_first_is_scheduled(
+    hass: HomeAssistant, home: Assist, manager: JobManager, broadcast: RecordingBroadcastHandler
+) -> None:
+    speech = await say(hass, home, "at 6pm broadcast dinner is ready")
+
+    assert speech == 'OK, at 6 PM tomorrow I\'ll broadcast "dinner is ready".'
+    assert [job.intent.type for job in manager.pending() if job.intent] == ["HassBroadcast"]
+    assert broadcast.messages == []
 
 
 class StubLlmAgent(conversation.AbstractConversationAgent):

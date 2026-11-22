@@ -3,15 +3,17 @@
 from dataclasses import dataclass
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.at.ha_internal.recognize import RecognizedCommand, RecognizeError, async_recognize_command
 from custom_components.at.lang import get_language_pack
+from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.components.vacuum.const import VacuumEntityFeature
 from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import area_registry as ar, entity_registry as er
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.setup import async_setup_component
 from tests.assist import ASSISTANT, LANGUAGE, Assist  # noqa: TID251  (plain module; see tests/assist.py)
 
@@ -70,11 +72,42 @@ async def house(
     return House(kitchen_area_id=kitchen.id, hallway_area_id=hallway.id)
 
 
-async def recognize(hass: HomeAssistant, text: str) -> RecognizedCommand:
+async def recognize(
+    hass: HomeAssistant, text: str, *, device_id: str | None = None, time_last: bool = False
+) -> RecognizedCommand:
     assert PACK is not None
     return await async_recognize_command(
-        hass, text, language=LANGUAGE, device_id=None, satellite_id=None, context=Context(), pack=PACK
+        hass,
+        text,
+        language=LANGUAGE,
+        device_id=device_id,
+        satellite_id=None,
+        context=Context(),
+        pack=PACK,
+        time_last=time_last,
     )
+
+
+def add_satellite(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    object_id: str,
+    *,
+    features: int = AssistSatelliteEntityFeature.ANNOUNCE,
+    device_id: str | None = None,
+) -> str:
+    """Register a voice satellite; broadcasts do not need it exposed."""
+    entry = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        object_id,
+        suggested_object_id=object_id,
+        original_name=object_id.replace("_", " ").title(),
+        supported_features=features,
+        device_id=device_id,
+    )
+    hass.states.async_set(entry.entity_id, "idle", {ATTR_SUPPORTED_FEATURES: features})
+    return entry.entity_id
 
 
 @pytest.mark.usefixtures("house")
@@ -135,6 +168,59 @@ async def test_clean_area_without_an_area_cleaner_is_no_target(hass: HomeAssista
         await recognize(hass, "vacuum the hallway")
 
     assert err.value.code == "no_target"
+
+
+@pytest.mark.usefixtures("house")
+async def test_broadcast_reaches_announcing_satellites(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> None:
+    kitchen = add_satellite(hass, entity_registry, "kitchen_satellite")
+    add_satellite(hass, entity_registry, "mute_satellite", features=0)
+
+    command = await recognize(hass, "broadcast dinner is ready")
+
+    assert command.intent.type == "HassBroadcast"
+    assert command.targets.entity_ids == [kitchen]
+    assert command.summary == 'Broadcast "dinner is ready"'
+
+
+@pytest.mark.usefixtures("house")
+async def test_broadcast_without_an_announcing_satellite_is_no_target(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> None:
+    add_satellite(hass, entity_registry, "mute_satellite", features=0)
+
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, "broadcast dinner is ready")
+
+    assert err.value.code == "no_target"
+
+
+@pytest.mark.usefixtures("house")
+async def test_broadcast_skips_the_satellite_it_was_spoken_to(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, device_registry: dr.DeviceRegistry
+) -> None:
+    """The handler leaves the speaking device out, so it alone cannot hear the broadcast."""
+    entry = MockConfigEntry(domain="test")
+    entry.add_to_hass(hass)
+    device = device_registry.async_get_or_create(config_entry_id=entry.entry_id, identifiers={("test", "speaker")})
+    add_satellite(hass, entity_registry, "speaking_satellite", device_id=device.id)
+
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, "broadcast dinner is ready", device_id=device.id)
+
+    assert err.value.code == "no_target"
+
+
+@pytest.mark.usefixtures("house")
+async def test_broadcast_with_its_time_after_the_message_is_refused(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> None:
+    """In "broadcast dinner is at 6" the time belongs to the message, so it is not a job."""
+    add_satellite(hass, entity_registry, "kitchen_satellite")
+
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, "broadcast dinner is", time_last=True)
+
+    assert err.value.code == "refused"
 
 
 @pytest.mark.parametrize(

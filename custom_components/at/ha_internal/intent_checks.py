@@ -12,22 +12,30 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.climate.const import ClimateEntityFeature
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.components.vacuum.const import VacuumEntityFeature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar, intent
+from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers import area_registry as ar, entity_registry as er, intent
 
 ASSISTANT = "conversation"
+# Mirrors EXCLUDED_DOMAINS in homeassistant/components/assist_satellite/intent.py.
+_BROADCAST_EXCLUDED_DOMAINS = frozenset({"voip"})
 
 
 @dataclass
 class TargetCheck:
-    """The constraints and preferences to match, and the areas a vacuum is asked to clean."""
+    """
+    The constraints and preferences to match, and the areas a vacuum is asked to clean.
+
+    ``states`` is set when the handler picks its targets itself rather than by matching.
+    """
 
     constraints: intent.MatchTargetsConstraints
     preferences: intent.MatchTargetsPreferences
     cleaning_areas: list[ar.AreaEntry] = field(default_factory=list)
+    states: list[State] | None = None
 
 
 def _value(slots: dict[str, Any], key: str) -> str | None:
@@ -79,7 +87,7 @@ def _service_check(hass: HomeAssistant, intent_type: str, slots: dict[str, Any])
 def _one_entity(domain: str, features: int, *, single_target: bool) -> Callable[..., TargetCheck]:
     """Build a check for a handler that matches by name, area and floor within one domain."""
 
-    def build(_hass: HomeAssistant, slots: dict[str, Any]) -> TargetCheck:
+    def build(_hass: HomeAssistant, slots: dict[str, Any], _device_id: str | None) -> TargetCheck:
         return TargetCheck(
             constraints=intent.MatchTargetsConstraints(
                 name=_name(slots),
@@ -96,14 +104,14 @@ def _one_entity(domain: str, features: int, *, single_target: bool) -> Callable[
     return build
 
 
-def _todo_list(_hass: HomeAssistant, slots: dict[str, Any]) -> TargetCheck:
+def _todo_list(_hass: HomeAssistant, slots: dict[str, Any], _device_id: str | None) -> TargetCheck:
     return TargetCheck(
         constraints=intent.MatchTargetsConstraints(name=_value(slots, "name"), domains={"todo"}, assistant=ASSISTANT),
         preferences=intent.MatchTargetsPreferences(),
     )
 
 
-def _clean_area(hass: HomeAssistant, slots: dict[str, Any]) -> TargetCheck:
+def _clean_area(hass: HomeAssistant, slots: dict[str, Any], _device_id: str | None) -> TargetCheck:
     """
     Mirror CleanAreaIntentHandler: the area is what to clean, the vacuum can live anywhere.
 
@@ -134,7 +142,40 @@ def _clean_area(hass: HomeAssistant, slots: dict[str, Any]) -> TargetCheck:
     )
 
 
-_BUILDERS: dict[str, Callable[[HomeAssistant, dict[str, Any]], TargetCheck]] = {
+def _broadcast(hass: HomeAssistant, _slots: dict[str, Any], device_id: str | None) -> TargetCheck:
+    """
+    Mirror BroadcastIntentHandler: every satellite that can announce, except the one spoken to.
+
+    Raises:
+        intent.MatchFailedError: no satellite would hear the broadcast.
+
+    """
+    registry = er.async_get(hass)
+    constraints = intent.MatchTargetsConstraints(
+        domains={"assist_satellite"}, features=AssistSatelliteEntityFeature.ANNOUNCE
+    )
+    states: list[State] = []
+    for entity_id in hass.states.async_entity_ids("assist_satellite"):
+        entry = registry.async_get(entity_id)
+        if entry is None or not entry.supported_features & AssistSatelliteEntityFeature.ANNOUNCE:
+            continue
+        if device_id and entry.device_id == device_id:
+            continue
+        config_entry = hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
+        if config_entry is not None and config_entry.domain in _BROADCAST_EXCLUDED_DOMAINS:
+            continue
+        if (state := hass.states.get(entity_id)) is not None:
+            states.append(state)
+    if not states:
+        raise intent.MatchFailedError(
+            result=intent.MatchTargetsResult(is_match=False, no_match_reason=intent.MatchFailedReason.DOMAIN),
+            constraints=constraints,
+        )
+    return TargetCheck(constraints=constraints, preferences=intent.MatchTargetsPreferences(), states=states)
+
+
+_BUILDERS: dict[str, Callable[[HomeAssistant, dict[str, Any], str | None], TargetCheck]] = {
+    "HassBroadcast": _broadcast,
     "HassClimateSetFanMode": _one_entity("climate", ClimateEntityFeature.FAN_MODE, single_target=True),
     "HassClimateSetTemperature": _one_entity("climate", ClimateEntityFeature.TARGET_TEMPERATURE, single_target=True),
     "HassListAddItem": _todo_list,
@@ -150,14 +191,16 @@ _BUILDERS: dict[str, Callable[[HomeAssistant, dict[str, Any]], TargetCheck]] = {
 }
 
 
-def target_check(hass: HomeAssistant, intent_type: str, slots: dict[str, Any]) -> TargetCheck:
+def target_check(
+    hass: HomeAssistant, intent_type: str, slots: dict[str, Any], device_id: str | None = None
+) -> TargetCheck:
     """
-    Return the check ``intent_type``'s handler will make of these slots.
+    Return the check ``intent_type``'s handler will make of these slots, spoken to ``device_id``.
 
     Raises:
         intent.MatchFailedError: the slots name something the handler refuses before matching.
 
     """
     if (build := _BUILDERS.get(intent_type)) is not None:
-        return build(hass, slots)
+        return build(hass, slots, device_id)
     return _service_check(hass, intent_type, slots)
