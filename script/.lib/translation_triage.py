@@ -215,6 +215,7 @@ def decide(
         remove |= {NEEDS_REVIEW, UNVERIFIED, VERIFIED}
     elif beyond:
         add.add(NEEDS_REVIEW)
+        remove |= {VERIFIED, UNVERIFIED}
     elif approved:
         add.add(VERIFIED)
         remove |= {NEEDS_REVIEW, UNVERIFIED}
@@ -382,6 +383,13 @@ def _apply(repo: str, pr: dict[str, Any], decision: Decision, existing: list[dic
         _gh("-X", "POST", f"repos/{repo}/issues/{number}/comments", stdin=json.dumps({"body": notice}))
 
 
+def _drop_stale_labels(repo: str, pr: dict[str, Any]) -> None:
+    """Remove verified and unverified, which only ever describe the head they were computed for."""
+    current = {label["name"] for label in pr.get("labels", [])}
+    for label in sorted({VERIFIED, UNVERIFIED} & current):
+        _gh("-X", "DELETE", f"repos/{repo}/issues/{pr['number']}/labels/{quote(label, safe='')}")
+
+
 def _changed_files(repo: str, number: int) -> list[str]:
     names: list[str] = []
     for item in _paged(f"repos/{repo}/pulls/{number}/files"):
@@ -402,6 +410,7 @@ def _triage(
     languages, beyond = classify_files(_changed_files(repo, number))
     if len(languages) > MAX_LANGUAGES:
         print(f"#{number}: too many languages; no action taken", file=sys.stderr)
+        _drop_stale_labels(repo, pr)
         return
     labels = {label["name"] for label in pr.get("labels", [])}
     decision = decide(
@@ -417,6 +426,9 @@ def _triage(
         languages,
         beyond=beyond,
     )
+    if not decision.comment:
+        _drop_stale_labels(repo, pr)
+        return
     _apply(repo, pr, decision, _bot_comments(repo, number))
 
 
@@ -444,6 +456,7 @@ def _run(
         report = None
     if report is None:
         print("report.json has an unexpected shape; no action taken", file=sys.stderr)
+        _drop_stale_labels(repo, pr)
         return 0
     report = {**report, "failed": report["failed"] or run_conclusion != "success"}
     _triage(repo, pr, report, _read_artifact(artifact / "report.md"), maintainers)
@@ -460,6 +473,7 @@ def _daily(repo: str, maintainers: Mapping[str, list[str]]) -> int:
             parsed = _state_from_comment(comments[0]["body"]) if comments else None
             if parsed is None or parsed[0]["head_sha"] != pr["head"]["sha"]:
                 print(f"#{pr['number']}: no current report state; skipped", file=sys.stderr)
+                _drop_stale_labels(repo, pr)
                 continue
             state, markdown = parsed
             reported = set(state["languages"]) - set(state.get("no_report", []))

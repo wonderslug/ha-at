@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 
@@ -548,3 +549,62 @@ def test_language_count_is_capped() -> None:
         )
         is None
     )
+
+
+def deleted_labels(gh: FakeGh) -> list[str]:
+    """Return the label DELETE calls made."""
+    return [c[-1].rsplit("/", 1)[-1] for c in gh.writes() if "DELETE" in c]
+
+
+STALE = {"name": tt.BASE}, {"name": tt.VERIFIED}, {"name": tt.UNVERIFIED}
+
+
+def test_beyond_removes_stale_verified() -> None:
+    """A code change on a new head drops verified and unverified."""
+    d = decide(beyond=True, current_labels={tt.BASE, tt.VERIFIED, tt.UNVERIFIED})
+    assert {tt.VERIFIED, tt.UNVERIFIED} <= d.remove
+
+
+def test_malformed_report_still_removes_stale_verified(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The only write on a no-action path is dropping stale verified labels."""
+    gh = FakeGh()
+    gh.pr["labels"] = list(STALE)
+    run(gh, monkeypatch, tmp_path, report={"languages": 3})
+    assert len(gh.writes()) == 2
+    assert sorted(deleted_labels(gh)) == sorted(quote(x, safe="") for x in (tt.VERIFIED, tt.UNVERIFIED))
+
+
+def test_no_languages_still_removes_stale_verified(env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A head with no translation files cannot stay verified."""
+    gh = FakeGh()
+    gh.files = [{"filename": "README.md"}]
+    gh.pr["labels"] = list(STALE)
+    run(gh, monkeypatch, tmp_path)
+    assert len(deleted_labels(gh)) == 2
+    assert not [c for c in gh.writes() if "POST" in c]
+
+
+def test_too_many_languages_still_removes_stale_verified(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Too many languages is a no-action path that still drops verified."""
+    gh = FakeGh()
+    gh.files = [
+        {"filename": f"custom_components/at/translations/a{chr(97 + i % 26)}{chr(97 + i // 26)}.json"}
+        for i in range(101)
+    ]
+    gh.pr["labels"] = list(STALE)
+    run(gh, monkeypatch, tmp_path)
+    assert len(deleted_labels(gh)) == 2
+
+
+def test_daily_with_moved_head_removes_stale_verified(env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stored report for an older head cannot keep verified."""
+    gh = FakeGh(comments=[bot_comment(decide(head_sha=OLD).comment)])
+    gh.pr["labels"] = list(STALE)
+    monkeypatch.setattr(tt, "_gh", gh)
+    assert tt.main(["daily"]) == 0
+    assert len(deleted_labels(gh)) == 2
+    assert not [c for c in gh.writes() if "POST" in c or "PATCH" in c]
