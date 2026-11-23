@@ -182,7 +182,7 @@ async def test_unsupported_language_refuses(hass: HomeAssistant, manager: MagicM
     ):
         await schedule(hass, manager, home, "schalte das Licht ein", "um 6 Uhr", language="de")
 
-    assert exc.value.speech == "Sorry, scheduling is only available in English for now."
+    assert exc.value.speech == "Sorry, scheduling isn't available in this language yet."
     parse.assert_not_called()
     split.assert_not_called()
     recognize.assert_not_called()

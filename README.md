@@ -77,7 +77,7 @@ actions:
 - **It tells you what happened.** Every job fires an event when it is scheduled, runs, fails, is cancelled or is missed, and shows in the logbook. `sensor.at_next_job` and `sensor.at_pending_jobs` put the queue on a dashboard.
 
 > [!NOTE]
-> Voice and text scheduling is English only. Only commands that Home Assistant's built-in agent understands can be scheduled. See [known limitations](docs/user/CONFIGURATION.md#known-limitations).
+> Voice and text scheduling works in the languages that have a voice pack; see [Languages](docs/user/TRANSLATING.md#languages). Only commands that Home Assistant's built-in agent understands can be scheduled. See [known limitations](docs/user/CONFIGURATION.md#known-limitations).
 
 ## Installation
 

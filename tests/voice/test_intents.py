@@ -21,7 +21,7 @@ pytestmark = [
     pytest.mark.filterwarnings("ignore::aiohttp.web_exceptions.NotAppKeyWarning"),
 ]
 
-UNSUPPORTED = "Sorry, scheduling is only available in English for now."
+UNSUPPORTED = "Sorry, scheduling isn't available in this language yet."
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ def format_clock(dt: datetime) -> str:
     return f"{dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
 
 
-UNSUPPORTED_LANGUAGE = "Sorry, scheduling is only available in English for now."
+UNSUPPORTED_LANGUAGE = "Sorry, scheduling isn't available in this language yet."
 
 
 def format_spoken_time(dt: datetime) -> str:
