@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/wonderslug/ha-at/compare/v0.1.2...v1.0.0) (2026-11-23)
+
+
+### Maintenance
+
+* prepare the 1.0.0 release ([#54](https://github.com/wonderslug/ha-at/issues/54)) ([d27352f](https://github.com/wonderslug/ha-at/commit/d27352f56cd9186b7a92b1f4d3beed4fce6f7ec1))
+
 ## [0.1.2](https://github.com/wonderslug/ha-at/compare/v0.1.1...v0.1.2) (2026-11-23)
 
 
