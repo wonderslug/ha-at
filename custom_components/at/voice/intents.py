@@ -118,12 +118,12 @@ class _AtHandler(intent.IntentHandler):
         try:
             return await self._async_run(intent_obj, pack, manager)
         except ScheduleRefused as err:
-            # NO_INTENT_MATCH tells a sentence trigger to hand the whole sentence back to Assist.
-            code = (
-                intent.IntentResponseErrorCode.NO_INTENT_MATCH
-                if err.unrecognized
-                else intent.IntentResponseErrorCode.FAILED_TO_HANDLE
-            )
+            # A sentence trigger hands NO_INTENT_MATCH back to Assist, and NO_VALID_TARGETS to an LLM agent.
+            code = intent.IntentResponseErrorCode.FAILED_TO_HANDLE
+            if err.unrecognized:
+                code = intent.IntentResponseErrorCode.NO_INTENT_MATCH
+            elif err.no_target:
+                code = intent.IntentResponseErrorCode.NO_VALID_TARGETS
             return _error(intent_obj, err.speech, code)
 
     async def _async_run(

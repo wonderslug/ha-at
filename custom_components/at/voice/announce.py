@@ -218,6 +218,35 @@ def parse_announcement(hass: HomeAssistant, pack: LanguagePack, text: str) -> An
     return None
 
 
+def missing_message(hass: HomeAssistant, pack: LanguagePack, text: str) -> str | None:
+    """
+    Read ``text`` as an announcement that names an area or a floor but says nothing to announce there.
+
+    Home Assistant's own broadcast sentence would read the place as the message, so a cut-off
+    "announce in the kitchen" must be caught before it is recognized.
+
+    Returns:
+        The pack's question asking for the message, or None when ``text`` is not such a sentence.
+
+    """
+    for slot, group in _PLACES:
+        no_message = f"{group}_no_message"
+        if not pack.sentences.get(no_message):
+            continue
+        found = recognize_best(text, _parser(pack, no_message), slot_lists={slot: _place_list(hass, slot)})
+        if found is None:
+            continue
+        place_id = str(found.entities[slot].value)
+        if slot == "area":
+            area = ar.async_get(hass).async_get_area(place_id)
+            name = area.name if area else str(found.entities[slot].text).strip()
+        else:
+            floor = fr.async_get(hass).async_get_floor(place_id)
+            name = floor.name if floor else str(found.entities[slot].text).strip()
+        return pack.recognize_errors[f"no_message_{slot}"].format(**{slot: name})
+    return None
+
+
 def _gate(sentence: str) -> str:
     ends = [sentence.index(slot) + len(slot) for slot in _PLACE_SLOTS if slot in sentence]
     return sentence[: min(ends)] if ends else sentence
@@ -229,7 +258,9 @@ def trigger_sentences(pack: LanguagePack) -> list[str]:
 
     Home Assistant matches a trigger with every list as free text, and two free-text slots side
     by side never match, so a place sentence ends at its ``{area}`` or ``{floor}``;
-    ``parse_announcement`` then reads the whole sentence again with the real names.
+    ``parse_announcement`` then reads the whole sentence again with the real names. The
+    ``*_no_message`` sentences are left out: "tell {area}" alone would catch any sentence that
+    starts with "tell", and the place and everyone sentences already reach each of them.
     """
     groups = [group for _, group in _PLACES] + ["announce_everyone"]
     return list(dict.fromkeys(_gate(sentence) for group in groups for sentence in pack.sentences.get(group, [])))

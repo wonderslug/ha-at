@@ -12,6 +12,7 @@ from custom_components.at.ha_internal import recognize as recognize_module
 from custom_components.at.ha_internal.intents import async_run_intent
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
 from custom_components.at.lang import get_language_pack
+from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.const import ATTR_FRIENDLY_NAME, EVENT_CALL_SERVICE
 from homeassistant.core import Context, Event, HomeAssistant
@@ -302,4 +303,55 @@ async def test_does_not_execute(hass: HomeAssistant, home: Home) -> None:
             await recognize(hass, text, home.kitchen_device_id)
         await hass.async_block_till_done()
 
+    assert_nothing_ran(hass, home)
+
+
+@pytest.mark.parametrize(
+    ("text", "question"),
+    [
+        pytest.param("announce in the kitchen", "What should I announce in the Kitchen?", id="area"),
+        pytest.param("broadcast to the kitchen", "What should I announce in the Kitchen?", id="area-to"),
+        pytest.param("broadcast to downstairs", "What should I announce on Downstairs?", id="floor"),
+        pytest.param("let everybody in the kitchen know", "What should I announce in the Kitchen?", id="let-know"),
+    ],
+)
+async def test_announcement_without_a_message_is_no_message(
+    hass: HomeAssistant, home: Home, text: str, question: str
+) -> None:
+    """Without this, Home Assistant's broadcast sentence would store the place as the message."""
+    with pytest.raises(RecognizeError) as err:
+        await recognize(hass, text, home.office_device_id)
+
+    assert err.value.code == "no_message"
+    assert err.value.message == question
+    assert_nothing_ran(hass, home)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("announce the pizza is here in the kitchen", id="place-last"),
+        pytest.param("announce in the kitchen the pizza is here", id="place-first"),
+        pytest.param("announce in the kitchen thats the pizza is here", id="misheard-that-s"),  # codespell:ignore thats
+    ],
+)
+async def test_place_announcement_either_side_of_the_message(
+    hass: HomeAssistant, home: Home, entity_registry: er.EntityRegistry, text: str
+) -> None:
+    speaker = entity_registry.async_get_or_create(
+        "assist_satellite",
+        "test",
+        "kitchen_speaker",
+        suggested_object_id="kitchen_speaker",
+        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
+    )
+    entity_registry.async_update_entity(speaker.entity_id, area_id=home.kitchen_area_id)
+    hass.states.async_set(speaker.entity_id, "idle")
+
+    command = await recognize(hass, text, home.office_device_id)
+
+    assert command.intent.type == "PlaceAnnounce"
+    assert command.intent.slots["area"]["value"] == home.kitchen_area_id
+    assert command.intent.slots["message"]["value"] == "the pizza is here"
+    assert command.summary == 'Announce "the pizza is here" in Kitchen'
     assert_nothing_ran(hass, home)

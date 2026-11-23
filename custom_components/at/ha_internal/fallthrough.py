@@ -113,6 +113,11 @@ async def _async_default_intents(hass: HomeAssistant, given: TriggerInput) -> st
     return None if response is None else _speech(response)
 
 
+def is_built_in_agent(agent_id: str | None) -> bool:
+    """Say whether a sentence was meant for Home Assistant's built-in agent rather than another one, such as an LLM."""
+    return agent_id is None or agent_id == conversation.HOME_ASSISTANT_AGENT
+
+
 async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None:
     """
     Answer the full sentence the way its agent would have without `at`.
@@ -121,7 +126,7 @@ async def async_hand_off(hass: HomeAssistant, given: TriggerInput) -> str | None
         The agent's speech, or None when the built-in agent has no intent for the sentence.
 
     """
-    if given.agent_id is not None and given.agent_id != conversation.HOME_ASSISTANT_AGENT:
+    if not is_built_in_agent(given.agent_id):
         return await _isolated(_async_forward(hass, given))
     return await _isolated(_async_default_intents(hass, given))
 

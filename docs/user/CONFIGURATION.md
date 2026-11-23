@@ -67,8 +67,14 @@ When two jobs match, `at` names their times and asks you to say "cancel the 6 pm
 | `at 6 announce in the kitchen that dinner is ready` | The announcing satellites in the kitchen area                    |
 | `at 8 pm tell everyone upstairs it's time for bed`  | The announcing satellites on the floor named "Upstairs"          |
 | `in 5 minutes let the garage know the car is ready` | The announcing satellites in the garage area                     |
+| `at 6 announce dinner is ready in the kitchen`      | The announcing satellites in the kitchen area                    |
+| `at 9 tell everyone it's bedtime on the top floor`  | The announcing satellites on the floor named "Top Floor"         |
 
-The area or floor is matched against the names and aliases of your areas and floors. When an area and a floor share a name, the area is used. A place nobody knows stays part of the message, and the announcement goes to the whole house.
+The place can come before or after the message. After the message it needs `in`, `to` or `on` in front of it: "announce dinner is ready in the kitchen", "broadcast bedtime to upstairs". A leading "that" is not part of the message.
+
+The area or floor is matched against the names and aliases of your areas and floors. When an area and a floor share a name, the area is used. A place nobody knows stays part of the message, and the announcement goes to the whole house. A message that really does end in one of your area names, such as "tell everyone the car is in the garage" in a home with a Garage area, goes to that area as "the car is".
+
+An announcement that names a place but no message, such as "announce in the kitchen" when speech-to-text cuts you off, is never sent or scheduled. `at` asks "What should I announce in the Kitchen?" instead.
 
 Put the time **first**. A time after the message is part of the message: "tell everyone dinner is at 6" is announced right away, with "at 6" in it. The `at__AtSchedule` tool and the `at.schedule` action take the time separately, so this does not apply to them.
 
@@ -83,6 +89,8 @@ An announcement to a place with no announcing satellite is refused when you sche
 `at` stores the command only if Home Assistant's built-in agent can understand it right now and the target is exposed to Assist. Timers, questions, and chit-chat are refused, and so are targets that are not exposed or do not exist. Exposure is checked again when the job runs.
 
 Sentences `at` cannot use, such as "remind me at 5", are handed back to the conversation agent you were talking to, so normal conversation is not broken. A handed-back exchange to another agent starts a new conversation there.
+
+When that agent is not Home Assistant's built-in one, for example an LLM with **Prefer handling commands locally** on, a sentence whose device or area does not exist is handed back too, instead of `at` answering "I am not aware of any device called ...". That lets the LLM handle sentences such as "in 15 seconds turn off the table lamp and announce bedtime in the suite room", which hold two commands that `at` reads as one name. With the built-in agent, `at` still says which name it could not find.
 
 ## LLM agents
 
@@ -226,7 +234,8 @@ The events also show in the logbook.
 - Commands must be ones the built-in agent understands. Anything else is refused.
 - Canceling a job by its time by voice needs digits, such as "cancel the 7:30 job". Scheduling accepts words such as "at seven thirty".
 - Exchanges forwarded to another conversation agent start a new conversation.
-- An area or floor at the end of an announcement, as in "announce dinner is ready in the kitchen", is read as part of the message, and the announcement goes to the whole house. Name the place first: "announce in the kitchen that dinner is ready".
+- A floor at the end of an announcement needs `in`, `to` or `on` in front of it: "tell everyone dinner is ready upstairs" goes to the whole house, "tell everyone dinner is ready on upstairs" does not. Naming the floor first works either way: "announce upstairs dinner is ready".
+- Everything after the place is the message, including a second command: "announce in the suite room that it's bedtime and turn off the lamp" announces all of it and does not turn off the lamp. Say the two commands separately.
 - Running jobs do not appear in the to-do list.
 
 ## Troubleshooting

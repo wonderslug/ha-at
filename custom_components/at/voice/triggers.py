@@ -6,7 +6,7 @@ from typing import Any
 
 from custom_components.at.const import DOMAIN, INTENT_AUTOMATION_RUN, LOGGER
 from custom_components.at.core.timeparse import TimeParseError, split_time_and_command
-from custom_components.at.ha_internal.fallthrough import async_hand_off, async_no_intent_speech
+from custom_components.at.ha_internal.fallthrough import async_hand_off, async_no_intent_speech, is_built_in_agent
 from custom_components.at.ha_internal.recognize import RecognizeError, async_recognize_command
 from custom_components.at.ha_internal.sentence_triggers import (
     LanguageSentences,
@@ -15,7 +15,7 @@ from custom_components.at.ha_internal.sentence_triggers import (
     async_register_sentence_triggers,
 )
 from custom_components.at.lang import LanguagePack
-from custom_components.at.voice.announce import parse_announcement, trigger_sentences
+from custom_components.at.voice.announce import missing_message, parse_announcement, trigger_sentences
 from custom_components.at.voice.intents import INTENT_CANCEL, INTENT_LIST, INTENT_SCHEDULE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
@@ -99,7 +99,9 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
 
     With ``defer_relative`` the relative-time schedule sentences are left out, so Home
     Assistant's own delayed commands answer them. A schedule sentence whose command Assist
-    doesn't know ("remind me at 5") goes back, whole, to the agent it was meant for.
+    doesn't know ("remind me at 5") goes back, whole, to the agent it was meant for, and so does
+    one whose target doesn't exist when that agent isn't the built-in one: an LLM may still
+    make sense of "turn off the lamp and announce bedtime".
 
     Returns:
         The sentences, ready to register.
@@ -112,11 +114,22 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
             speech = await async_hand_off(hass, given)
         except Exception:  # noqa: BLE001 - another agent's code; whatever it raises, the user still gets an answer
             LOGGER.exception("Handing %r back to its agent failed", given.sentence)
-            return pack.recognize_errors["no_match"]
+            return refusal
         return refusal if speech is None else speech
+
+    async def refused(given: TriggerInput, response: intent.IntentResponse) -> str:
+        """Say the response, unless the refusal is one the sentence's own agent may still answer."""
+        code = response.error_code
+        if code is intent.IntentResponseErrorCode.NO_INTENT_MATCH or (
+            code is intent.IntentResponseErrorCode.NO_VALID_TARGETS and not is_built_in_agent(given.agent_id)
+        ):
+            return await hand_off_or(given, _speech(response))
+        return _speech(response)
 
     async def announce(given: TriggerInput) -> str:
         """Announce now; a sentence that turns out not to be an announcement goes back to its agent."""
+        if (question := missing_message(hass, pack, given.sentence)) is not None:
+            return question
         if (announcement := parse_announcement(hass, pack, given.sentence)) is None:
             return await hand_off_or(given, pack.recognize_errors["no_match"])
         try:
@@ -130,6 +143,8 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
                 pack=pack,
             )
         except RecognizeError as err:
+            if err.code == "no_target" and not is_built_in_agent(given.agent_id):
+                return await hand_off_or(given, err.message)
             return err.message
         slots = {name: slot["value"] for name, slot in command.intent.slots.items() if name in announcement.slots}
         await _async_respond(hass, command.intent.type, slots, given)
@@ -138,12 +153,13 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
     async def schedule(given: TriggerInput) -> str:
         slots = {"time": given.sentence_without("command"), "command": given.wildcards["command"]}
         response = await _async_respond(hass, INTENT_SCHEDULE, slots, given)
-        if response.error_code is intent.IntentResponseErrorCode.NO_INTENT_MATCH:
-            # "tell everyone dinner is at 6": the time is part of the message, so announce it now.
-            if parse_announcement(hass, pack, given.sentence) is not None:
-                return await announce(given)
-            return await hand_off_or(given, _speech(response))
-        return _speech(response)
+        # "tell everyone dinner is at 6": the time is part of the message, so announce it now.
+        if (
+            response.error_code is intent.IntentResponseErrorCode.NO_INTENT_MATCH
+            and parse_announcement(hass, pack, given.sentence) is not None
+        ):
+            return await announce(given)
+        return await refused(given, response)
 
     async def unparsed(given: TriggerInput) -> str:
         return await hand_off_or(given, pack.recognize_errors["no_match"])
@@ -182,10 +198,7 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
             "time": name.replace(rest, "", 1).strip(),
             "command": f"{given.sentence[: given.spans['name'][0]]}{rest}".strip(),
         }
-        response = await _async_respond(hass, INTENT_SCHEDULE, slots, given)
-        if response.error_code is intent.IntentResponseErrorCode.NO_INTENT_MATCH:
-            return await hand_off_or(given, _speech(response))
-        return _speech(response)
+        return await refused(given, await _async_respond(hass, INTENT_SCHEDULE, slots, given))
 
     callbacks = {"cancel": cancel, "list": list_jobs, "announce": announce, "schedule": schedule, "run": run}
     groups = [

@@ -17,23 +17,21 @@ from custom_components.at.ha_internal.fallthrough import async_hand_off
 from custom_components.at.ha_internal.sentence_triggers import LanguageSentences, TriggerInput, _gate_lists
 from custom_components.at.lang.en import EN
 from homeassistant.components import conversation
-from homeassistant.components.assist_pipeline import (
-    PipelineEvent,
-    PipelineEventType,
-    async_get_pipelines,
-    async_update_pipeline,
-)
-from homeassistant.components.assist_pipeline.models import PipelineStage
-from homeassistant.components.assist_pipeline.pipeline import async_get_pipeline
-from homeassistant.components.assist_pipeline.run import PipelineInput, PipelineRun
-from homeassistant.components.assist_satellite.const import AssistSatelliteEntityFeature
 from homeassistant.components.conversation.chat_log import current_chat_log
 from homeassistant.components.conversation.trigger import has_no_punctuation, is_valid_sentence
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import Context, HomeAssistant, ServiceCall
-from homeassistant.helpers import area_registry as ar, chat_session, entity_registry as er, floor_registry as fr, intent
-from homeassistant.setup import async_setup_component
-from tests.assist import LIGHT, Assist, say  # noqa: TID251  (plain module; see tests/assist.py)
+from homeassistant.helpers import area_registry as ar, chat_session, floor_registry as fr, intent
+from tests.assist import (  # noqa: TID251  (plain module; see tests/assist.py)
+    LIGHT,
+    Assist,
+    StubLlmAgent,
+    run_pipeline,
+    run_pipeline_with_id,
+    say,
+    use_agent,
+)
+from tests.voice.conftest import RecordingBroadcastHandler  # noqa: TID251  (fixture types)
 
 pytestmark = [
     pytest.mark.real_dependencies,
@@ -401,41 +399,6 @@ async def test_unknown_command_with_time_still_refused(hass: HomeAssistant, home
     assert manager.pending() == []
 
 
-class RecordingBroadcastHandler(intent.IntentHandler):
-    """Stand in for the broadcast intent and record the messages it is given."""
-
-    intent_type = "HassBroadcast"
-    slot_schema = {"message": str}
-
-    def __init__(self) -> None:
-        """Start with no messages."""
-        self.messages: list[str] = []
-
-    @override
-    async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
-        """Record the message and answer like the real handler."""
-        self.messages.append(intent_obj.slots["message"]["value"])
-        response = intent_obj.create_response()
-        response.async_set_speech("Done")
-        return response
-
-
-@pytest.fixture
-def broadcast(hass: HomeAssistant, entity_registry: er.EntityRegistry) -> RecordingBroadcastHandler:
-    """Stand in for the broadcast handler, with one satellite that takes announcements."""
-    entry = entity_registry.async_get_or_create(
-        "assist_satellite",
-        "test",
-        "kitchen_satellite",
-        suggested_object_id="kitchen_satellite",
-        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
-    )
-    hass.states.async_set(entry.entity_id, "idle")
-    handler = RecordingBroadcastHandler()
-    intent.async_register(hass, handler)
-    return handler
-
-
 async def test_full_sentence_handed_to_assist_intent(
     hass: HomeAssistant, home: Assist, manager: JobManager, broadcast: RecordingBroadcastHandler
 ) -> None:
@@ -455,25 +418,6 @@ async def test_broadcast_with_its_time_first_is_scheduled(
     assert speech == 'OK, at 6 PM tomorrow I\'ll broadcast "dinner is ready".'
     assert [job.intent.type for job in manager.pending() if job.intent] == ["HassBroadcast"]
     assert broadcast.messages == []
-
-
-@pytest.fixture
-def announce_calls(
-    hass: HomeAssistant, area_registry: ar.AreaRegistry, entity_registry: er.EntityRegistry
-) -> list[ServiceCall]:
-    """Put an announcing satellite in the office, beside the one spoken to, and record announcements."""
-    office = area_registry.async_get_area_by_name("Office")
-    assert office is not None
-    entry = entity_registry.async_get_or_create(
-        "assist_satellite",
-        "test",
-        "office_speaker",
-        suggested_object_id="office_speaker",
-        supported_features=AssistSatelliteEntityFeature.ANNOUNCE,
-    )
-    entity_registry.async_update_entity(entry.entity_id, area_id=office.id)
-    hass.states.async_set(entry.entity_id, "idle")
-    return async_mock_service(hass, "assist_satellite", "announce")
 
 
 @pytest.mark.usefixtures("manager")
@@ -565,64 +509,6 @@ async def test_broadcast_in_other_words_with_its_time_last_is_said_now(
     assert broadcast.messages == ["dinner is at 6"]
 
 
-class StubLlmAgent(conversation.AbstractConversationAgent):
-    """A non-default agent standing in for an LLM; it records what reaches it."""
-
-    def __init__(self) -> None:
-        """Start with no calls."""
-        self.texts: list[str] = []
-
-    @property
-    @override
-    def supported_languages(self) -> list[str] | str:
-        """Accept every language."""
-        return MATCH_ALL
-
-    @override
-    async def async_process(self, user_input: conversation.ConversationInput) -> conversation.ConversationResult:
-        """Answer every sentence with the same speech."""
-        self.texts.append(user_input.text)
-        response = intent.IntentResponse(language=user_input.language)
-        response.async_set_speech("stub agent")
-        return conversation.ConversationResult(response=response, conversation_id=user_input.conversation_id)
-
-
-@pytest.fixture
-async def llm_pipeline(hass: HomeAssistant, manager: JobManager) -> StubLlmAgent:
-    """Make a stub LLM the pipeline's agent, with prefer-local on."""
-    stub_agent = StubLlmAgent()
-    await use_agent(hass, stub_agent)
-    return stub_agent
-
-
-async def run_pipeline(hass: HomeAssistant, home: Assist, text: str) -> str:
-    speech, _conversation_id = await run_pipeline_with_id(hass, home, text)
-    return speech
-
-
-async def run_pipeline_with_id(hass: HomeAssistant, home: Assist, text: str) -> tuple[str, str]:
-    (pipeline,) = async_get_pipelines(hass)
-    events: list[PipelineEvent] = []
-    with chat_session.async_get_chat_session(hass) as session:
-        conversation_id = session.conversation_id
-        await PipelineInput(
-            session=session,
-            intent_input=text,
-            device_id=home.device_id,
-            run=PipelineRun(
-                hass,
-                context=Context(),
-                pipeline=async_get_pipeline(hass, pipeline.id),
-                start_stage=PipelineStage.INTENT,
-                end_stage=PipelineStage.INTENT,
-                event_callback=events.append,
-            ),
-        ).execute(validate=True)
-    (intent_end,) = [event for event in events if event.type is PipelineEventType.INTENT_END]
-    assert intent_end.data is not None
-    return intent_end.data["intent_output"]["response"]["speech"]["plain"]["speech"], conversation_id
-
-
 async def test_unknown_command_goes_to_llm_agent_once(
     hass: HomeAssistant, home: Assist, manager: JobManager, llm_pipeline: StubLlmAgent
 ) -> None:
@@ -679,17 +565,6 @@ class StreamingStubAgent(conversation.AbstractConversationAgent):
             response = intent.IntentResponse(language=user_input.language)
             response.async_set_speech(LONG_REPLY)
             return conversation.ConversationResult(response=response, conversation_id=chat_log.conversation_id)
-
-
-async def use_agent(hass: HomeAssistant, agent: conversation.AbstractConversationAgent) -> str:
-    """Make ``agent`` the pipeline's agent, with prefer-local on, and return its agent id."""
-    assert await async_setup_component(hass, "assist_pipeline", {})
-    agent_entry = MockConfigEntry(domain="test", title="Stub LLM")
-    agent_entry.add_to_hass(hass)
-    conversation.async_set_agent(hass, agent_entry, agent)
-    (pipeline,) = async_get_pipelines(hass)
-    await async_update_pipeline(hass, pipeline, conversation_engine=agent_entry.entry_id, prefer_local_intents=True)
-    return agent_entry.entry_id
 
 
 @pytest.mark.parametrize(
