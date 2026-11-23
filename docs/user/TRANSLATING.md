@@ -134,8 +134,11 @@ A language is verified when one of these is true on the current commit:
 
 - A reviewer listed for that language in [`.github/translation-maintainers.yml`](../../.github/translation-maintainers.yml)
   approves it. The author cannot be that reviewer.
-- A repository maintainer approves it together with another approver. This is how a language's first reviewer is
-  confirmed, so they can be added to that file afterwards.
+- A repository maintainer approves it after another approver has. This is how a language's first reviewer is
+  confirmed, so they can be added to that file afterwards: the native speaker approves first, then the repository
+  maintainer approves. A maintainer approval that comes before the other one does not count, so approve again.
+
+Only the automation sets `translation: verified`. Do not apply it by hand: the next run removes it.
 
 The 30 days count from when `translation: needs native review` was applied with the checks passing. After 30 days
 without verification the pull request gets `translation: unverified` and a comment saying so. It is not blocked, and

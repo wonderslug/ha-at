@@ -24,12 +24,13 @@ Reviewer I have asked:
 
 - [ ] I ran it on a live Home Assistant instance in this language
 - [ ] I only ran `script/test tests/translations`
+- [ ] I did not run anything locally; I rely on the automatic report
 - [ ] I used machine translation for part of this, and I describe where below
 
 Details:
 
 ## Checklist
 
-- [ ] I read [Translating Scheduled Jobs](../../docs/user/TRANSLATING.md)
+- [ ] I read [Translating Scheduled Jobs](https://github.com/wonderslug/ha-at/blob/main/docs/user/TRANSLATING.md)
 - [ ] I left out keys I did not translate instead of copying the English text
 - [ ] I accurately described the extent of human review, automated testing, and real-world testing
