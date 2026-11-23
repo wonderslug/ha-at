@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { historyDetail, sourceLabel } from "../src/source";
 import type { HomeAssistant, Job, JobStatus } from "../src/types";
+import { enLocalize } from "./en-localize";
 
 function job(status: JobStatus, result: Partial<Job["result"]> = {}, source: Partial<Job["source"]> = {}): Job {
   return {
@@ -42,19 +43,19 @@ const hass = {
 } as unknown as HomeAssistant;
 
 const cancelled = (by: string | null, user: string | null = null, origin: string | null = null) =>
-  historyDetail(job("cancelled", { cancelled_by: by, cancelled_user_id: user, cancelled_origin: origin }), hass);
+  historyDetail(job("cancelled", { cancelled_by: by, cancelled_user_id: user, cancelled_origin: origin }), hass, enLocalize);
 
 describe("historyDetail", () => {
   it("shows the error for a failed job", () => {
-    expect(historyDetail(job("failed", { error: "entity not found" }), hass)).toBe("entity not found");
+    expect(historyDetail(job("failed", { error: "entity not found" }), hass, enLocalize)).toBe("entity not found");
   });
 
   it("explains a missed job", () => {
-    expect(historyDetail(job("missed"), hass)).toBe("Home Assistant was off when it was due");
+    expect(historyDetail(job("missed"), hass, enLocalize)).toBe("Home Assistant was off when it was due");
   });
 
   it("is empty for a done job", () => {
-    expect(historyDetail(job("done"), hass)).toBe("");
+    expect(historyDetail(job("done"), hass, enLocalize)).toBe("");
   });
 
   it("names where and who for each channel", () => {
@@ -71,6 +72,7 @@ describe("historyDetail", () => {
       historyDetail(
         job("cancelled", { cancelled_by: "voice", cancelled_user_id: user, cancelled_device_id: device }),
         hass,
+        enLocalize,
       );
     expect(viaDevice("sat-1", "u-brian")).toBe("Cancelled from Assist · Kitchen satellite by Brian");
     expect(viaDevice("deleted")).toBe("Cancelled from Assist");
@@ -78,14 +80,14 @@ describe("historyDetail", () => {
 
   it("names the device without a person when nobody is known", () => {
     const fromDevice = (by: string) =>
-      historyDetail(job("cancelled", { cancelled_by: by, cancelled_user_id: null, cancelled_device_id: "sat-1" }), hass);
+      historyDetail(job("cancelled", { cancelled_by: by, cancelled_user_id: null, cancelled_device_id: "sat-1" }), hass, enLocalize);
     expect(fromDevice("voice")).toBe("Cancelled from Assist · Kitchen satellite");
     expect(fromDevice("llm")).toBe("Cancelled from Assist · Kitchen satellite");
   });
 
   it("names the device an LLM cancel came from, with the person", () => {
     expect(
-      historyDetail(job("cancelled", { cancelled_by: "llm", cancelled_user_id: "u-brian", cancelled_device_id: "phone" }), hass),
+      historyDetail(job("cancelled", { cancelled_by: "llm", cancelled_user_id: "u-brian", cancelled_device_id: "phone" }), hass, enLocalize),
     ).toBe("Cancelled from Assist · Brian's phone by Brian");
   });
 
@@ -107,7 +109,7 @@ describe("historyDetail", () => {
 });
 
 describe("sourceLabel", () => {
-  const src = (source: Partial<Job["source"]>) => sourceLabel(job("pending", {}, source), hass);
+  const src = (source: Partial<Job["source"]>) => sourceLabel(job("pending", {}, source), hass, enLocalize);
 
   it("calls every Assist path Assist", () => {
     expect(src({ via: "voice", device_id: "sat-1" })).toBe("Assist · Kitchen satellite");
@@ -136,5 +138,27 @@ describe("sourceLabel", () => {
     expect(src({ via: "voice", device_id: "deleted" })).toBe("Assist");
     expect(src({ via: "panel", user_id: "stranger" })).toBe("Add job");
     expect(src({ via: "panel", user_id: "me" })).toBe("Add job · Me");
+  });
+});
+
+describe("cancel sentences", () => {
+  it("resolves every channel, device and user combination to a whole-sentence key", () => {
+    const channels = [null, "voice", "llm", "panel", "todo", "service"];
+    for (const by of channels) {
+      for (const user of [null, "u-brian"]) {
+        for (const device of [null, "sat-1"]) {
+          for (const origin of [null, "automation.bedtime"]) {
+            const text = historyDetail(
+              job("cancelled", { cancelled_by: by, cancelled_user_id: user, cancelled_device_id: device, cancelled_origin: origin }),
+              hass,
+              enLocalize,
+            );
+            expect(text).toMatch(/^Cancelled/);
+            expect(text).not.toContain("source.");
+            expect(text).not.toMatch(/[{}]/);
+          }
+        }
+      }
+    }
   });
 });

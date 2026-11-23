@@ -1,0 +1,46 @@
+name: Labels
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - ".github/labels.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: "Create or update labels"
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read # read .github/labels.yml
+      issues: write # create and edit labels
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+          version: "2026.11.8"
+
+      - name: Create or update the labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          yq -o json -I 0 '.[]' .github/labels.yml | while IFS= read -r label; do
+            gh label create "$(jq -r .name <<<"${label}")" \
+              --color "$(jq -r .color <<<"${label}")" \
+              --description "$(jq -r .description <<<"${label}")" \
+              --repo "${GITHUB_REPOSITORY}" --force
+          done

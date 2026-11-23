@@ -28,6 +28,8 @@ This skill is which keys a given change needs, and how to write them.
 - Update **`en.json` only**. Never edit or create other language files on your own initiative — translations are
   contributed through the project's translation workflow, and machine-translating them creates churn no maintainer
   asked for.
+- Contributor languages follow [`docs/user/TRANSLATING.md`](../../../docs/user/TRANSLATING.md); the rule above on
+  `en.json` is unchanged for agents.
 - If the developer explicitly asks for another language, confirm which files before starting.
 - During feature work, business logic comes first. Use the translation key in code immediately, and fill in `en.json`
   either when asked or when the feature is complete.

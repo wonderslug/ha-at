@@ -253,86 +253,86 @@ var h = class extends HTMLElement {
 };
 h.elementStyles = [], h.shadowRootOptions = { mode: "open" }, h[p("elementProperties")] = /* @__PURE__ */ new Map(), h[p("finalized")] = /* @__PURE__ */ new Map(), le?.({ ReactiveElement: h }), (f.reactiveElementVersions ??= []).push("2.1.2");
 // node_modules/lit-html/lit-html.js
-var g = globalThis, fe = (e) => e, _ = g.trustedTypes, pe = _ ? _.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, me = "$lit$", v = `lit$${Math.random().toFixed(9).slice(2)}$`, he = "?" + v, ge = `<${he}>`, y = document, b = () => y.createComment(""), x = (e) => e === null || typeof e != "object" && typeof e != "function", S = Array.isArray, _e = (e) => S(e) || typeof e?.[Symbol.iterator] == "function", C = "[ 	\n\f\r]", w = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ve = /-->/g, ye = />/g, T = RegExp(`>|${C}(?:([^\\s"'>=/]+)(${C}*=${C}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), be = /'/g, xe = /"/g, Se = /^(?:script|style|textarea|title)$/i, E = ((e) => (t, ...n) => ({
+var fe = globalThis, pe = (e) => e, g = fe.trustedTypes, me = g ? g.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, he = "$lit$", _ = `lit$${Math.random().toFixed(9).slice(2)}$`, ge = "?" + _, _e = `<${ge}>`, v = document, y = () => v.createComment(""), b = (e) => e === null || typeof e != "object" && typeof e != "function", x = Array.isArray, ve = (e) => x(e) || typeof e?.[Symbol.iterator] == "function", S = "[ 	\n\f\r]", C = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ye = /-->/g, be = />/g, w = RegExp(`>|${S}(?:([^\\s"'>=/]+)(${S}*=${S}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), xe = /'/g, Se = /"/g, Ce = /^(?:script|style|textarea|title)$/i, T = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), D = Symbol.for("lit-noChange"), O = Symbol.for("lit-nothing"), Ce = /* @__PURE__ */ new WeakMap(), k = y.createTreeWalker(y, 129);
-function we(e, t) {
-	if (!S(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return pe === void 0 ? t : pe.createHTML(t);
+}))(1), E = Symbol.for("lit-noChange"), D = Symbol.for("lit-nothing"), we = /* @__PURE__ */ new WeakMap(), O = v.createTreeWalker(v, 129);
+function Te(e, t) {
+	if (!x(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return me === void 0 ? t : me.createHTML(t);
 }
-var Te = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = w;
+var Ee = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = C;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === w ? c[1] === "!--" ? o = ve : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = T) : (Se.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = T) : o = ye : o === T ? c[0] === ">" ? (o = i ?? w, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? T : c[3] === "\"" ? xe : be) : o === xe || o === be ? o = T : o === ve || o === ye ? o = w : (o = T, i = void 0);
-		let d = o === T && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === w ? n + ge : l >= 0 ? (r.push(s), n.slice(0, l) + me + n.slice(l) + v + d) : n + v + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === C ? c[1] === "!--" ? o = ye : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = w) : (Ce.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = w) : o = be : o === w ? c[0] === ">" ? (o = i ?? C, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? w : c[3] === "\"" ? Se : xe) : o === Se || o === xe ? o = w : o === ye || o === be ? o = C : (o = w, i = void 0);
+		let d = o === w && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === C ? n + _e : l >= 0 ? (r.push(s), n.slice(0, l) + he + n.slice(l) + _ + d) : n + _ + (l === -2 ? t : d);
 	}
-	return [we(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, A = class e {
+	return [Te(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, k = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = Te(t, n);
-		if (this.el = e.createElement(l, r), k.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = Ee(t, n);
+		if (this.el = e.createElement(l, r), O.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = k.nextNode()) !== null && c.length < s;) {
+		for (; (i = O.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(me)) {
-					let t = u[o++], n = i.getAttribute(e).split(v), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(he)) {
+					let t = u[o++], n = i.getAttribute(e).split(_), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? De : r[1] === "?" ? Oe : r[1] === "@" ? ke : N
+						ctor: r[1] === "." ? Oe : r[1] === "?" ? ke : r[1] === "@" ? Ae : M
 					}), i.removeAttribute(e);
-				} else e.startsWith(v) && (c.push({
+				} else e.startsWith(_) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (Se.test(i.tagName)) {
-					let e = i.textContent.split(v), t = e.length - 1;
+				if (Ce.test(i.tagName)) {
+					let e = i.textContent.split(_), t = e.length - 1;
 					if (t > 0) {
-						i.textContent = _ ? _.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], b()), k.nextNode(), c.push({
+						i.textContent = g ? g.emptyScript : "";
+						for (let n = 0; n < t; n++) i.append(e[n], y()), O.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], b());
+						i.append(e[t], y());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === he) c.push({
+				if (i.data === ge) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(v, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(_, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += v.length - 1;
+					}), e += _.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = y.createElement("template");
+		let n = v.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
-function j(e, t, n = e, r) {
-	if (t === D) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = x(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = j(e, i._$AS(e, t.values), i, r)), t;
+function A(e, t, n = e, r) {
+	if (t === E) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = b(t) ? void 0 : t._$litDirective$;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = A(e, i._$AS(e, t.values), i, r)), t;
 }
-var Ee = class {
+var De = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -343,28 +343,28 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? y).importNode(t, !0);
-		k.currentNode = r;
-		let i = k.nextNode(), a = 0, o = 0, s = n[0];
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? v).importNode(t, !0);
+		O.currentNode = r;
+		let i = O.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new M(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new Ae(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new j(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new je(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = k.nextNode(), a++);
+			a !== s?.index && (i = O.nextNode(), a++);
 		}
-		return k.currentNode = y, r;
+		return O.currentNode = v, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, M = class e {
+}, j = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = O, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = D, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -377,7 +377,7 @@ var Ee = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = j(this, e, t), x(e) ? e === O || e == null || e === "" ? (this._$AH !== O && this._$AR(), this._$AH = O) : e !== this._$AH && e !== D && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? _e(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = A(this, e, t), b(e) ? e === D || e == null || e === "" ? (this._$AH !== D && this._$AR(), this._$AH = D) : e !== this._$AH && e !== E && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ve(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -386,36 +386,36 @@ var Ee = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== O && x(this._$AH) ? this._$AA.nextSibling.data = e : this.T(y.createTextNode(e)), this._$AH = e;
+		this._$AH !== D && b(this._$AH) ? this._$AA.nextSibling.data = e : this.T(v.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = A.createElement(we(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = k.createElement(Te(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new Ee(r, this), n = e.u(this.options);
+			let e = new De(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = Ce.get(e.strings);
-		return t === void 0 && Ce.set(e.strings, t = new A(e)), t;
+		let t = we.get(e.strings);
+		return t === void 0 && we.set(e.strings, t = new k(e)), t;
 	}
 	k(t) {
-		S(this._$AH) || (this._$AH = [], this._$AR());
+		x(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(b()), this.O(b()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(y()), this.O(y()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = fe(e).nextSibling;
-			fe(e).remove(), e = t;
+			let t = pe(e).nextSibling;
+			pe(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, N = class {
+}, M = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -423,47 +423,47 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = O, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = O;
+		this.type = 1, this._$AH = D, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = D;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = j(this, e, t, 0), a = !x(e) || e !== this._$AH && e !== D, a && (this._$AH = e);
+		if (i === void 0) e = A(this, e, t, 0), a = !b(e) || e !== this._$AH && e !== E, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = j(this, r[n + o], t, o), s === D && (s = this._$AH[o]), a ||= !x(s) || s !== this._$AH[o], s === O ? e = O : e !== O && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = A(this, r[n + o], t, o), s === E && (s = this._$AH[o]), a ||= !b(s) || s !== this._$AH[o], s === D ? e = D : e !== D && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === O ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === D ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, De = class extends N {
+}, Oe = class extends M {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === O ? void 0 : e;
+		this.element[this.name] = e === D ? void 0 : e;
 	}
-}, Oe = class extends N {
+}, ke = class extends M {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== O);
+		this.element.toggleAttribute(this.name, !!e && e !== D);
 	}
-}, ke = class extends N {
+}, Ae = class extends M {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = j(this, e, t, 0) ?? O) === D) return;
-		let n = this._$AH, r = e === O && n !== O || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== O && (n === O || r);
+		if ((e = A(this, e, t, 0) ?? D) === E) return;
+		let n = this._$AH, r = e === D && n !== D || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== D && (n === D || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
 		typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
 	}
-}, Ae = class {
+}, je = class {
 	constructor(e, t, n) {
 		this.element = e, this.type = 6, this._$AN = void 0, this._$AM = t, this.options = n;
 	}
@@ -471,33 +471,33 @@ var Ee = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		j(this, e);
+		A(this, e);
 	}
-}, je = {
-	M: me,
-	P: v,
-	A: he,
+}, Me = {
+	M: he,
+	P: _,
+	A: ge,
 	C: 1,
-	L: Te,
-	R: Ee,
-	D: _e,
-	V: j,
-	I: M,
-	H: N,
-	N: Oe,
-	U: ke,
-	B: De,
-	F: Ae
-}, Me = g.litHtmlPolyfillSupport;
-Me?.(A, M), (g.litHtmlVersions ??= []).push("3.3.3");
-var Ne = (e, t, n) => {
+	L: Ee,
+	R: De,
+	D: ve,
+	V: A,
+	I: j,
+	H: M,
+	N: ke,
+	U: Ae,
+	B: Oe,
+	F: je
+}, Ne = fe.litHtmlPolyfillSupport;
+Ne?.(k, j), (fe.litHtmlVersions ??= []).push("3.3.3");
+var Pe = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new M(t.insertBefore(b(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new j(t.insertBefore(y(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, Pe = globalThis, P = class extends h {
+}, N = globalThis, P = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -507,7 +507,7 @@ var Ne = (e, t, n) => {
 	}
 	update(e) {
 		let t = this.render();
-		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Ne(t, this.renderRoot, this.renderOptions);
+		this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(e), this._$Do = Pe(t, this.renderRoot, this.renderOptions);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._$Do?.setConnected(!0);
@@ -516,12 +516,12 @@ var Ne = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return D;
+		return E;
 	}
 };
-P._$litElement$ = !0, P.finalized = !0, Pe.litElementHydrateSupport?.({ LitElement: P });
-var Fe = Pe.litElementPolyfillSupport;
-Fe?.({ LitElement: P }), (Pe.litElementVersions ??= []).push("4.2.2");
+P._$litElement$ = !0, P.finalized = !0, N.litElementHydrateSupport?.({ LitElement: P });
+var Fe = N.litElementPolyfillSupport;
+Fe?.({ LitElement: P }), (N.litElementVersions ??= []).push("4.2.2");
 // node_modules/@lit/reactive-element/decorators/custom-element.js
 var F = (e) => (t, n) => {
 	n === void 0 ? customElements.define(e, t) : n.addInitializer(() => {
@@ -637,41 +637,41 @@ function qe(e) {
 function Je(e, t) {
 	return { delay_seconds: e === "+15m" ? 900 : 3600 };
 }
-function Ye(e) {
+function Ye(e, t) {
 	if (!e.trim()) return {
 		ok: !0,
 		value: {}
 	};
 	try {
-		let t = JSON.parse(e);
-		return t && typeof t == "object" && !Array.isArray(t) ? {
+		let n = JSON.parse(e);
+		return n && typeof n == "object" && !Array.isArray(n) ? {
 			ok: !0,
-			value: t
+			value: n
 		} : {
 			ok: !1,
-			error: "Must be a JSON object, like {\"key\": \"value\"}"
+			error: t("add_job.must_be_json_object", { example: "{\"key\": \"value\"}" })
 		};
 	} catch {
 		return {
 			ok: !1,
-			error: "Invalid JSON"
+			error: t("add_job.invalid_json")
 		};
 	}
 }
-function Xe(e) {
+function Xe(e, t) {
 	try {
-		let t = JSON.parse(e);
-		return Array.isArray(t) && t.length > 0 && t.every((e) => e && typeof e == "object" && !Array.isArray(e)) ? {
+		let n = JSON.parse(e);
+		return Array.isArray(n) && n.length > 0 && n.every((e) => e && typeof e == "object" && !Array.isArray(e)) ? {
 			ok: !0,
-			value: t
+			value: n
 		} : {
 			ok: !1,
-			error: "Must be a non-empty JSON list of action objects"
+			error: t("add_job.must_be_action_list")
 		};
 	} catch {
 		return {
 			ok: !1,
-			error: "Invalid JSON"
+			error: t("add_job.invalid_json")
 		};
 	}
 }
@@ -856,7 +856,7 @@ var _t = [
 	"vacuum"
 ], W = class extends P {
 	constructor(...e) {
-		super(...e), this.op = "turn_on", this.entity = "", this.varsText = "";
+		super(...e), this.localize = (e) => e, this.op = "turn_on", this.entity = "", this.varsText = "";
 	}
 	get domains() {
 		return this.op === "script" ? ["script"] : this.op === "automation" ? ["automation"] : _t;
@@ -869,7 +869,7 @@ var _t = [
 		})).sort((e, t) => e.name.localeCompare(t.name));
 	}
 	get vars() {
-		return this.op === "script" ? Ye(this.varsText) : {
+		return this.op === "script" ? Ye(this.varsText, this.localize) : {
 			ok: !0,
 			value: {}
 		};
@@ -889,31 +889,31 @@ var _t = [
 	}
 	render() {
 		let e = this.vars;
-		return E`
+		return T`
       <div class="field">
-        <label class="label" for="op">Action</label>
+        <label class="label" for="op">${this.localize("pick_fallback.action")}</label>
         <select id="op" .value=${this.op} @change=${(e) => {
 			this.op = e.target.value, this.entity = "";
 		}}>
-          <option value="turn_on">Turn on</option>
-          <option value="turn_off">Turn off</option>
-          <option value="toggle">Toggle</option>
-          <option value="script">Run script</option>
-          <option value="automation">Trigger automation</option>
+          <option value="turn_on">${this.localize("pick_fallback.op_turn_on")}</option>
+          <option value="turn_off">${this.localize("pick_fallback.op_turn_off")}</option>
+          <option value="toggle">${this.localize("pick_fallback.op_toggle")}</option>
+          <option value="script">${this.localize("pick_fallback.op_script")}</option>
+          <option value="automation">${this.localize("pick_fallback.op_automation")}</option>
         </select>
       </div>
       <div class="field">
-        <label class="label" for="entity">Target</label>
+        <label class="label" for="entity">${this.localize("pick_fallback.target")}</label>
         <select id="entity" .value=${this.entity} @change=${(e) => this.entity = e.target.value}>
-          <option value="">Choose…</option>
-          ${this.entities.map((e) => E`<option value=${e.id} ?selected=${e.id === this.entity}>${e.name}</option>`)}
+          <option value="">${this.localize("pick_fallback.choose")}</option>
+          ${this.entities.map((e) => T`<option value=${e.id} ?selected=${e.id === this.entity}>${e.name}</option>`)}
         </select>
       </div>
-      ${this.op === "script" ? E`<div class="field">
-            <label class="label" for="vars">Variables (JSON, optional)</label>
+      ${this.op === "script" ? T`<div class="field">
+            <label class="label" for="vars">${this.localize("pick_fallback.variables")}</label>
             <textarea id="vars" rows="3" placeholder='{"brightness": 80}' .value=${this.varsText} @input=${(e) => this.varsText = e.target.value}></textarea>
-            ${e.ok ? O : E`<div class="inline-error">${e.error}</div>`}
-          </div>` : O}
+            ${e.ok ? D : T`<div class="inline-error">${e.error}</div>`}
+          </div>` : D}
     `;
 	}
 	static {
@@ -924,11 +924,11 @@ var _t = [
     `];
 	}
 };
-U([I({ attribute: !1 })], W.prototype, "hass", void 0), U([L()], W.prototype, "op", void 0), U([L()], W.prototype, "entity", void 0), U([L()], W.prototype, "varsText", void 0), W = U([F("at-pick-fallback")], W);
+U([I({ attribute: !1 })], W.prototype, "hass", void 0), U([I({ attribute: !1 })], W.prototype, "localize", void 0), U([L()], W.prototype, "op", void 0), U([L()], W.prototype, "entity", void 0), U([L()], W.prototype, "varsText", void 0), W = U([F("at-pick-fallback")], W);
 // src/components/pick-action.ts
 var G = class extends P {
 	constructor(...e) {
-		super(...e), this.ready = !1;
+		super(...e), this.localize = (e) => e, this.ready = !1;
 	}
 	emit(e) {
 		this.dispatchEvent(new CustomEvent("action-changed", { detail: { action: e } }));
@@ -940,7 +940,7 @@ var G = class extends P {
 		this.emit(e.detail.action);
 	}
 	render() {
-		return this.ready ? E`<ha-service-control .hass=${this.hass} .value=${this.value} narrow @value-changed=${this.onValue}></ha-service-control>` : E`<at-pick-fallback .hass=${this.hass} @action-changed=${this.onFallback}></at-pick-fallback>`;
+		return this.ready ? T`<ha-service-control .hass=${this.hass} .value=${this.value} narrow @value-changed=${this.onValue}></ha-service-control>` : T`<at-pick-fallback .hass=${this.hass} .localize=${this.localize} @action-changed=${this.onFallback}></at-pick-fallback>`;
 	}
 	static {
 		this.styles = u`
@@ -953,11 +953,11 @@ var G = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], G.prototype, "hass", void 0), U([I({ type: Boolean })], G.prototype, "ready", void 0), U([L()], G.prototype, "value", void 0), G = U([F("at-pick-action")], G);
+U([I({ attribute: !1 })], G.prototype, "hass", void 0), U([I({ attribute: !1 })], G.prototype, "localize", void 0), U([I({ type: Boolean })], G.prototype, "ready", void 0), U([L()], G.prototype, "value", void 0), G = U([F("at-pick-action")], G);
 // src/components/sequence-editor.ts
 var K = class extends P {
 	constructor(...e) {
-		super(...e), this.ready = !1, this.value = [], this.rawText = "";
+		super(...e), this.localize = (e) => e, this.ready = !1, this.value = [], this.rawText = "";
 	}
 	emit(e) {
 		this.dispatchEvent(new CustomEvent("action-changed", { detail: { action: e } }));
@@ -969,19 +969,19 @@ var K = class extends P {
 	}
 	onRaw(e) {
 		this.rawText = e;
-		let t = Xe(e);
+		let t = Xe(e, this.localize);
 		this.emit(t.ok ? t.value : void 0);
 	}
 	fallback() {
-		let e = this.rawText.trim() ? Xe(this.rawText) : void 0;
-		return E`<div class="field">
-      <label class="label" for="raw">Action list (JSON)</label>
+		let e = this.rawText.trim() ? Xe(this.rawText, this.localize) : void 0;
+		return T`<div class="field">
+      <label class="label" for="raw">${this.localize("sequence_editor.action_list")}</label>
       <textarea id="raw" rows="6" placeholder='[{"action": "light.turn_on", "target": {"entity_id": "light.porch"}}]' .value=${this.rawText} @input=${(e) => this.onRaw(e.target.value)}></textarea>
-      ${e && !e.ok ? E`<div class="inline-error">${e.error}</div>` : O}
+      ${e && !e.ok ? T`<div class="inline-error">${e.error}</div>` : D}
     </div>`;
 	}
 	render() {
-		return this.ready ? E`<ha-selector .hass=${this.hass} .selector=${{ action: {} }} .value=${this.value} @value-changed=${this.onValue}></ha-selector>` : this.fallback();
+		return this.ready ? T`<ha-selector .hass=${this.hass} .selector=${{ action: {} }} .value=${this.value} @value-changed=${this.onValue}></ha-selector>` : this.fallback();
 	}
 	static {
 		this.styles = [H, u`
@@ -994,11 +994,11 @@ var K = class extends P {
     `];
 	}
 };
-U([I({ attribute: !1 })], K.prototype, "hass", void 0), U([I({ type: Boolean })], K.prototype, "ready", void 0), U([L()], K.prototype, "value", void 0), U([L()], K.prototype, "rawText", void 0), K = U([F("at-sequence-editor")], K);
+U([I({ attribute: !1 })], K.prototype, "hass", void 0), U([I({ attribute: !1 })], K.prototype, "localize", void 0), U([I({ type: Boolean })], K.prototype, "ready", void 0), U([L()], K.prototype, "value", void 0), U([L()], K.prototype, "rawText", void 0), K = U([F("at-sequence-editor")], K);
 // src/components/add-job-dialog.ts
 var q = class extends P {
 	constructor(...e) {
-		super(...e), this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.chip = "+15m", this.when = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.openSeq = 0, this.onKey = (e) => {
+		super(...e), this.localize = (e) => e, this.isAdmin = !1, this.open = !1, this.mode = "type", this.text = "", this.chip = "+15m", this.when = "", this.error = "", this.busy = !1, this.parseSeq = 0, this.openSeq = 0, this.onKey = (e) => {
 			this.open && (e.key === "Escape" && !e.defaultPrevented && !this.inPopup(e) ? this.close() : e.key === "Tab" && !this.inOverlay(e) && this.trapFocus(e));
 		};
 	}
@@ -1063,7 +1063,7 @@ var q = class extends P {
 			}, (e) => {
 				t === this.parseSeq && (this.preview = {
 					ok: !1,
-					message: e?.message || "Could not parse"
+					message: e?.message || this.localize("add_job_dialog.parse_failed")
 				});
 			});
 		}, 300);
@@ -1089,7 +1089,7 @@ var q = class extends P {
 		} : {
 			action: e,
 			due: this.dueDate().toISOString()
-		} : "Choose an action";
+		} : this.localize("add_job_dialog.choose_action");
 	}
 	async submit() {
 		let e = this.hass;
@@ -1101,7 +1101,7 @@ var q = class extends P {
 			try {
 				await Be(e, t), this.busy = !1, this.close();
 			} catch (e) {
-				this.error = e?.message || "Could not add the job";
+				this.error = e?.message || this.localize("add_job_dialog.add_failed");
 			} finally {
 				this.busy = !1;
 			}
@@ -1118,62 +1118,64 @@ var q = class extends P {
 	}
 	whenSection() {
 		let e = this.hass?.config.time_zone ?? "UTC", t = rt(/* @__PURE__ */ new Date(), e);
-		return E`<div class="field">
-      <span class="label">When</span>
+		return T`<div class="field">
+      <span class="label">${this.localize("add_job_dialog.when")}</span>
       <div class="row">
-        ${["+15m", "+1h"].map((e) => E`<button class="chip ${this.chip === e ? "on" : ""}" @click=${() => this.onChip(e)}>${e}</button>`)}
-        <input type="datetime-local" aria-label="Date and time" .value=${this.when} min=${t} @input=${(e) => this.onWhen(e.target.value)} />
+        ${["+15m", "+1h"].map((e) => T`<button class="chip ${this.chip === e ? "on" : ""}" @click=${() => this.onChip(e)}>${this.localize(e === "+15m" ? "add_job_dialog.chip_15m" : "add_job_dialog.chip_1h")}</button>`)}
+        <input type="datetime-local" aria-label=${this.localize("add_job_dialog.date_time")} .value=${this.when} min=${t} @input=${(e) => this.onWhen(e.target.value)} />
       </div>
-      ${this.chip === "" && !this.whenValid ? E`<div class="inline-error">${this.when ? "Time must be in the future" : "Choose a time"}</div>` : O}
+      ${this.chip === "" && !this.whenValid ? T`<div class="inline-error">${this.localize(this.when ? "add_job_dialog.time_in_past" : "add_job_dialog.choose_time")}</div>` : D}
     </div>`;
 	}
 	pickSection() {
 		let e = this.mode === "pick";
-		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">Loading…</div>` : O : E`<at-pick-action
+		return this.pickerReady === void 0 ? e ? T`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : D : T`<at-pick-action
       ?hidden=${!e}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e) => this.pickedAction = e.detail.action}
     ></at-pick-action>`;
 	}
 	typeSection() {
-		return E`<div class="field">
-      <label class="label" for="text">What should happen, and when?</label>
-      <input id="text" type="text" placeholder="turn on the porch light at 11pm" .value=${this.text} @input=${(e) => this.onText(e.target.value)} />
+		return T`<div class="field">
+      <label class="label" for="text">${this.localize("add_job_dialog.type_label")}</label>
+      <input id="text" type="text" placeholder=${this.localize("add_job_dialog.type_placeholder")} .value=${this.text} @input=${(e) => this.onText(e.target.value)} />
       <div class=${this.preview ? this.preview.ok ? "preview ok" : "preview bad" : "preview"} aria-live="polite">
-        ${this.preview ? this.preview.ok ? this.preview.text : this.preview.message : O}
+        ${this.preview ? this.preview.ok ? this.preview.text : this.preview.message : D}
       </div>
     </div>`;
 	}
 	sequenceSection() {
 		let e = this.mode === "sequence";
-		return this.pickerReady === void 0 ? e ? E`<div class="field label" role="status">Loading…</div>` : O : E`<at-sequence-editor
+		return this.pickerReady === void 0 ? e ? T`<div class="field label" role="status">${this.localize("add_job_dialog.loading")}</div>` : D : T`<at-sequence-editor
       ?hidden=${!e}
       .hass=${this.hass}
       .ready=${this.pickerReady}
+      .localize=${this.localize}
       @action-changed=${(e) => this.sequenceAction = e.detail.action}
     ></at-sequence-editor>`;
 	}
 	tabBtn(e, t) {
-		return E`<button class="mode ${this.mode === e ? "active" : ""}" role="tab" aria-selected=${this.mode === e} @click=${() => this.setMode(e)}>${t}</button>`;
+		return T`<button class="mode ${this.mode === e ? "active" : ""}" role="tab" aria-selected=${this.mode === e} @click=${() => this.setMode(e)}>${t}</button>`;
 	}
 	render() {
-		return this.open ? E`
+		return this.open ? T`
       <div class="backdrop" @click=${() => this.close()}></div>
-      <div class="dialog" role="dialog" aria-modal="true" aria-label="Add job">
-        <h2>Add job</h2>
+      <div class="dialog" role="dialog" aria-modal="true" aria-label=${this.localize("add_job_dialog.title")}>
+        <h2>${this.localize("add_job_dialog.title")}</h2>
         <div class="modes" role="tablist">
-          ${this.tabBtn("type", "Type it")} ${this.tabBtn("pick", "Pick it")} ${this.isAdmin ? this.tabBtn("sequence", "Sequence") : O}
+          ${this.tabBtn("type", this.localize("add_job_dialog.tab_type"))} ${this.tabBtn("pick", this.localize("add_job_dialog.tab_pick"))} ${this.isAdmin ? this.tabBtn("sequence", this.localize("add_job_dialog.tab_sequence")) : D}
         </div>
-        ${this.mode === "type" ? this.typeSection() : O} ${this.pickSection()} ${this.isAdmin ? this.sequenceSection() : O}
-        ${this.mode === "type" ? O : this.whenSection()}
-        ${this.error ? E`<div class="error" role="alert">${this.error}</div>` : O}
+        ${this.mode === "type" ? this.typeSection() : D} ${this.pickSection()} ${this.isAdmin ? this.sequenceSection() : D}
+        ${this.mode === "type" ? D : this.whenSection()}
+        ${this.error ? T`<div class="error" role="alert">${this.error}</div>` : D}
         <div class="actions">
-          <button ?disabled=${this.busy} @click=${() => this.close()}>Cancel</button>
-          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>Add</button>
+          <button ?disabled=${this.busy} @click=${() => this.close()}>${this.localize("add_job_dialog.cancel")}</button>
+          <button class="primary" ?disabled=${!this.canSubmit} @click=${() => void this.submit()}>${this.localize("add_job_dialog.add")}</button>
         </div>
       </div>
-    ` : O;
+    ` : D;
 	}
 	static {
 		this.styles = [H, u`
@@ -1270,7 +1272,7 @@ var q = class extends P {
     `];
 	}
 };
-U([I({ attribute: !1 })], q.prototype, "hass", void 0), U([I({ type: Boolean })], q.prototype, "isAdmin", void 0), U([I({
+U([I({ attribute: !1 })], q.prototype, "hass", void 0), U([I({ attribute: !1 })], q.prototype, "localize", void 0), U([I({ type: Boolean })], q.prototype, "isAdmin", void 0), U([I({
 	type: Boolean,
 	reflect: !0
 })], q.prototype, "open", void 0), U([L()], q.prototype, "mode", void 0), U([L()], q.prototype, "text", void 0), U([L()], q.prototype, "preview", void 0), U([L()], q.prototype, "pickerReady", void 0), U([L()], q.prototype, "pickedAction", void 0), U([L()], q.prototype, "sequenceAction", void 0), U([L()], q.prototype, "chip", void 0), U([L()], q.prototype, "when", void 0), U([L()], q.prototype, "error", void 0), U([L()], q.prototype, "busy", void 0), q = U([F("at-add-job-dialog")], q);
@@ -1304,7 +1306,7 @@ var J = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, { I: xt } = je, St = (e) => e.strings === void 0, Ct = {}, wt = (e, t = Ct) => e._$AH = t, Tt = yt(class extends bt {
+}, { I: xt } = Me, St = (e) => e.strings === void 0, Ct = {}, wt = (e, t = Ct) => e._$AH = t, Tt = yt(class extends bt {
 	constructor(e) {
 		if (super(e), e.type !== J.PROPERTY && e.type !== J.ATTRIBUTE && e.type !== J.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
 		if (!St(e)) throw Error("`live` bindings can only contain a single expression");
@@ -1313,27 +1315,27 @@ var J = {
 		return e;
 	}
 	update(e, [t]) {
-		if (t === D || t === O) return t;
+		if (t === E || t === D) return t;
 		let n = e.element, r = e.name;
 		if (e.type === J.PROPERTY) {
-			if (t === n[r]) return D;
+			if (t === n[r]) return E;
 		} else if (e.type === J.BOOLEAN_ATTRIBUTE) {
-			if (!!t === n.hasAttribute(r)) return D;
-		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return D;
+			if (!!t === n.hasAttribute(r)) return E;
+		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return E;
 		return wt(e), t;
 	}
 }), Et = {
-	voice: "Assist",
-	llm: "Assist",
-	panel: "Add job",
-	reschedule: "Reschedule",
-	todo: "To-do list"
+	voice: "assist",
+	llm: "assist",
+	panel: "add_job",
+	reschedule: "reschedule",
+	todo: "todo"
 }, Dt = {
-	voice: "from Assist",
-	llm: "from Assist",
-	panel: "in the panel",
-	todo: "from the to-do list",
-	service: "by an action"
+	voice: "from_assist",
+	llm: "from_assist",
+	panel: "in_panel",
+	todo: "from_todo",
+	service: "by_action"
 }, Ot = (e) => e === "voice" || e === "llm";
 function kt(e, t) {
 	if (!e) return;
@@ -1348,27 +1350,28 @@ function jt(e, t) {
 	return t?.states?.[e]?.attributes.friendly_name ?? e;
 }
 var Mt = (e) => e.charAt(0).toUpperCase() + e.slice(1);
-function Nt(e, t) {
-	let { via: n, device_id: r, user_id: i, origin: a } = e.source, o = a ? [Mt(a.split(".")[0]), jt(a, t)] : [Et[n] ?? "Action"], s = Ot(n) ? At(r, t) : void 0;
+function Nt(e, t, n) {
+	let { via: r, device_id: i, user_id: a, origin: o } = e.source, s = o ? [Mt(o.split(".")[0]), jt(o, t)] : [n(`source.${Et[r] ?? "action"}`)], c = Ot(r) ? At(i, t) : void 0;
 	return [
-		...o,
-		s,
-		kt(i, t)
+		...s,
+		c,
+		kt(a, t)
 	].filter(Boolean).join(" · ");
 }
-function Pt(e, t) {
-	let n = e.cancelled_origin, r = Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, i = n ? `by ${n.split(".")[0]} ${jt(n, t)}` : [Dt[e.cancelled_by ?? ""], r].filter(Boolean).join(" · "), a = kt(e.cancelled_user_id, t);
-	return [
-		"Cancelled",
-		i,
-		a && `by ${a}`
-	].filter(Boolean).join(" ");
+function Pt(e, t, n) {
+	let r = e.cancelled_origin, i = r ? "by_origin" : Dt[e.cancelled_by ?? ""], a = !r && Ot(e.cancelled_by) ? At(e.cancelled_device_id, t) : void 0, o = kt(e.cancelled_user_id, t);
+	return n(`source.${`cancelled${i ? `_${i}` : ""}${a ? "_device" : ""}${o ? "_by_user" : ""}`}`, {
+		domain: r?.split(".")[0] ?? "",
+		origin: r ? jt(r, t) : "",
+		device: a ?? "",
+		name: o ?? ""
+	});
 }
-function Ft(e, t) {
+function Ft(e, t, n) {
 	switch (e.status) {
 		case "failed": return e.result.error ?? "";
-		case "missed": return "Home Assistant was off when it was due";
-		case "cancelled": return Pt(e.result, t);
+		case "missed": return n("source.missed");
+		case "cancelled": return Pt(e.result, t, n);
 		default: return "";
 	}
 }
@@ -1407,8 +1410,8 @@ function Vt(e, t) {
 	};
 	return t.kind !== "removed" && (n.status === "pending" ? i.pending.push(n) : n.status === "running" ? i.running.push(n) : i.history.push(n)), Bt(i);
 }
-function Ht(e) {
-	return `Upcoming (${e.pending.length})`;
+function Ht(e, t) {
+	return t("upcoming_table.title", { count: e.pending.length });
 }
 function Ut(e, t, n, r = 15) {
 	let i = t === "all" ? e : e.filter((e) => e.status === t);
@@ -1424,29 +1427,14 @@ var Wt = {
 	missed: r,
 	cancelled: t
 }, Gt = [
-	{
-		value: "all",
-		label: "All"
-	},
-	{
-		value: "done",
-		label: "Done"
-	},
-	{
-		value: "failed",
-		label: "Failed"
-	},
-	{
-		value: "missed",
-		label: "Missed"
-	},
-	{
-		value: "cancelled",
-		label: "Cancelled"
-	}
+	"all",
+	"done",
+	"failed",
+	"missed",
+	"cancelled"
 ], X = class extends P {
 	constructor(...e) {
-		super(...e), this.history = [], this.now = Date.now(), this.narrow = !1, this.filter = "all", this.expanded = !1, this.editing = null, this.value = "";
+		super(...e), this.localize = (e) => e, this.history = [], this.now = Date.now(), this.narrow = !1, this.filter = "all", this.expanded = !1, this.editing = null, this.value = "";
 	}
 	fire(e, t) {
 		this.dispatchEvent(new CustomEvent(e, {
@@ -1471,11 +1459,11 @@ var Wt = {
 	}
 	actions(e) {
 		let t = (e) => e.stopPropagation();
-		return this.editing === e.id ? E`<div class="edit" @click=${t}>
+		return this.editing === e.id ? T`<div class="edit" @click=${t}>
       <input type="datetime-local" .value=${this.value} @input=${(e) => this.value = e.target.value} />
-      <ha-button appearance="plain" size="s" @click=${() => this.submit(e.job)}>Save</ha-button>
-      <ha-button appearance="plain" size="s" @click=${() => this.editing = null}>Cancel</ha-button>
-    </div>` : E`<ha-button appearance="plain" size="s" @click=${(n) => (t(n), this.startEditing(e.job))}>Re-schedule</ha-button>`;
+      <ha-button appearance="plain" size="s" @click=${() => this.submit(e.job)}>${this.localize("history_table.save")}</ha-button>
+      <ha-button appearance="plain" size="s" @click=${() => this.editing = null}>${this.localize("history_table.cancel")}</ha-button>
+    </div>` : T`<ha-button appearance="plain" size="s" @click=${(n) => (t(n), this.startEditing(e.job))}>${this.localize("history_table.reschedule")}</ha-button>`;
 	}
 	get columns() {
 		return {
@@ -1483,19 +1471,19 @@ var Wt = {
 				title: "",
 				type: "icon",
 				showNarrow: !0,
-				template: (e) => E`<ha-svg-icon class="status ${e.job.status}" title=${e.job.status} .path=${Wt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
+				template: (e) => T`<ha-svg-icon class="status ${e.job.status}" title=${this.localize(`history_table.filter_${e.job.status}`)} .path=${Wt[e.job.status] ?? "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"}></ha-svg-icon>`
 			},
 			when: {
-				title: "Time",
+				title: this.localize("history_table.column_time"),
 				minWidth: "120px"
 			},
 			summary: {
-				title: "Job",
+				title: this.localize("history_table.column_job"),
 				main: !0,
 				flex: 2
 			},
 			details: {
-				title: "Details",
+				title: this.localize("history_table.column_details"),
 				flex: 2
 			},
 			actions: {
@@ -1516,22 +1504,22 @@ var Wt = {
 			job: e,
 			when: R(new Date(e.finished_at ?? e.due), new Date(this.now), n, r),
 			summary: e.summary,
-			details: Ft(e, this.hass)
+			details: Ft(e, this.hass, this.localize)
 		}));
-		return E`<ha-card header="History">
+		return T`<ha-card .header=${this.localize("history_table.title")}>
       <div class="chips">
-        ${Gt.map((e) => E`<ha-filter-chip .label=${e.label} .selected=${Tt(this.filter === e.value)} @click=${(t) => this.selectFilter(t, e.value)}></ha-filter-chip>`)}
+        ${Gt.map((e) => T`<ha-filter-chip .label=${this.localize(`history_table.filter_${e}`)} .selected=${Tt(this.filter === e)} @click=${(t) => this.selectFilter(t, e)}></ha-filter-chip>`)}
       </div>
       <ha-data-table
         .columns=${this.columns}
         .data=${i}
         .narrow=${this.narrow}
-        .noDataText=${this.history.length ? "No jobs match this filter." : "No history yet."}
+        .noDataText=${this.localize(this.history.length ? "history_table.empty_filtered" : "history_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}
       ></ha-data-table>
-      ${!this.expanded && t > 15 ? E`<div class="footer"><ha-button appearance="plain" @click=${() => this.expanded = !0}>Show all (${t})</ha-button></div>` : O}
+      ${!this.expanded && t > 15 ? T`<div class="footer"><ha-button appearance="plain" @click=${() => this.expanded = !0}>${this.localize("history_table.show_all", { count: t })}</ha-button></div>` : D}
     </ha-card>`;
 	}
 	static {
@@ -1570,9 +1558,12 @@ var Wt = {
   `;
 	}
 };
-U([I({ attribute: !1 })], X.prototype, "hass", void 0), U([I({ attribute: !1 })], X.prototype, "history", void 0), U([I({ type: Number })], X.prototype, "now", void 0), U([I({ type: Boolean })], X.prototype, "narrow", void 0), U([L()], X.prototype, "filter", void 0), U([L()], X.prototype, "expanded", void 0), U([L()], X.prototype, "editing", void 0), U([L()], X.prototype, "value", void 0), X = U([F("at-history-table")], X);
+U([I({ attribute: !1 })], X.prototype, "hass", void 0), U([I({ attribute: !1 })], X.prototype, "localize", void 0), U([I({ attribute: !1 })], X.prototype, "history", void 0), U([I({ type: Number })], X.prototype, "now", void 0), U([I({ type: Boolean })], X.prototype, "narrow", void 0), U([L()], X.prototype, "filter", void 0), U([L()], X.prototype, "expanded", void 0), U([L()], X.prototype, "editing", void 0), U([L()], X.prototype, "value", void 0), X = U([F("at-history-table")], X);
 // src/components/job-details.ts
 var Z = class extends P {
+	constructor(...e) {
+		super(...e), this.localize = (e) => e;
+	}
 	close() {
 		this.dispatchEvent(new CustomEvent("close-details", {
 			bubbles: !0,
@@ -1581,26 +1572,26 @@ var Z = class extends P {
 	}
 	render() {
 		let e = this.job;
-		if (!e) return O;
+		if (!e) return D;
 		let t = this.hass?.config.time_zone ?? "UTC", n = this.hass?.locale?.language ?? this.hass?.language ?? "en", r = new Intl.DateTimeFormat(n, {
 			timeZone: t,
 			dateStyle: "medium",
 			timeStyle: "medium"
 		}).format(new Date(e.created_at)), i = e.intent ? `${e.intent.type}\n${Y(e.intent.slots)}` : Y(e.action ?? []);
-		return E`<div class="backdrop" @click=${() => this.close()}>
-      <div class="card" role="dialog" aria-label="Job details" @click=${(e) => e.stopPropagation()}>
+		return T`<div class="backdrop" @click=${() => this.close()}>
+      <div class="card" role="dialog" aria-label=${this.localize("job_details.title")} @click=${(e) => e.stopPropagation()}>
         <h2>${e.summary}</h2>
         <dl>
-          <dt>${e.intent ? "Intent" : "Action"}</dt>
+          <dt>${this.localize(e.intent ? "job_details.intent" : "job_details.action")}</dt>
           <dd><pre>${i}</pre></dd>
-          <dt>Created by</dt>
-          <dd>${Nt(e, this.hass)}</dd>
-          <dt>Created</dt>
+          <dt>${this.localize("job_details.created_by")}</dt>
+          <dd>${Nt(e, this.hass, this.localize)}</dd>
+          <dt>${this.localize("job_details.created")}</dt>
           <dd>${r}</dd>
-          <dt>ID</dt>
+          <dt>${this.localize("job_details.id")}</dt>
           <dd><code>${e.id}</code></dd>
         </dl>
-        <button @click=${() => this.close()}>Close</button>
+        <button @click=${() => this.close()}>${this.localize("job_details.close")}</button>
       </div>
     </div>`;
 	}
@@ -1616,11 +1607,11 @@ var Z = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], Z.prototype, "hass", void 0), U([I({ attribute: !1 })], Z.prototype, "job", void 0), Z = U([F("at-job-details")], Z);
+U([I({ attribute: !1 })], Z.prototype, "hass", void 0), U([I({ attribute: !1 })], Z.prototype, "localize", void 0), U([I({ attribute: !1 })], Z.prototype, "job", void 0), Z = U([F("at-job-details")], Z);
 // src/components/upcoming-table.ts
 var Q = class extends P {
 	constructor(...e) {
-		super(...e), this.pending = [], this.running = [], this.now = Date.now(), this.isAdmin = !1, this.narrow = !1;
+		super(...e), this.localize = (e) => e, this.pending = [], this.running = [], this.now = Date.now(), this.isAdmin = !1, this.narrow = !1;
 	}
 	fire(e, t, n) {
 		n?.stopPropagation(), this.dispatchEvent(new CustomEvent(e, {
@@ -1634,21 +1625,21 @@ var Q = class extends P {
 		return et(t.getTime(), this.now) || R(t, new Date(this.now), this.hass?.locale?.language ?? this.hass?.language ?? "en", this.hass?.config.time_zone ?? "UTC");
 	}
 	actions(e) {
-		return e.running ? O : E`${this.isAdmin || !e.job.raw_action ? E`<ha-icon-button .label=${"Run now"} .path=${"M8,5.14V19.14L19,12.14L8,5.14Z"} @click=${(t) => this.fire("run-job", e.job, t)}></ha-icon-button>` : O}
-      <ha-icon-button .label=${"Cancel"} .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"} @click=${(t) => this.fire("cancel-job", e.job, t)}></ha-icon-button>`;
+		return e.running ? D : T`${this.isAdmin || !e.job.raw_action ? T`<ha-icon-button .label=${this.localize("upcoming_table.run_now")} .path=${"M8,5.14V19.14L19,12.14L8,5.14Z"} @click=${(t) => this.fire("run-job", e.job, t)}></ha-icon-button>` : D}
+      <ha-icon-button .label=${this.localize("upcoming_table.cancel")} .path=${"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"} @click=${(t) => this.fire("cancel-job", e.job, t)}></ha-icon-button>`;
 	}
 	get columns() {
 		return {
 			when: {
-				title: "When",
+				title: this.localize("upcoming_table.column_when"),
 				main: !0,
 				minWidth: "120px"
 			},
 			summary: {
-				title: "Job",
+				title: this.localize("upcoming_table.column_job"),
 				flex: 2
 			},
-			source: { title: "Source" },
+			source: { title: this.localize("upcoming_table.column_source") },
 			actions: {
 				title: "",
 				type: "icon-button",
@@ -1668,20 +1659,20 @@ var Q = class extends P {
 			id: e.id,
 			job: e,
 			running: t,
-			when: t ? "Running…" : this.when(e),
+			when: t ? this.localize("upcoming_table.running") : this.when(e),
 			summary: e.summary,
-			source: Nt(e, this.hass)
+			source: Nt(e, this.hass, this.localize)
 		}), t = [...this.running.map((t) => e(t, !0)), ...this.pending.map((t) => e(t, !1))];
-		return E`<ha-card .header=${Ht({
+		return T`<ha-card .header=${Ht({
 			pending: this.pending,
 			running: this.running,
 			history: []
-		})}>
+		}, this.localize)}>
       <ha-data-table
         .columns=${this.columns}
         .data=${t}
         .narrow=${this.narrow}
-        .noDataText=${"Nothing scheduled."}
+        .noDataText=${this.localize("upcoming_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}
@@ -1696,14 +1687,136 @@ var Q = class extends P {
   `;
 	}
 };
-U([I({ attribute: !1 })], Q.prototype, "hass", void 0), U([I({ attribute: !1 })], Q.prototype, "pending", void 0), U([I({ attribute: !1 })], Q.prototype, "running", void 0), U([I({ type: Number })], Q.prototype, "now", void 0), U([I({ type: Boolean })], Q.prototype, "isAdmin", void 0), U([I({ type: Boolean })], Q.prototype, "narrow", void 0), Q = U([F("at-upcoming-table")], Q);
+U([I({ attribute: !1 })], Q.prototype, "hass", void 0), U([I({ attribute: !1 })], Q.prototype, "localize", void 0), U([I({ attribute: !1 })], Q.prototype, "pending", void 0), U([I({ attribute: !1 })], Q.prototype, "running", void 0), U([I({ type: Number })], Q.prototype, "now", void 0), U([I({ type: Boolean })], Q.prototype, "isAdmin", void 0), U([I({ type: Boolean })], Q.prototype, "narrow", void 0), Q = U([F("at-upcoming-table")], Q);
+// ../custom_components/at/translations/en.json
+var Kt = {
+	panel: {
+		title: "Scheduled Jobs",
+		update_needed: "This panel needs an update for this Home Assistant version.",
+		missing_elements: "Missing: {elements}",
+		more_options: "More options",
+		cancel_all: "Cancel all",
+		confirm_cancel_all: "Confirm cancel all?",
+		clear_history: "Clear history",
+		reconnecting: "Reconnecting…",
+		request_failed: "Request failed",
+		dismiss: "Dismiss",
+		add_job: "Add job"
+	},
+	upcoming_table: {
+		title: "Upcoming ({count})",
+		column_when: "When",
+		column_job: "Job",
+		column_source: "Source",
+		running: "Running…",
+		run_now: "Run now",
+		cancel: "Cancel",
+		empty: "Nothing scheduled."
+	},
+	history_table: {
+		title: "History",
+		column_time: "Time",
+		column_job: "Job",
+		column_details: "Details",
+		filter_all: "All",
+		filter_done: "Done",
+		filter_failed: "Failed",
+		filter_missed: "Missed",
+		filter_cancelled: "Cancelled",
+		reschedule: "Re-schedule",
+		save: "Save",
+		cancel: "Cancel",
+		empty_filtered: "No jobs match this filter.",
+		empty: "No history yet.",
+		show_all: "Show all ({count})"
+	},
+	job_details: {
+		title: "Job details",
+		intent: "Intent",
+		action: "Action",
+		created_by: "Created by",
+		created: "Created",
+		id: "ID",
+		close: "Close"
+	},
+	add_job_dialog: {
+		title: "Add job",
+		tab_type: "Type it",
+		tab_pick: "Pick it",
+		tab_sequence: "Sequence",
+		type_label: "What should happen, and when?",
+		type_placeholder: "turn on the porch light at 11pm",
+		when: "When",
+		chip_15m: "+15m",
+		chip_1h: "+1h",
+		date_time: "Date and time",
+		time_in_past: "Time must be in the future",
+		choose_time: "Choose a time",
+		choose_action: "Choose an action",
+		loading: "Loading…",
+		parse_failed: "Could not parse",
+		add_failed: "Could not add the job",
+		cancel: "Cancel",
+		add: "Add"
+	},
+	pick_fallback: {
+		action: "Action",
+		op_turn_on: "Turn on",
+		op_turn_off: "Turn off",
+		op_toggle: "Toggle",
+		op_script: "Run script",
+		op_automation: "Trigger automation",
+		target: "Target",
+		choose: "Choose…",
+		variables: "Variables (JSON, optional)"
+	},
+	sequence_editor: { action_list: "Action list (JSON)" },
+	add_job: {
+		must_be_json_object: "Must be a JSON object, like {example}",
+		invalid_json: "Invalid JSON",
+		must_be_action_list: "Must be a non-empty JSON list of action objects"
+	},
+	source: {
+		assist: "Assist",
+		add_job: "Add job",
+		reschedule: "Reschedule",
+		todo: "To-do list",
+		action: "Action",
+		cancelled: "Cancelled",
+		missed: "Home Assistant was off when it was due",
+		cancelled_by_user: "Cancelled by {name}",
+		cancelled_from_assist: "Cancelled from Assist",
+		cancelled_from_assist_by_user: "Cancelled from Assist by {name}",
+		cancelled_in_panel: "Cancelled in the panel",
+		cancelled_in_panel_by_user: "Cancelled in the panel by {name}",
+		cancelled_from_todo: "Cancelled from the to-do list",
+		cancelled_from_todo_by_user: "Cancelled from the to-do list by {name}",
+		cancelled_by_action: "Cancelled by an action",
+		cancelled_by_action_by_user: "Cancelled by an action by {name}",
+		cancelled_by_origin: "Cancelled by {domain} {origin}",
+		cancelled_by_origin_by_user: "Cancelled by {domain} {origin} by {name}",
+		cancelled_from_assist_device: "Cancelled from Assist · {device}",
+		cancelled_from_assist_device_by_user: "Cancelled from Assist · {device} by {name}"
+	}
+}, qt = "component.at.config_panel.";
+function Jt(e, t) {
+	let n = Kt;
+	for (let t of e.split(".")) {
+		if (typeof n != "object" || !n) return "";
+		n = n[t];
+	}
+	return typeof n == "string" ? n.replace(/\{(\w+)\}/g, (e, n) => t && n in t ? String(t[n]) : e) : "";
+}
+function Yt(e) {
+	return (t, n) => e.localize(`${qt}${t}`, n) || Jt(t, n) || t;
+}
 // src/reconnect.ts
-var Kt = 1e3, qt = 3e4;
-function Jt(e) {
-	return Math.min(Kt * 2 ** Math.min(e, 10), qt);
+var Xt = 1e3, Zt = 3e4;
+function Qt(e) {
+	return Math.min(Xt * 2 ** Math.min(e, 10), Zt);
 }
 // src/at-panel.ts
-var Yt = "Scheduled Jobs", $ = class extends P {
+var $ = class extends P {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this.data = {
 			pending: [],
@@ -1727,7 +1840,23 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 		super.disconnectedCallback(), this.gone = !0, this.generation++, window.clearInterval(this.tick), window.clearTimeout(this.retryTimer), this.subscribed = !1, this.unsub?.().catch(() => void 0), this.unsub = void 0;
 	}
 	updated(e) {
-		e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
+		e.has("hass") && this.hass && this.hass.language !== this.translationsLanguage && this.loadTranslations(this.hass), e.has("hass") && this.hass && !this.subscribed && !this.gone && this.start();
+	}
+	async loadTranslations(e) {
+		this.translationsLanguage = e.language;
+		try {
+			await e.loadBackendTranslation("config_panel", "at");
+		} catch {
+			return;
+		}
+		this.requestUpdate();
+	}
+	get localize() {
+		let e = this.hass;
+		return e ? (this.localizeFor?.hass !== e && (this.localizeFor = {
+			hass: e,
+			localize: Yt(e)
+		}), this.localizeFor.localize) : (e) => e;
 	}
 	async start() {
 		this.hass && !this.subscribed && (this.subscribed = !0, Ge(this.hass).then((e) => this.atInfo = e, () => void 0), pt().then((e) => this.missing = e), await this.subscribe());
@@ -1758,7 +1887,7 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 	}
 	scheduleRetry() {
 		if (this.reconnecting = !0, this.gone) return;
-		let e = Jt(this.attempt++);
+		let e = Qt(this.attempt++);
 		window.clearTimeout(this.retryTimer), this.retryTimer = window.setTimeout(() => void this.subscribe(), e);
 	}
 	async call(e) {
@@ -1766,7 +1895,7 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 			await e();
 		} catch (e) {
 			let t = e?.message;
-			this.error = t || "Request failed";
+			this.error = t || this.localize("panel.request_failed");
 		}
 	}
 	cancelAll() {
@@ -1790,16 +1919,16 @@ var Yt = "Scheduled Jobs", $ = class extends P {
 	}
 	get title_() {
 		let e = this.panel?.config?.title;
-		return typeof e == "string" && e ? e : Yt;
+		return typeof e == "string" && e ? e : this.localize("panel.title");
 	}
 	render() {
-		if (this.missing === void 0) return O;
-		if (this.missing.length) return E`<div class="missing">
-        <p>This panel needs an update for this Home Assistant version.</p>
-        <p>Missing: ${this.missing.join(", ")}</p>
+		if (this.missing === void 0) return D;
+		if (this.missing.length) return T`<div class="missing">
+        <p>${this.localize("panel.update_needed")}</p>
+        <p>${this.localize("panel.missing_elements", { elements: this.missing.join(", ") })}</p>
       </div>`;
-		let e = this.atInfo?.is_admin ?? !1;
-		return E`
+		let e = this.localize, t = this.atInfo?.is_admin ?? !1;
+		return T`
       <hass-subpage main-page .hass=${this.hass} .narrow=${this.narrow} .header=${this.title_}>
         <ha-dropdown
           slot="toolbar-icon"
@@ -1807,30 +1936,30 @@ var Yt = "Scheduled Jobs", $ = class extends P {
           @wa-select=${this.onMenuSelect}
           @wa-after-hide=${() => this.confirmCancelAll = !1}
         >
-          <ha-icon-button slot="trigger" .label=${"More options"} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"}></ha-icon-button>
-          <ha-dropdown-item value="cancel-all">${this.confirmCancelAll ? "Confirm cancel all?" : "Cancel all"}</ha-dropdown-item>
-          <ha-dropdown-item value="clear-history">Clear history</ha-dropdown-item>
+          <ha-icon-button slot="trigger" .label=${e("panel.more_options")} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"}></ha-icon-button>
+          <ha-dropdown-item value="cancel-all">${e(this.confirmCancelAll ? "panel.confirm_cancel_all" : "panel.cancel_all")}</ha-dropdown-item>
+          <ha-dropdown-item value="clear-history">${e("panel.clear_history")}</ha-dropdown-item>
         </ha-dropdown>
         <div class="content" @run-job=${this.onRun} @cancel-job=${this.onCancel} @reschedule-job=${this.onReschedule} @open-job=${this.onOpen}>
-          ${this.reconnecting ? E`<div class="notice">Reconnecting…</div>` : O}
-          ${this.error ? E`<div class="error" role="alert">${this.error}<button aria-label="Dismiss" @click=${() => this.error = ""}>✕</button></div>` : O}
+          ${this.reconnecting ? T`<div class="notice">${e("panel.reconnecting")}</div>` : D}
+          ${this.error ? T`<div class="error" role="alert">${this.error}<button aria-label=${e("panel.dismiss")} @click=${() => this.error = ""}>✕</button></div>` : D}
           <at-upcoming-table
-            .hass=${this.hass}
+            .hass=${this.hass} .localize=${e}
             .pending=${this.data.pending}
             .running=${this.data.running}
             .now=${this.now}
-            .isAdmin=${e}
+            .isAdmin=${t}
             .narrow=${this.narrow}
           ></at-upcoming-table>
-          <at-history-table .hass=${this.hass} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
+          <at-history-table .hass=${this.hass} .localize=${e} .history=${this.data.history} .now=${this.now} .narrow=${this.narrow}></at-history-table>
         </div>
         <ha-button slot="fab" size="l" @click=${() => this.addOpen = !0}>
           <ha-svg-icon slot="start" .path=${"M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"}></ha-svg-icon>
-          Add job
+          ${e("panel.add_job")}
         </ha-button>
       </hass-subpage>
-      <at-add-job-dialog .hass=${this.hass} .isAdmin=${e} .open=${this.addOpen} @close-add-job=${() => this.addOpen = !1}></at-add-job-dialog>
-      <at-job-details .hass=${this.hass} .job=${this.details} @close-details=${() => this.details = void 0}></at-job-details>
+      <at-add-job-dialog .hass=${this.hass} .localize=${e} .isAdmin=${t} .open=${this.addOpen} @close-add-job=${() => this.addOpen = !1}></at-add-job-dialog>
+      <at-job-details .hass=${this.hass} .localize=${e} .job=${this.details} @close-details=${() => this.details = void 0}></at-job-details>
     `;
 	}
 	static {

@@ -1,11 +1,13 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import type { Localize } from "../localize";
 import { sourceLabel, toYaml } from "../source";
 import type { HomeAssistant, Job } from "../types";
 
 @customElement("at-job-details")
 export class JobDetails extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ attribute: false }) job?: Job;
 
   private close() {
@@ -22,19 +24,19 @@ export class JobDetails extends LitElement {
       ? `${job.intent.type}\n${toYaml(job.intent.slots)}`
       : toYaml(job.action ?? []);
     return html`<div class="backdrop" @click=${() => this.close()}>
-      <div class="card" role="dialog" aria-label="Job details" @click=${(e: Event) => e.stopPropagation()}>
+      <div class="card" role="dialog" aria-label=${this.localize("job_details.title")} @click=${(e: Event) => e.stopPropagation()}>
         <h2>${job.summary}</h2>
         <dl>
-          <dt>${job.intent ? "Intent" : "Action"}</dt>
+          <dt>${this.localize(job.intent ? "job_details.intent" : "job_details.action")}</dt>
           <dd><pre>${what}</pre></dd>
-          <dt>Created by</dt>
-          <dd>${sourceLabel(job, this.hass)}</dd>
-          <dt>Created</dt>
+          <dt>${this.localize("job_details.created_by")}</dt>
+          <dd>${sourceLabel(job, this.hass, this.localize)}</dd>
+          <dt>${this.localize("job_details.created")}</dt>
           <dd>${created}</dd>
-          <dt>ID</dt>
+          <dt>${this.localize("job_details.id")}</dt>
           <dd><code>${job.id}</code></dd>
         </dl>
-        <button @click=${() => this.close()}>Close</button>
+        <button @click=${() => this.close()}>${this.localize("job_details.close")}</button>
       </div>
     </div>`;
   }

@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { fromServiceControl, type ServiceControlValue } from "../add-job";
+import type { Localize } from "../localize";
 import type { HomeAssistant } from "../types";
 import "./pick-fallback";
 
@@ -11,6 +12,7 @@ import "./pick-fallback";
 @customElement("at-pick-action")
 export class PickAction extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ type: Boolean }) ready = false;
 
   @state() private value?: ServiceControlValue;
@@ -32,7 +34,7 @@ export class PickAction extends LitElement {
   protected override render() {
     return this.ready
       ? html`<ha-service-control .hass=${this.hass} .value=${this.value} narrow @value-changed=${this.onValue}></ha-service-control>`
-      : html`<at-pick-fallback .hass=${this.hass} @action-changed=${this.onFallback}></at-pick-fallback>`;
+      : html`<at-pick-fallback .hass=${this.hass} .localize=${this.localize} @action-changed=${this.onFallback}></at-pick-fallback>`;
   }
 
   static override styles = css`

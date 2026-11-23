@@ -1,0 +1,32 @@
+language: en
+now: "2026-11-17 22:22"
+time_zone: America/Chicago
+
+times:
+  - {category: relative, text: in 20 minutes, expect: "2026-11-17 22:42"}
+  - {category: relative, text: in an hour and a half, expect: "2026-11-17 23:52"}
+  - {category: relative, text: in 3 days, expect: "2026-11-20 22:22"}
+  - {category: clock, text: at 6am, expect: "2026-11-18 06:00"}
+  - {category: clock, text: at 6:30, expect: "2026-11-18 06:30"}
+  - {category: clock, text: at 11pm, expect: "2026-11-17 23:00"}
+  - {category: day, text: tomorrow at 7, expect: "2026-11-18 07:00"}
+  - {category: day, text: tomorrow morning at 8, expect: "2026-11-18 08:00"}
+  - {category: weekday, text: on friday at 8, expect: "2026-11-20 08:00"}
+  - {category: weekday, text: on tuesday at 9am, expect: "2026-11-24 09:00"}
+  - {category: named, text: at noon, expect: "2026-11-18 12:00"}
+  - {category: named, text: at midnight, expect: "2026-11-18 00:00"}
+  - {category: spelled_number, text: in forty five minutes, expect: "2026-11-17 23:07"}
+  - {category: spelled_number, text: in one hundred and twenty minutes, expect: "2026-11-18 00:22"}
+  - {category: clock, text: in the purple moon, expect: null}
+
+sentences:
+  - {text: in 10 minutes turn off the kitchen light, group: schedule, slots: {command: turn off the kitchen light}}
+  - {text: turn on the porch light at 7pm, group: schedule, slots: {command: turn on the porch light}}
+  - {text: what's scheduled, group: list}
+  - {text: what's scheduled for tomorrow, group: list, slots: {scope: tomorrow}}
+  - {text: cancel all jobs, group: cancel}
+  - {text: cancel the bedtime script, group: cancel, slots: {name: bedtime}}
+  - {text: run the morning routine, group: run, slots: {name: morning routine}}
+  - {text: trigger the doorbell automation, group: run}
+  - {text: announce in the kitchen that dinner is ready, group: announce}
+  - {text: tell everyone upstairs that it is bedtime, group: announce}

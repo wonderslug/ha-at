@@ -3,18 +3,13 @@ import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { dateToWallTime, formatWhen, wallTimeToDate } from "../format";
+import type { Localize } from "../localize";
 import { historyDetail } from "../source";
 import { HISTORY_LIMIT, visibleHistory } from "../state";
 import type { DataTableColumns, HomeAssistant, Job, JobStatus } from "../types";
 
 const ICONS: Record<string, string> = { done: mdiCheckCircle, failed: mdiAlertCircle, missed: mdiClockAlert, cancelled: mdiCancel };
-const FILTERS: { value: "all" | JobStatus; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "done", label: "Done" },
-  { value: "failed", label: "Failed" },
-  { value: "missed", label: "Missed" },
-  { value: "cancelled", label: "Cancelled" },
-];
+const FILTERS: ("all" | JobStatus)[] = ["all", "done", "failed", "missed", "cancelled"];
 
 interface Row {
   id: string;
@@ -27,6 +22,7 @@ interface Row {
 @customElement("at-history-table")
 export class HistoryTable extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ attribute: false }) history: Job[] = [];
   @property({ type: Number }) now = Date.now();
   @property({ type: Boolean }) narrow = false;
@@ -63,12 +59,12 @@ export class HistoryTable extends LitElement {
   private actions(row: Row) {
     const stop = (e: Event) => e.stopPropagation();
     if (this.editing !== row.id) {
-      return html`<ha-button appearance="plain" size="s" @click=${(e: Event) => (stop(e), this.startEditing(row.job))}>Re-schedule</ha-button>`;
+      return html`<ha-button appearance="plain" size="s" @click=${(e: Event) => (stop(e), this.startEditing(row.job))}>${this.localize("history_table.reschedule")}</ha-button>`;
     }
     return html`<div class="edit" @click=${stop}>
       <input type="datetime-local" .value=${this.value} @input=${(e: Event) => (this.value = (e.target as HTMLInputElement).value)} />
-      <ha-button appearance="plain" size="s" @click=${() => this.submit(row.job)}>Save</ha-button>
-      <ha-button appearance="plain" size="s" @click=${() => (this.editing = null)}>Cancel</ha-button>
+      <ha-button appearance="plain" size="s" @click=${() => this.submit(row.job)}>${this.localize("history_table.save")}</ha-button>
+      <ha-button appearance="plain" size="s" @click=${() => (this.editing = null)}>${this.localize("history_table.cancel")}</ha-button>
     </div>`;
   }
 
@@ -79,11 +75,11 @@ export class HistoryTable extends LitElement {
         type: "icon",
         showNarrow: true,
         template: (r: Row) =>
-          html`<ha-svg-icon class="status ${r.job.status}" title=${r.job.status} .path=${ICONS[r.job.status] ?? mdiCheckCircle}></ha-svg-icon>`,
+          html`<ha-svg-icon class="status ${r.job.status}" title=${this.localize(`history_table.filter_${r.job.status}`)} .path=${ICONS[r.job.status] ?? mdiCheckCircle}></ha-svg-icon>`,
       },
-      when: { title: "Time", minWidth: "120px" },
-      summary: { title: "Job", main: true, flex: 2 },
-      details: { title: "Details", flex: 2 },
+      when: { title: this.localize("history_table.column_time"), minWidth: "120px" },
+      summary: { title: this.localize("history_table.column_job"), main: true, flex: 2 },
+      details: { title: this.localize("history_table.column_details"), flex: 2 },
       actions: { title: "", showNarrow: true, minWidth: this.editing ? "320px" : "130px", template: (r: Row) => this.actions(r) },
     };
   }
@@ -102,25 +98,25 @@ export class HistoryTable extends LitElement {
       job,
       when: formatWhen(new Date(job.finished_at ?? job.due), new Date(this.now), locale, tz),
       summary: job.summary,
-      details: historyDetail(job, this.hass),
+      details: historyDetail(job, this.hass, this.localize),
     }));
-    return html`<ha-card header="History">
+    return html`<ha-card .header=${this.localize("history_table.title")}>
       <div class="chips">
         ${FILTERS.map(
-          (f) => html`<ha-filter-chip .label=${f.label} .selected=${live(this.filter === f.value)} @click=${(e: Event) => this.selectFilter(e, f.value)}></ha-filter-chip>`,
+          (f) => html`<ha-filter-chip .label=${this.localize(`history_table.filter_${f}`)} .selected=${live(this.filter === f)} @click=${(e: Event) => this.selectFilter(e, f)}></ha-filter-chip>`,
         )}
       </div>
       <ha-data-table
         .columns=${this.columns}
         .data=${data}
         .narrow=${this.narrow}
-        .noDataText=${this.history.length ? "No jobs match this filter." : "No history yet."}
+        .noDataText=${this.localize(this.history.length ? "history_table.empty_filtered" : "history_table.empty")}
         clickable
         auto-height
         @row-click=${this.onRowClick}
       ></ha-data-table>
       ${!this.expanded && matching > HISTORY_LIMIT
-        ? html`<div class="footer"><ha-button appearance="plain" @click=${() => (this.expanded = true)}>Show all (${matching})</ha-button></div>`
+        ? html`<div class="footer"><ha-button appearance="plain" @click=${() => (this.expanded = true)}>${this.localize("history_table.show_all", { count: matching })}</ha-button></div>`
         : nothing}
     </ha-card>`;
   }

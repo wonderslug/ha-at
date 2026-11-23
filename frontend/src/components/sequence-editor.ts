@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { parseRawAction } from "../add-job";
+import type { Localize } from "../localize";
 import type { HomeAssistant } from "../types";
 import { fieldStyles } from "./field-styles";
 
@@ -11,6 +12,7 @@ import { fieldStyles } from "./field-styles";
 @customElement("at-sequence-editor")
 export class SequenceEditor extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
+  @property({ attribute: false }) localize: Localize = (key) => key;
   @property({ type: Boolean }) ready = false;
 
   @state() private value: unknown[] = [];
@@ -29,14 +31,14 @@ export class SequenceEditor extends LitElement {
 
   private onRaw(text: string) {
     this.rawText = text;
-    const r = parseRawAction(text);
+    const r = parseRawAction(text, this.localize);
     this.emit(r.ok ? r.value : undefined);
   }
 
   private fallback() {
-    const raw = this.rawText.trim() ? parseRawAction(this.rawText) : undefined;
+    const raw = this.rawText.trim() ? parseRawAction(this.rawText, this.localize) : undefined;
     return html`<div class="field">
-      <label class="label" for="raw">Action list (JSON)</label>
+      <label class="label" for="raw">${this.localize("sequence_editor.action_list")}</label>
       <textarea id="raw" rows="6" placeholder='[{"action": "light.turn_on", "target": {"entity_id": "light.porch"}}]' .value=${this.rawText} @input=${(e: Event) => this.onRaw((e.target as HTMLTextAreaElement).value)}></textarea>
       ${raw && !raw.ok ? html`<div class="inline-error">${raw.error}</div>` : nothing}
     </div>`;

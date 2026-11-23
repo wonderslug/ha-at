@@ -105,7 +105,6 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
         The sentences, ready to register.
 
     """
-    sentences = pack.sentences
 
     async def hand_off_or(given: TriggerInput, refusal: str) -> str:
         """Let the sentence's own agent answer it, and refuse only when nothing else can."""
@@ -188,14 +187,32 @@ def _language_sentences(hass: HomeAssistant, pack: LanguagePack, *, defer_relati
             return await hand_off_or(given, _speech(response))
         return _speech(response)
 
+    callbacks = {"cancel": cancel, "list": list_jobs, "announce": announce, "schedule": schedule, "run": run}
+    groups = [
+        SentenceGroup(name, group_sentences, callbacks[name])
+        for name, group_sentences in sentence_groups(pack, defer_relative=defer_relative)
+    ]
+    return LanguageSentences(pack.code, groups, pack.sentence_lists, unparsed)
+
+
+def sentence_groups(pack: LanguagePack, *, defer_relative: bool) -> list[tuple[str, list[str]]]:
+    """
+    Name each group of sentence templates a pack registers, in registration order.
+
+    With ``defer_relative`` the relative-time schedule sentences are left out.
+
+    Returns:
+        ``(name, sentences)`` pairs for cancel, list, announce, schedule and run.
+
+    """
+    sentences = pack.sentences
     schedule_sentences = [*sentences["schedule_absolute"]]
     if not defer_relative:
         schedule_sentences += sentences["schedule_relative"]
-    groups = [
-        SentenceGroup(sentences["cancel"], cancel),
-        SentenceGroup(sentences["list"], list_jobs),
-        SentenceGroup(trigger_sentences(pack), announce),
-        SentenceGroup(schedule_sentences, schedule),
-        SentenceGroup(sentences["run"], run),
+    return [
+        ("cancel", sentences["cancel"]),
+        ("list", sentences["list"]),
+        ("announce", trigger_sentences(pack)),
+        ("schedule", schedule_sentences),
+        ("run", sentences["run"]),
     ]
-    return LanguageSentences(pack.code, groups, pack.sentence_lists, unparsed)

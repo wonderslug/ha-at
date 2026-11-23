@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyChange, HISTORY_LIMIT, type PanelState, upcomingLabel, visibleHistory } from "../src/state";
 import { nextRetryDelay } from "../src/reconnect";
 import type { Job, JobStatus } from "../src/types";
+import { enLocalize } from "./en-localize";
 
 function job(id: string, status: JobStatus, due = "2026-11-18T12:00:00Z", finished: string | null = null): Job {
   return {
@@ -92,8 +93,8 @@ describe("nextRetryDelay", () => {
 describe("upcomingLabel", () => {
   it("shows the pending count", () => {
     const state: PanelState = { pending: [job("a", "pending"), job("b", "pending")], running: [job("c", "running")], history: [] };
-    expect(upcomingLabel(state)).toBe("Upcoming (2)");
-    expect(upcomingLabel({ pending: [], running: [], history: [] })).toBe("Upcoming (0)");
+    expect(upcomingLabel(state, enLocalize)).toBe("Upcoming (2)");
+    expect(upcomingLabel({ pending: [], running: [], history: [] }, enLocalize)).toBe("Upcoming (0)");
   });
 });
 

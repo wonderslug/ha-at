@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# script/translations-report: Report on the translations of the integration
+#
+# Runs the translation checks for the changed or all languages and writes the
+# JSON and Markdown report CI posts on a pull request. Exits 1 when a check fails.
+#
+# Usage:
+#   ./script/translations-report (--changed-files PATH | --all) [--json PATH] [--markdown PATH]
+#
+# Examples:
+#   ./script/translations-report --all --markdown /dev/stdout
+#   ./script/translations-report --changed-files changed.txt --json report.json
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+# shellcheck source=script/.lib/output.sh
+source "$SCRIPT_DIR/.lib/output.sh"
+# shellcheck source=script/.lib/integration.sh
+source "$SCRIPT_DIR/.lib/integration.sh"
+
+activate_venv
+
+python -m tests.translations.report "$@"

@@ -5,6 +5,7 @@ import "../src/components/history-table";
 import "../src/components/upcoming-table";
 import { wallTimeToDate } from "../src/format";
 import type { DataTableColumns, HomeAssistant, Job, JobStatus } from "../src/types";
+import { enHass, enLocalize } from "./en-localize";
 
 function job(id: string, status: JobStatus, extra: Partial<Job> = {}): Job {
   return {
@@ -26,11 +27,11 @@ function job(id: string, status: JobStatus, extra: Partial<Job> = {}): Job {
   };
 }
 
-const HASS = { config: { time_zone: "America/Chicago" }, language: "en", states: {}, user: { is_admin: false } };
+const HASS = enHass({ config: { time_zone: "America/Chicago" }, states: {}, user: { is_admin: false } } as unknown as Partial<HomeAssistant>);
 
 async function mount<T extends LitElement>(tag: string, props: Record<string, unknown>): Promise<T> {
   const el = document.createElement(tag) as T;
-  Object.assign(el, { hass: HASS as unknown as HomeAssistant, ...props });
+  Object.assign(el, { hass: HASS, localize: enLocalize, ...props });
   document.body.append(el);
   await el.updateComplete;
   return el;

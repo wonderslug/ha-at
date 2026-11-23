@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/components/sequence-editor";
 import type { SequenceEditor } from "../src/components/sequence-editor";
-import type { HomeAssistant } from "../src/types";
+import { enHass, enLocalize } from "./en-localize";
 
 class StubSelector extends HTMLElement {
   hass?: unknown;
@@ -11,11 +11,12 @@ class StubSelector extends HTMLElement {
 }
 customElements.define("ha-selector", StubSelector);
 
-const HASS = { config: { time_zone: "UTC" }, language: "en" } as unknown as HomeAssistant;
+const HASS = enHass();
 
 async function mount(ready: boolean): Promise<{ el: SequenceEditor; changed: ReturnType<typeof vi.fn> }> {
   const el = document.createElement("at-sequence-editor");
   el.hass = HASS;
+  el.localize = enLocalize;
   el.ready = ready;
   const changed = vi.fn();
   el.addEventListener("action-changed", (e) => changed((e as CustomEvent).detail.action));

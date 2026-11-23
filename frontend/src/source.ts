@@ -1,19 +1,20 @@
+import type { Localize } from "./localize";
 import type { HomeAssistant, Job } from "./types";
 
 const WHERE: Record<string, string> = {
-  voice: "Assist",
-  llm: "Assist",
-  panel: "Add job",
-  reschedule: "Reschedule",
-  todo: "To-do list",
+  voice: "assist",
+  llm: "assist",
+  panel: "add_job",
+  reschedule: "reschedule",
+  todo: "todo",
 };
 
 const CANCEL_WHERE: Record<string, string> = {
-  voice: "from Assist",
-  llm: "from Assist",
-  panel: "in the panel",
-  todo: "from the to-do list",
-  service: "by an action",
+  voice: "from_assist",
+  llm: "from_assist",
+  panel: "in_panel",
+  todo: "from_todo",
+  service: "by_action",
 };
 
 const isAssist = (via: string | null | undefined) => via === "voice" || via === "llm";
@@ -38,32 +39,37 @@ function originName(entityId: string, hass: HomeAssistant | undefined): string {
 const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Where a job came from, who made it and through what, as "Assist · Kitchen satellite · Brian". */
-export function sourceLabel(job: Job, hass: HomeAssistant | undefined): string {
+export function sourceLabel(job: Job, hass: HomeAssistant | undefined, localize: Localize): string {
   const { via, device_id, user_id, origin } = job.source;
-  const where = origin ? [capitalised(origin.split(".")[0]), originName(origin, hass)] : [WHERE[via] ?? "Action"];
+  const where = origin ? [capitalised(origin.split(".")[0]), originName(origin, hass)] : [localize(`source.${WHERE[via] ?? "action"}`)];
   const device = isAssist(via) ? deviceName(device_id, hass) : undefined;
   return [...where, device, userName(user_id, hass)].filter(Boolean).join(" · ");
 }
 
-function cancelDetail(result: Job["result"], hass: HomeAssistant | undefined): string {
+/** One whole-sentence key per combination, so a translation can order the pieces its own way. */
+function cancelDetail(result: Job["result"], hass: HomeAssistant | undefined, localize: Localize): string {
   const origin = result.cancelled_origin;
-  const device = isAssist(result.cancelled_by) ? deviceName(result.cancelled_device_id, hass) : undefined;
-  const where = origin
-    ? `by ${origin.split(".")[0]} ${originName(origin, hass)}`
-    : [CANCEL_WHERE[result.cancelled_by ?? ""], device].filter(Boolean).join(" · ");
+  const channel = origin ? "by_origin" : CANCEL_WHERE[result.cancelled_by ?? ""];
+  const device = !origin && isAssist(result.cancelled_by) ? deviceName(result.cancelled_device_id, hass) : undefined;
   const who = userName(result.cancelled_user_id, hass);
-  return ["Cancelled", where, who && `by ${who}`].filter(Boolean).join(" ");
+  const key = `cancelled${channel ? `_${channel}` : ""}${device ? "_device" : ""}${who ? "_by_user" : ""}`;
+  return localize(`source.${key}`, {
+    domain: origin?.split(".")[0] ?? "",
+    origin: origin ? originName(origin, hass) : "",
+    device: device ?? "",
+    name: who ?? "",
+  });
 }
 
 /** The History "Details" text: why a job failed, was missed, or who cancelled it and from where. */
-export function historyDetail(job: Job, hass: HomeAssistant | undefined): string {
+export function historyDetail(job: Job, hass: HomeAssistant | undefined, localize: Localize): string {
   switch (job.status) {
     case "failed":
       return job.result.error ?? "";
     case "missed":
-      return "Home Assistant was off when it was due";
+      return localize("source.missed");
     case "cancelled":
-      return cancelDetail(job.result, hass);
+      return cancelDetail(job.result, hass, localize);
     default:
       return "";
   }
