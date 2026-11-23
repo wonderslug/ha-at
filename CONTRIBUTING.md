@@ -59,6 +59,11 @@ Run `script/check` to lint and type-check your code before submitting, or `scrip
 
 **Local validation:** Run `script/hassfest` to validate your integration against Home Assistant's quality standards using the official validation tools. This checks manifest.json, translations, services.yaml (service action definitions), and integration structure locally before pushing to GitHub.
 
+## Translate the Integration
+
+To add or improve a language, follow [Translating Scheduled Jobs](docs/user/TRANSLATING.md). It covers the files, the
+checks, the translation pull request template and how a native speaker's review works.
+
 ## AI Agent Support
 
 This project ships [agent skills](./.agents/skills/README.md) — task-triggered playbooks written against the open
