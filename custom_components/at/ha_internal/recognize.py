@@ -20,7 +20,7 @@ from custom_components.at.const import (
 )
 from custom_components.at.core.models import IntentSpec, Targets
 from custom_components.at.ha_internal.intent_checks import target_check
-from custom_components.at.voice.announce import parse_announcement
+from custom_components.at.voice.announce import missing_message, parse_announcement
 from custom_components.at.voice.automation import match_automations
 from homeassistant.components import conversation
 from homeassistant.exceptions import HomeAssistantError, TemplateError
@@ -52,11 +52,11 @@ _NO_INTENT_KEY = "no_intent"
 _MISSING_ENTITY = "<missing>"
 _JSON_SCALARS = (str, int, float, bool, type(None))
 
-type RecognizeErrorCode = Literal["no_match", "no_target", "refused"]
+type RecognizeErrorCode = Literal["no_match", "no_message", "no_target", "refused"]
 
 
 class RecognizeError(HomeAssistantError):
-    """The command can't be scheduled: no intent, no exposed target, or a refused intent."""
+    """The command can't be scheduled: no intent, no exposed target, a refused intent, or nothing to announce."""
 
     def __init__(self, code: RecognizeErrorCode, message: str) -> None:
         """Keep the reason code and the sentence to say back."""
@@ -284,7 +284,8 @@ async def async_recognize_command(
 
     Raises:
         RecognizeError: ``no_match`` when no intent matched, ``refused`` for intents a job
-            must not store, ``no_target`` when no exposed entity matches the targets.
+            must not store, ``no_target`` when no exposed entity matches the targets,
+            ``no_message`` for an announcement to a place with nothing to announce.
 
     """
     if (command := _automation_command(hass, pack, text, language, device_id, satellite_id)) is not None:
@@ -294,6 +295,8 @@ async def async_recognize_command(
     if agent is None:
         raise RecognizeError("no_match", pack.recognize_errors.get("no_match", text))
 
+    if (question := missing_message(hass, pack, text)) is not None:
+        raise RecognizeError("no_message", question)
     if (announcement := parse_announcement(hass, pack, text)) is not None:
         intent_type, slots = announcement.intent_type, announcement.slots
     else:

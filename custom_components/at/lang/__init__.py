@@ -39,7 +39,8 @@ class LanguagePack:
     number_scales: Mapping[str, int] = field(default_factory=dict)  # word -> multiplier, "hundred" -> 100
     number_fillers: frozenset[str] = frozenset()  # words inside a number that add nothing, "and", "oh"
     # Sentence templates by group: schedule_absolute, schedule_relative, list, cancel, run, announce_area,
-    # announce_floor ({area} and {floor} are the registries' names) and announce_everyone
+    # announce_floor ({area} and {floor} are the registries' names), announce_everyone, and
+    # announce_area_no_message and announce_floor_no_message, an announcement that names only its place
     sentences: Mapping[str, list[str]] = field(default_factory=dict)
     sentence_lists: Mapping[str, Any] = field(default_factory=dict)  # hassil range/value lists the templates use
     run_pattern: str = ""  # regex with a ``name`` group for "run <automation>" outside a sentence trigger
@@ -52,7 +53,9 @@ class LanguagePack:
     joiner: str = ", "  # joins several target names, " and " in English
     domain_words: Mapping[str, str] = field(default_factory=dict)  # domain -> plural noun, "light" -> "lights"
     place_target: str = "{place}"  # an area or floor target, with {place} and {things}
-    recognize_errors: Mapping[str, str] = field(default_factory=dict)  # no_match|refused|no_target[_domain]
+    recognize_errors: Mapping[str, str] = field(
+        default_factory=dict
+    )  # no_match|refused|no_target[_domain]|no_message_(area|floor)
     responses: Mapping[str, Any] = field(default_factory=dict)  # response key -> template or formatter
     logbook: Mapping[str, str] = field(default_factory=dict)  # event key -> template
     todo: Mapping[str, str] = field(default_factory=dict)  # done|failed|missed|cancelled -> description

@@ -72,7 +72,7 @@ actions:
 
 - **It does not forget.** Jobs are saved in Home Assistant's storage. A job that comes due while Home Assistant is restarting still runs if it is within the grace window (5 minutes by default), and is marked missed otherwise, so nothing fires hours late by surprise.
 - **It checks before it promises.** A voice or text command is accepted only if Home Assistant's built-in agent understands it and the target is exposed to Assist. "Turn on the porch light" is checked against your real porch light when you schedule it, and again when it runs.
-- **It stays out of the way.** Sentences `at` cannot use are handed back to the conversation agent you were talking to, so normal conversation keeps working.
+- **It stays out of the way.** Sentences `at` cannot use are handed back to the conversation agent you were talking to, so normal conversation keeps working. With an LLM agent, so are sentences naming a device or area `at` cannot find, which the LLM may still make sense of.
 - **It respects who asked.** Anyone signed in can schedule a single action. Jobs with several steps or templates, and actions scheduled by an administrator or an automation, need an administrator to run early or change.
 - **It tells you what happened.** Every job fires an event when it is scheduled, runs, fails, is cancelled or is missed, and shows in the logbook. `sensor.at_next_job` and `sensor.at_pending_jobs` put the queue on a dashboard.
 

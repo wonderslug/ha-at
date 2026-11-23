@@ -30,3 +30,6 @@ sentences:
   - {text: trigger the doorbell automation, group: run}
   - {text: announce in the kitchen that dinner is ready, group: announce}
   - {text: tell everyone upstairs that it is bedtime, group: announce}
+  - {text: announce that dinner is ready in the kitchen, group: announce}
+  - {text: tell everyone the car is here on the ground floor, group: announce}
+  - {text: in 5 minutes announce the pizza is here in the kitchen, group: schedule}
