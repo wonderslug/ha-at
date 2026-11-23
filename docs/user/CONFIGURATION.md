@@ -78,7 +78,7 @@ An announcement that names a place but no message, such as "announce in the kitc
 
 Put the time **first**. A time after the message is part of the message: "tell everyone dinner is at 6" is announced right away, with "at 6" in it. The `at__AtSchedule` tool and the `at.schedule` action take the time separately, so this does not apply to them.
 
-An announcement to a place with no announcing satellite is refused when you schedule it, not when it is due.
+An announcement to a place with no announcing satellite is refused when you schedule it, not when it is due. If you talk to an LLM agent, the sentence goes to it instead; see [What can be scheduled](#what-can-be-scheduled).
 
 ### Scripts and automations
 
@@ -231,7 +231,7 @@ The events also show in the logbook.
 
 - Voice and time phrases are English only. Each voice assistant uses the sentences of its own language, whatever your Home Assistant language is, so an English assistant works on a German system. In an assistant of another language, `at` leaves the sentence to Assist. Use the panel or the `at.schedule` action with its `at` or `delay` field instead. The LLM tools take a spoken time phrase, so they also need English.
 - A job that runs `script.turn_on` or `automation.trigger` counts as done once the script or automation starts, not when it finishes. A failure inside the script or automation does not mark the job failed.
-- Commands must be ones the built-in agent understands. Anything else is refused.
+- Commands must be ones the built-in agent understands. Anything else is refused, or, if you talk to an LLM agent, handed to it. The LLM can still schedule with the `at__AtSchedule` tool.
 - Canceling a job by its time by voice needs digits, such as "cancel the 7:30 job". Scheduling accepts words such as "at seven thirty".
 - Exchanges forwarded to another conversation agent start a new conversation.
 - A floor at the end of an announcement needs `in`, `to` or `on` in front of it: "tell everyone dinner is ready upstairs" goes to the whole house, "tell everyone dinner is ready on upstairs" does not. Naming the floor first works either way: "announce upstairs dinner is ready".
@@ -241,6 +241,8 @@ The events also show in the logbook.
 ## Troubleshooting
 
 - **A phrase is ignored or answered by another agent.** Check the wording against the tables above, and that the target is exposed to Assist.
+- **"What should I announce in the Kitchen?"** The sentence named a place but no message, usually because speech-to-text stopped listening early. Nothing was sent or scheduled. Say the whole sentence again.
+- **An LLM answers a sentence you meant `at` to schedule.** The device or area name did not match anything exposed to Assist, so `at` handed the sentence to your LLM agent. Check the name against the entity or area name in Home Assistant, and that it is exposed to Assist.
 - **"Sorry, scheduling is only available in English for now."** The voice assistant you used is not set to English.
 - **A job shows as missed.** Home Assistant was down, or `at` was reloading, for longer than the **Grace window**.
 - **Diagnostics.** On the integration page, select the three-dot menu > **Download diagnostics**. The file lists the options, job counts by status, whether your language is supported, and whether each Home Assistant hook `at` relies on was found. It holds no job text and no user IDs. Attach it to bug reports.

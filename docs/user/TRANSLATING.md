@@ -44,6 +44,26 @@ off the kitchen light". It is optional.
 3. Copy `tests/translations/examples/en.yaml` to `tests/translations/examples/<code>.yaml` and rewrite it in your
    language.
 
+### Announcement sentences
+
+Announcements use five sentence template groups in `sentences`, and the reviewer checks them closely:
+
+| Group                       | What it matches                                                  |
+| --------------------------- | ---------------------------------------------------------------- |
+| `announce_area`             | A message to one area, with `{area}` and `{message}`             |
+| `announce_floor`            | A message to one floor, with `{floor}` and `{message}`           |
+| `announce_everyone`         | A message to the whole house, with `{message}` only              |
+| `announce_area_no_message`  | A sentence that names an area but has no message, `{area}` only  |
+| `announce_floor_no_message` | A sentence that names a floor but has no message, `{floor}` only |
+
+- The place can come before or after the message. When it comes after, put at least one fixed word between
+  `{message}` and the place, as English does with `(in|to) [the] {area}`. Home Assistant reads every `{placeholder}`
+  in a voice sentence as free text, and two free-text placeholders side by side never match.
+- The `_no_message` groups catch a sentence cut off before its message, such as "announce in the kitchen". `at` then
+  asks for the message with `no_message_area` or `no_message_floor` from `recognize_errors`, instead of announcing the
+  place name. Translate both replies, keeping `{area}` and `{floor}`.
+- Leave words such as "that" out of the message with an optional word before it: `[that[s]] {message}`.
+
 The examples file is how a reviewer, and the automated checks, see that your pack works. It has a header with a
 fixed `now` and `time_zone`, then two lists:
 

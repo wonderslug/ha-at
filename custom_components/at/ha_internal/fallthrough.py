@@ -3,8 +3,8 @@ Hand a sentence that `at` matched but can't schedule back to the agent it was me
 
 A matched sentence trigger takes the sentence away from the agent for good, and a callback
 that answers None only makes Home Assistant say "Done". So when the command part isn't
-something Assist knows ("remind me at 5", "broadcast dinner is at 6"), `at` passes the full
-sentence on itself:
+something Assist knows ("remind me at 5", "broadcast dinner is at 6"), or, for an agent other
+than the built-in one, names a target that doesn't exist, `at` passes the full sentence on itself:
 
 - to the pipeline's own agent when that isn't the built-in one (an LLM). Non-default agents
   don't run sentence triggers, so this can't loop back into `at`;
