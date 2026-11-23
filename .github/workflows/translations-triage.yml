@@ -12,20 +12,19 @@ on: # zizmor: ignore[dangerous-triggers] - never checks out or runs pull request
 
 permissions: {}
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
-
 jobs:
   run:
     name: "Triage the pull request"
+    concurrency:
+      group: ${{ github.workflow }}-run-${{ github.event.workflow_run.id }}
+      cancel-in-progress: false
     if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read # read the default branch and the maintainer list
-      pull-requests: write # labels and reviews
-      issues: write # the report comment
+      pull-requests: read # reviews, files and head commit
+      issues: write # labels and the report comment
       actions: read # download the report artifact
     steps:
       - name: Checkout the default branch
@@ -64,13 +63,16 @@ jobs:
 
   daily:
     name: "Review open translation pull requests"
+    concurrency:
+      group: ${{ github.workflow }}-daily
+      cancel-in-progress: false
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read # read the default branch and the maintainer list
-      pull-requests: write # labels and reviews
-      issues: write # the report comment
+      pull-requests: read # reviews, files and head commit
+      issues: write # labels and the report comment
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
