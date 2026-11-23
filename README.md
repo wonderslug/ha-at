@@ -81,7 +81,7 @@ actions:
 
 ## Installation
 
-Open the integration in the Marketplace (Home Assistant 2026.11 and newer) or in HACS:
+Search for **at: Scheduled Jobs** in the Marketplace (Home Assistant 2026.11 and newer) or in HACS, or open it directly:
 
 [![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=wonderslug&repository=ha-at&category=integration)
 
@@ -126,7 +126,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [commits-shield]: https://img.shields.io/github/commit-activity/y/wonderslug/ha-at.svg?style=for-the-badge
 [commits]: https://github.com/wonderslug/ha-at/commits/main
 [hacs]: https://www.hacs.xyz/docs/marketplace/
-[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[hacsbadge]: https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/wonderslug/ha-at.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40wonderslug-blue.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/wonderslug/ha-at.svg?style=for-the-badge
