@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.translations import report  # noqa: TID251  (plain module; see tests/assist.py)
+from tests.translations import checks, report  # noqa: TID251  (plain module; see tests/assist.py)
 from tests.translations.checks import Finding, StringsResult  # noqa: TID251  (plain module; see tests/assist.py)
 from tests.translations.report import (  # noqa: TID251  (plain module; see tests/assist.py)
     build_report,
@@ -118,6 +118,7 @@ def test_main_writes_both_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     empty.mkdir()
     monkeypatch.setattr(report, "TRANSLATIONS_DIR", empty)
     monkeypatch.setattr(report, "EXAMPLES_DIR", empty)
+    monkeypatch.setattr(checks, "TRANSLATIONS_DIR", empty)
     out = tmp_path / "report.json"
     md = tmp_path / "report.md"
     assert main(["--all", "--json", str(out), "--markdown", str(md)]) == 0
