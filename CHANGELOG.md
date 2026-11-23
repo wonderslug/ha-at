@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0](https://github.com/wonderslug/ha-at/tree/v1.0.0) (2026-11-23)
+
+First stable release of **at: Scheduled Jobs**: tell Home Assistant to run any action later, once, and it keeps the job until it is due, through restarts.
+
+### Features
+
+* **Schedule in plain language:** "turn off the porch light at 11 pm", "in 20 minutes close the garage door". Clock times, times in words, 24-hour wording, days and relative times all work, with the time before or after the command.
+* **Six ways to schedule a job:** voice satellites, typed Assist sentences, LLM conversation agents (`at__AtSchedule`, `at__AtList` and `at__AtCancel` tools), the **Scheduled Jobs** sidebar panel, the `todo.at_scheduled` to-do list, and the `at.schedule` action for automations and scripts.
+* **Announcements and broadcasts:** schedule a message to everyone, or to one area or floor.
+* **Run automations by voice**, now or at a scheduled time.
+* **Scheduled Jobs panel:** see upcoming and finished jobs, and add jobs by typing a sentence, by picking an action with Home Assistant's own action form, or as a multi-step sequence (administrators only).
+* **Jobs survive restarts:** a job that comes due during a restart still runs within the grace window (5 minutes by default) and is marked missed after it.
+* **Commands are checked when you schedule them and again when they run**, against the real targets exposed to Assist. Sentences `at` can't use go back to your conversation agent.
+* **Permissions:** anyone signed in can schedule a single action. Jobs with several steps or templates, and actions scheduled by an administrator or an automation, need an administrator to run early or change.
+* **Visibility:** an event and a logbook entry for every scheduled, run, failed, cancelled and missed job, with who cancelled it, plus `sensor.at_next_job` and `sensor.at_pending_jobs` for dashboards.
+
+Voice and text scheduling understand English only. See [known limitations](https://github.com/wonderslug/ha-at/blob/v1.0.0/docs/user/CONFIGURATION.md#known-limitations).
+
 ## [0.1.2](https://github.com/wonderslug/ha-at/compare/v0.1.1...v0.1.2) (2026-11-23)
 
 
