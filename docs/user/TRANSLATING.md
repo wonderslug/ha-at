@@ -1,6 +1,7 @@
 # Translating Scheduled Jobs
 
-You can add or improve a language without writing any code. This page explains what can be translated, how to do it,
+You can add or improve a language's strings and panel without writing any code. A voice pack is Python, so it needs
+some. This page explains what can be translated, how to do it,
 and how a translation is reviewed. You need a GitHub account and a text editor.
 
 The maintainer does not speak every language. Automated checks catch structural mistakes, and a native speaker of the
@@ -54,10 +55,18 @@ Cover every category. The six time categories are `relative`, `clock`, `day`, `w
 `spelled_number`. The five sentence groups are `schedule`, `list`, `cancel`, `run` and `announce`. A category with
 no example is reported but does not fail the checks.
 
+A voice pack is Python that runs in every user's Home Assistant, so the repository maintainer reviews it as code. The
+native speaker vouches for the language by reviewing the examples file. Because registering the pack changes
+`custom_components/at/lang/__init__.py`, a voice pack pull request is confirmed by the maintainer by hand, and a native
+speaker's approval alone does not verify it. Put the strings and the voice pack in separate pull requests, so the
+strings can be verified on their own.
+
 ## Checking your work
 
-Run these before you open the pull request. They need the project's development environment, described in
-[`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+Every translation pull request gets an automatic report comment that runs the same checks. For strings and panel work
+you can skip the local checks: if the report shows a failure, fix the file and push again. If you have the project's
+development environment, described in [`CONTRIBUTING.md`](../../CONTRIBUTING.md), you can run them first. Voice pack
+authors should run them, because a voice pack is code.
 
 ```bash
 script/test tests/translations
@@ -132,7 +141,8 @@ The 30 days count from when `translation: needs native review` was applied with 
 without verification the pull request gets `translation: unverified` and a comment saying so. It is not blocked, and
 a listed reviewer's approval still verifies it later. A failing check removes the review labels until it passes, and a
 pull request that also changes code beyond translations keeps `translation: needs native review` until it is
-confirmed by hand.
+confirmed by hand. This includes every voice pack pull request, which changes `custom_components/at/lang/__init__.py`:
+it never gets `translation: verified` or `translation: unverified`, and the maintainer confirms it by hand.
 
 ## Languages
 
