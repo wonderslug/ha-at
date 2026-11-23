@@ -12,6 +12,7 @@ from tests.translations.checks import (  # noqa: TID251  (plain module; see test
     EXAMPLES_DIR,
     PackResult,
     check_pack,
+    fatal_in_main_suite,
 )
 
 NOW = "2026-11-17 22:22"
@@ -141,4 +142,15 @@ def test_registered_pack(code: str) -> None:
     path = EXAMPLES_DIR / f"{code}.yaml"
     examples = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else None
     pack = _PACKS[code]()
-    assert _failures(check_pack(pack, examples, EN)) == []
+    assert fatal_in_main_suite(check_pack(pack, examples, EN).findings) == []
+
+
+def test_main_suite_ignores_example_mismatches() -> None:
+    wrong = {"text": "in 5 minutes", "category": "relative", "expect": "2020-01-01 00:00"}
+    result = check_pack(EN, _examples(times=[wrong]), EN)
+    assert _failures(result) == [("time_example", "in 5 minutes")]
+    assert fatal_in_main_suite(result.findings) == []
+
+
+def test_main_suite_fails_without_examples() -> None:
+    assert [f.kind for f in fatal_in_main_suite(check_pack(EN, None, EN).findings)] == ["no_examples"]

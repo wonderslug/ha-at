@@ -113,7 +113,11 @@ def test_markdown_lists_missing_keys() -> None:
     assert "… and 2 more" in text
 
 
-def test_main_writes_both_files(tmp_path: Path) -> None:
+def test_main_writes_both_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setattr(report, "TRANSLATIONS_DIR", empty)
+    monkeypatch.setattr(report, "EXAMPLES_DIR", empty)
     out = tmp_path / "report.json"
     md = tmp_path / "report.md"
     assert main(["--all", "--json", str(out), "--markdown", str(md)]) == 0

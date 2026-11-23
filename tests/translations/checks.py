@@ -1,6 +1,6 @@
 """Checks that every translation of the integration must pass, shared by the tests and the CI report."""
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, fields
 from datetime import datetime
 import json
@@ -30,6 +30,10 @@ EXAMPLES_DIR = Path(__file__).resolve().parent / "examples"
 TIME_CATEGORIES = ("relative", "clock", "day", "weekday", "named", "spelled_number")
 SENTENCE_GROUPS = ("schedule", "list", "cancel", "run", "announce")
 
+MAIN_SUITE_FATAL = frozenset(
+    {"html", "url", "whitespace", "empty", "not_string", "not_object", "no_examples", "no_pack", "bad_examples"}
+)
+
 _TIME_FORMAT = "%Y-%m-%d %H:%M"
 _DEFAULT_TIME_ZONE = "America/Chicago"
 
@@ -46,6 +50,15 @@ class Finding:
     kind: str
     key: str
     detail: str = ""
+
+
+def fatal_in_main_suite(findings: Iterable[Finding]) -> list[Finding]:
+    """Return the findings that fail the main test suite.
+
+    Key and placeholder drift against English, and example mismatches, fail only the translation workflow for the
+    language a pull request touches, so an English change never turns the suite red because another language lags.
+    """
+    return [finding for finding in findings if finding.severity == "fail" and finding.kind in MAIN_SUITE_FATAL]
 
 
 @dataclass
@@ -85,7 +98,7 @@ def check_strings(english: Mapping[str, Any], other: Any, language: str) -> Stri
     en_leaves = {key: value for key, value in _flatten(english).items() if isinstance(value, str)}
     if not isinstance(other, Mapping):
         return StringsResult(
-            language, len(en_leaves), 0, [Finding("fail", "unknown_key", "", "The file root is not a JSON object.")]
+            language, len(en_leaves), 0, [Finding("fail", "not_object", "", "The file root is not a JSON object.")]
         )
 
     translated = _flatten(other)
@@ -96,13 +109,16 @@ def check_strings(english: Mapping[str, Any], other: Any, language: str) -> Stri
         if key not in en_leaves:
             findings.append(Finding("fail", "unknown_key", key, "The key does not exist in English."))
         elif not isinstance(value, str):
-            findings.append(Finding("fail", "unknown_key", key, "The value is not a string."))
+            findings.append(Finding("fail", "not_string", key, "The value is not a string."))
 
     for key, english_value in en_leaves.items():
         value = translated.get(key)
         if not isinstance(value, str):
             if key not in translated:
                 findings.append(Finding("report", "missing_key", key))
+            continue
+        if not value.strip():
+            findings.append(Finding("fail", "empty", key))
             continue
         present += 1
         if set(_PLACEHOLDER.findall(value)) != set(_PLACEHOLDER.findall(english_value)):
