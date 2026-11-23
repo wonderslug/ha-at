@@ -17,8 +17,14 @@ describe("makeLocalize", () => {
     expect(localize).toHaveBeenCalledWith("component.at.config_panel.upcoming.title", undefined);
   });
 
-  it("falls back to the key", () => {
-    expect(makeLocalize(enHass({ localize: () => "" }))("upcoming.title")).toBe("upcoming.title");
+  it("falls back to bundled English before the translations load", () => {
+    const localize = makeLocalize(enHass({ localize: () => "" }));
+    expect(localize("panel.add_job")).toBe("Add job");
+    expect(localize("panel.missing_elements", { elements: "a, b" })).toBe("Missing: a, b");
+  });
+
+  it("falls back to the key when English has none either", () => {
+    expect(makeLocalize(enHass({ localize: () => "" }))("no.such.key")).toBe("no.such.key");
   });
 
   it("substitutes placeholders", () => {
