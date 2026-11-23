@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/wonderslug/ha-at/compare/v0.1.1...v0.1.2) (2026-11-23)
+
+
+### Bug Fixes
+
+* **voice:** ask for a missing announcement message, accept the place last, hand no-target to an LLM ([#50](https://github.com/wonderslug/ha-at/issues/50)) ([2d835ad](https://github.com/wonderslug/ha-at/commit/2d835adfbc05a1f27accae6e3e5f7e6a69c162f3))
+
 ## [0.1.1](https://github.com/wonderslug/ha-at/compare/v0.1.0...v0.1.1) (2026-11-23)
 
 
