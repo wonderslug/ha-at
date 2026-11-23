@@ -55,15 +55,13 @@ The PR:
 
 ### Version Bumping Rules
 
-This project is pre-1.0.0. Version bumps follow these rules:
+The project follows standard SemVer from `1.0.0` on:
 
 | Commit type                   | Version change                      |
 | ----------------------------- | ----------------------------------- |
-| `feat`                        | patch bump (e.g. `0.1.0` → `0.1.1`) |
-| `fix`, `perf`                 | patch bump                          |
-| `feat!` or `BREAKING CHANGE:` | minor bump (e.g. `0.1.0` → `0.2.0`) |
-
-Once the project reaches `1.0.0`, standard SemVer applies (`feat` → minor, `fix` → patch, breaking → major).
+| `feat`                        | minor bump (e.g. `1.0.0` → `1.1.0`) |
+| `fix`, `perf`                 | patch bump (e.g. `1.0.0` → `1.0.1`) |
+| `feat!` or `BREAKING CHANGE:` | major bump (e.g. `1.0.0` → `2.0.0`) |
 
 ### What Appears in the Changelog
 
