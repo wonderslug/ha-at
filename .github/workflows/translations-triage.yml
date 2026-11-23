@@ -1,0 +1,90 @@
+name: Translation triage
+
+# The Translations workflow runs a pull request's own code with a read-only token. This one holds the write token, so
+# it checks out the default branch only and treats the uploaded report as untrusted data.
+on: # zizmor: ignore[dangerous-triggers] - never checks out or runs pull request code; the artifact is validated
+  workflow_run:
+    workflows: [Translations]
+    types: [completed]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: "Triage the pull request"
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read # read the default branch and the maintainer list
+      pull-requests: write # labels and reviews
+      issues: write # the report comment
+      actions: read # download the report artifact
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+          version: "2026.11.8"
+
+      - name: Download the report
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          if gh run download "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" -n translation-report -D artifact; then
+            echo "found=true" >>"${GITHUB_OUTPUT}"
+          else
+            echo "Run ${RUN_ID} uploaded no translation report — nothing to triage"
+          fi
+
+      - name: Triage
+        if: steps.download.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          uv run --no-project --with pyyaml==6.0.3 python script/.lib/translation_triage.py run \
+            --artifact artifact --run-head-sha "${RUN_HEAD_SHA}" --run-conclusion "${RUN_CONCLUSION}"
+
+  daily:
+    name: "Review open translation pull requests"
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # read the default branch and the maintainer list
+      pull-requests: write # labels and reviews
+      issues: write # the report comment
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+          version: "2026.11.8"
+
+      - name: Triage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project --with pyyaml==6.0.3 python script/.lib/translation_triage.py daily

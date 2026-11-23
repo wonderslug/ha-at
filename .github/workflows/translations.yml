@@ -1,0 +1,92 @@
+name: Translations
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "custom_components/at/translations/**"
+      - "custom_components/at/lang/**"
+      - "tests/translations/**"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    name: "Translation report"
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up mise
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+          version: "2026.11.8"
+
+      - name: Get Home Assistant version
+        id: ha_version
+        run: |
+          version=$(bash script/.lib/ha_version.sh)
+          echo "HA_VERSION=${version}" >>"$GITHUB_OUTPUT"
+
+      - name: Cache Home Assistant installation
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .local/ha-venv
+          key: ha-venv-${{ runner.os }}-ha${{ steps.ha_version.outputs.HA_VERSION }}-${{ hashFiles('mise.toml', '.config/mise/conf.d/*.toml', '**/requirements*.txt') }}
+          restore-keys: |
+            ha-venv-${{ runner.os }}-ha${{ steps.ha_version.outputs.HA_VERSION }}-
+
+      - name: Install requirements
+        run: script/setup/bootstrap
+
+      - name: List the changed files
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p report
+          git diff --name-only "${BASE}...${HEAD}" >report/changed-files.txt
+
+      - name: Run the translation tests
+        run: script/test tests/translations
+
+      - name: Write the report
+        if: always()
+        run: |
+          script/translations-report --changed-files report/changed-files.txt \
+            --json report/report.json --markdown report/report.md || true
+          cat report/report.md >>"${GITHUB_STEP_SUMMARY}"
+
+      - name: Record the pull request number
+        if: always()
+        env:
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "${NUMBER}" >report/pr.txt
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: translation-report
+          path: |
+            report/report.json
+            report/report.md
+            report/pr.txt
+          retention-days: 7
+          if-no-files-found: warn
