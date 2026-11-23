@@ -81,8 +81,8 @@ Only user-facing changes appear in the public CHANGELOG:
 Reads the canonical version from `manifest.json`.
 
 ```bash
-./script/version              # Print: 0.1.0
-./script/version --tag        # Print: v0.1.0
+./script/version              # Print: 1.0.0
+./script/version --tag        # Print: v1.0.0
 ./script/version --check      # Verify manifest.json matches .release-please-manifest.json
 ```
 
