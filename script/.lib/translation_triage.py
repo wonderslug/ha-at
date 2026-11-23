@@ -174,7 +174,7 @@ def _review_line(
             names += ", …"
         line = f"`{code}`  Review  needs native review · maintainer: {names} · day {day or 0} of {WAIT_DAYS}"
     if privileged_alone and not approvers and not confirmation and not failed:
-        line += " · repository maintainer approved — a native speaker's approval is still needed"
+        line += " · repository maintainer approved — a native speaker's approval is still needed, then approve again"
     if not reported:
         line += " · no report"
     if others and not failed and not (confirmation and not approvers):
@@ -208,8 +208,15 @@ def decide(
     unreported = [code for code in codes if code not in report["languages"]]
     on_head = _approvers(reviews, author, head_sha)
     trusted = {login.lower() for login in privileged}
+    latest = latest_reviews(reviews)
     confirmation = next(
-        ((p, o) for p in on_head if p in trusted for o in on_head if o != p),
+        (
+            (p, o)
+            for p in on_head
+            if p in trusted
+            for o in on_head
+            if o != p and latest[p].submitted_at >= latest[o].submitted_at
+        ),
         None,
     )
     privileged_alone = any(p in trusted for p in on_head)
@@ -484,11 +491,18 @@ def _read_artifact(path: Path) -> str:
 def _run(
     repo: str, artifact: Path, run_head_sha: str, run_conclusion: str, maintainers: Mapping[str, list[str]]
 ) -> int:
-    raw = _read_artifact(artifact / "pr.txt")
     try:
-        number = parse_pr_number(raw)
-        pr = _gh(f"repos/{repo}/pulls/{number}")
-        validate_artifact_pr(raw, pr["head"]["sha"], run_head_sha)
+        number = parse_pr_number(_read_artifact(artifact / "pr.txt"))
+    except (ValueError, OSError) as err:
+        print(f"artifact rejected: {err}", file=sys.stderr)
+        return 1
+    pr = _gh(f"repos/{repo}/pulls/{number}")
+    head = pr["head"]["sha"]
+    if _SHA.fullmatch(head) and head != run_head_sha:
+        print(f"#{number}: head moved since the run; a newer run will report", file=sys.stderr)
+        return 0
+    try:
+        validate_artifact_pr(str(number), head, run_head_sha)
     except ValueError as err:
         print(f"artifact rejected: {err}", file=sys.stderr)
         return 1
@@ -496,14 +510,15 @@ def _run(
         return 0
     try:
         report = validate_report(json.loads(_read_artifact(artifact / "report.json")))
-    except ValueError:
+        markdown = _read_artifact(artifact / "report.md")
+    except ValueError, OSError:
         report = None
     if report is None:
-        print("report.json has an unexpected shape; no action taken", file=sys.stderr)
+        print("report artifact is missing or has an unexpected shape; no action taken", file=sys.stderr)
         _drop_stale_labels(repo, pr)
         return 0
     report = {**report, "failed": report["failed"] or run_conclusion != "success"}
-    _triage(repo, pr, report, _read_artifact(artifact / "report.md"), maintainers)
+    _triage(repo, pr, report, markdown, maintainers)
     return 0
 
 

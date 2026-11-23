@@ -308,8 +308,36 @@ def test_run_rejects_head_mismatch_without_writing(env: None, monkeypatch: pytes
     monkeypatch.setattr(tt, "_gh", gh)
     assert (
         tt.main(["run", "--artifact", str(artifact(tmp_path)), "--run-head-sha", OLD, "--run-conclusion", "success"])
-        == 1
+        == 0
     )
+    assert gh.writes() == []
+
+
+@pytest.mark.parametrize("name", ["report.json", "report.md"])
+def test_missing_artifact_file_drops_stale_labels_without_raising(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str
+) -> None:
+    """An unreadable artifact file never raises and never leaves a stale verified label."""
+    gh = FakeGh()
+    gh.pr["labels"] = list(STALE)
+    artifact(tmp_path)
+    (tmp_path / name).unlink()
+    monkeypatch.setattr(tt, "_gh", gh)
+    argv = ["run", "--artifact", str(tmp_path), "--run-head-sha", HEAD, "--run-conclusion", "success"]
+    assert tt.main(argv) == 0
+    assert sorted(deleted_labels(gh)) == sorted(quote(x, safe="") for x in (tt.VERIFIED, tt.UNVERIFIED))
+
+
+def test_missing_pr_file_is_rejected_without_raising(
+    env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Without a pull request number there is nothing to act on."""
+    gh = FakeGh()
+    artifact(tmp_path)
+    (tmp_path / "pr.txt").unlink()
+    monkeypatch.setattr(tt, "_gh", gh)
+    argv = ["run", "--artifact", str(tmp_path), "--run-head-sha", HEAD, "--run-conclusion", "success"]
+    assert tt.main(argv) == 1
     assert gh.writes() == []
 
 
@@ -625,11 +653,22 @@ def test_privileged_plus_other_approver_verifies() -> None:
     assert "confirmed by @\u200brob (repository maintainer) with @\u200bsam" in d.comment
 
 
+def test_privileged_approval_must_come_after_the_other() -> None:
+    """The repository maintainer confirms a native speaker's approval, not the other way round."""
+    after = decide(reviews=[review("sam", hours=0), review("rob", hours=1)], privileged={"rob"})
+    before = decide(reviews=[review("rob", hours=0), review("sam", hours=1)], privileged={"rob"})
+    assert tt.VERIFIED in after.add
+    assert tt.VERIFIED not in before.add
+    assert "approve again" in before.comment
+
+
 def test_privileged_alone_does_not_verify() -> None:
     """A repository maintainer alone is not enough."""
     d = decide(reviews=[review("rob")], privileged={"rob"})
     assert tt.VERIFIED not in d.add
-    assert "repository maintainer approved — a native speaker's approval is still needed" in d.comment
+    assert (
+        "repository maintainer approved — a native speaker's approval is still needed, then approve again" in d.comment
+    )
 
 
 def test_privileged_approval_on_older_commit_does_not_count() -> None:
@@ -734,7 +773,7 @@ def review_line(d: Any, code: str = "de") -> str:
             ["rob"],
             {"rob"},
             "- `de`  Review  needs native review · maintainer: @Anna, @bob · day 0 of 30"
-            " · repository maintainer approved — a native speaker's approval is still needed"
+            " · repository maintainer approved — a native speaker's approval is still needed, then approve again"
             " · approved by @\u200brob — not a listed maintainer, needs confirmation",
             id="repository-maintainer-alone",
         ),
