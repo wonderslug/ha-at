@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/wonderslug/ha-at/compare/v1.0.0...v1.0.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **voice:** say a language has no voice pack yet instead of naming English only ([#58](https://github.com/wonderslug/ha-at/issues/58)) ([2f96861](https://github.com/wonderslug/ha-at/commit/2f96861a61c66a5c9cf774d8dad6f09a0d2720cd))
+
 ## [1.0.0](https://github.com/wonderslug/ha-at/tree/v1.0.0) (2026-11-23)
 
 First stable release of **at: Scheduled Jobs**: tell Home Assistant to run any action later, once, and it keeps the job until it is due, through restarts.
