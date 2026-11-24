@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from zoneinfo import ZoneInfo
 
     from custom_components.at.lang import LanguagePack
 
@@ -235,7 +234,7 @@ def split_time_and_command(text: str, pack: LanguagePack) -> tuple[TimeSpec, str
     return _spec_from_match(best[1], pack), best[2]
 
 
-def _wall_to_aware(d: date, hour: int, minute: int, tz: ZoneInfo) -> datetime:
+def _wall_to_aware(d: date, hour: int, minute: int, tz: tzinfo) -> datetime:
     """Build a local time; a non-existent one moves forward to the first valid minute."""
     return _first_valid(datetime(d.year, d.month, d.day, hour, minute), tz)
 
@@ -272,7 +271,7 @@ def candidate_hours(spec: TimeSpec) -> list[int]:
     return sorted({hour % 12, hour % 12 + 12})
 
 
-def resolve(spec: TimeSpec, now: datetime, tz: ZoneInfo) -> ResolvedTime:
+def resolve(spec: TimeSpec, now: datetime, tz: tzinfo) -> ResolvedTime:
     """Resolve a spec to an aware UTC instant relative to ``now``."""
     if spec.relative is not None:
         return ResolvedTime(due=now.astimezone(UTC) + spec.relative, relative=True)

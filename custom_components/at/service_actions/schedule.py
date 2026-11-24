@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
-from zoneinfo import ZoneInfo
 
 from custom_components.at.const import DOMAIN
 from custom_components.at.core.actions import (
@@ -48,7 +47,7 @@ def _action_due(hass: HomeAssistant, data: dict[str, Any]) -> datetime:
         raise _invalid("unsupported_language")
     try:
         spec = parse_time_text(data["when"], pack)
-        return resolve(spec, dt_util.utcnow(), ZoneInfo(hass.config.time_zone)).due
+        return resolve(spec, dt_util.utcnow(), dt_util.get_default_time_zone()).due
     except TimeParseError as err:
         raise _invalid("bad_time", when=data["when"]) from err
 
