@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/wonderslug/ha-at/compare/v1.0.1...v1.0.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* **voice:** stop loading the time zone on the event loop ([#61](https://github.com/wonderslug/ha-at/issues/61)) ([31ef095](https://github.com/wonderslug/ha-at/commit/31ef095f8ee0ef38f1961f93caab5add867be7de))
+
 ## [1.0.1](https://github.com/wonderslug/ha-at/compare/v1.0.0...v1.0.1) (2026-11-23)
 
 
