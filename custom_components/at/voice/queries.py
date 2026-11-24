@@ -1,9 +1,8 @@
 """Pure selection of jobs to read out or cancel, and the sentences that say so."""
 
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, tzinfo
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from custom_components.at.core.models import Job, JobStatus, Via
 from custom_components.at.core.timeparse import TimeSpec, candidate_hours
@@ -37,7 +36,7 @@ def select_for_list(
     scope: Literal["all", "today", "tonight", "tomorrow"] | None,
     name: str | None,
     now: datetime,
-    tz: ZoneInfo,
+    tz: tzinfo,
 ) -> list[Job]:
     """Pick the pending jobs to read out, in due order."""
     local_now = now.astimezone(tz)
@@ -79,7 +78,7 @@ def _matches_time(local: datetime, spec: TimeSpec, local_now: datetime) -> bool:
     return True
 
 
-def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: ZoneInfo) -> list[Job]:
+def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: tzinfo) -> list[Job]:
     """Pick the pending jobs a cancel request refers to; several means it is ambiguous."""
     selected = _pending(jobs)
     if query.all:
@@ -93,7 +92,7 @@ def match_for_cancel(jobs: list[Job], query: CancelQuery, now: datetime, tz: Zon
     return selected
 
 
-def _item(pack: LanguagePack, job: Job, now: datetime, tz: ZoneInfo) -> str:
+def _item(pack: LanguagePack, job: Job, now: datetime, tz: tzinfo) -> str:
     responses = pack.responses
     local_due = job.due.astimezone(tz)
     return str(responses["list_item"]).format(
@@ -103,7 +102,7 @@ def _item(pack: LanguagePack, job: Job, now: datetime, tz: ZoneInfo) -> str:
     )
 
 
-def list_speech(pack: LanguagePack, jobs: list[Job], now: datetime, tz: ZoneInfo) -> str:
+def list_speech(pack: LanguagePack, jobs: list[Job], now: datetime, tz: tzinfo) -> str:
     """Say what is scheduled: the first three, then how many more."""
     responses = pack.responses
     if not jobs:
@@ -114,7 +113,7 @@ def list_speech(pack: LanguagePack, jobs: list[Job], now: datetime, tz: ZoneInfo
     return str(responses["list"]).format(count=len(jobs), items=items, more=more)
 
 
-def cancel_one_speech(pack: LanguagePack, job: Job, now: datetime, tz: ZoneInfo) -> str:
+def cancel_one_speech(pack: LanguagePack, job: Job, now: datetime, tz: tzinfo) -> str:
     """Say which job was cancelled."""
     return str(pack.responses["cancel_one"]).format(item=_item(pack, job, now, tz))
 
@@ -129,7 +128,7 @@ def _spoken_day(pack: LanguagePack, local_due: datetime, local_now: datetime) ->
     return day_qualifier(pack, local_due, local_now) or str(pack.responses["today"])
 
 
-def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None, now: datetime, tz: ZoneInfo) -> str:
+def ambiguous_speech(pack: LanguagePack, jobs: list[Job], query_name: str | None, now: datetime, tz: tzinfo) -> str:
     """Ask which of several matching jobs to cancel: by time, by day when they fall on different days, or by summary when two share a time."""
     responses = pack.responses
     local_now = now.astimezone(tz)

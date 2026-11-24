@@ -1,7 +1,6 @@
 """The AtSchedule, AtList and AtCancel intents: the one code path for scheduling, listing and cancelling."""
 
 from typing import TYPE_CHECKING, Literal, cast
-from zoneinfo import ZoneInfo
 
 import probatio
 
@@ -177,7 +176,7 @@ class AtListHandler(_AtHandler):
     async def _async_run(
         self, intent_obj: intent.Intent, pack: LanguagePack, manager: JobManager
     ) -> intent.IntentResponse:
-        tz = ZoneInfo(intent_obj.hass.config.time_zone)
+        tz = dt_util.get_default_time_zone()
         now = dt_util.utcnow()
         scope = _text_slot(intent_obj, "scope")
         jobs = select_for_list(
@@ -208,7 +207,7 @@ class AtCancelHandler(_AtHandler):
     async def _async_run(
         self, intent_obj: intent.Intent, pack: LanguagePack, manager: JobManager
     ) -> intent.IntentResponse:
-        tz = ZoneInfo(intent_obj.hass.config.time_zone)
+        tz = dt_util.get_default_time_zone()
         now = dt_util.utcnow()
         by = str(self._via_for(intent_obj))
         pending = manager.pending()

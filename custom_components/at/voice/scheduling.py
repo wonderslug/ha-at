@@ -1,9 +1,8 @@
 """The shared path every text entry point uses to schedule a command."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 import re
-from zoneinfo import ZoneInfo
 
 from custom_components.at.core.manager import JobManager
 from custom_components.at.core.models import Job, JobKind, JobStatus, Result, Source, Via, new_job_id
@@ -51,7 +50,7 @@ class ScheduleRefused(HomeAssistantError):
 
 
 def _confirmation(
-    pack: LanguagePack, summary: str, due: datetime, relative: timedelta | None, tz: ZoneInfo, now: datetime
+    pack: LanguagePack, summary: str, due: datetime, relative: timedelta | None, tz: tzinfo, now: datetime
 ) -> str:
     responses = pack.responses
     local_due = due.astimezone(tz)
@@ -108,7 +107,7 @@ async def async_schedule_command(
     if pack is None:
         raise ScheduleRefused(UNSUPPORTED_LANGUAGE)
 
-    tz = ZoneInfo(hass.config.time_zone)
+    tz = dt_util.get_default_time_zone()
     now = dt_util.utcnow()
     spec: TimeSpec | None = None
     resolved: ResolvedTime | None = None
