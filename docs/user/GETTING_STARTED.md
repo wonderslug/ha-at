@@ -13,14 +13,13 @@
 ### Marketplace (Home Assistant 2026.11 and newer)
 
 1. Go to **Settings** > **Marketplace**.
-2. Add `https://github.com/wonderslug/ha-at` as a custom repository with the category **Integration**.
-3. Open **at: Scheduled Jobs** and select **Download**.
+2. Search for **at: Scheduled Jobs** and open it.
+3. Select **Download**.
 
 ### HACS (before Home Assistant 2026.11)
 
-1. Open HACS, then select the three-dot menu > **Custom repositories**.
-2. Add `https://github.com/wonderslug/ha-at` with the category **Integration**.
-3. Find **at: Scheduled Jobs**, select **Download**, and restart Home Assistant.
+1. Open HACS and search for **at: Scheduled Jobs**.
+2. Open it, select **Download**, and restart Home Assistant.
 
 ### Manual installation
 
