@@ -148,16 +148,44 @@ def match_sentence(language: LanguageSentences, text: str, parser: Intents | Non
     )
 
 
-def _gate_lists(languages: Sequence[LanguageSentences]) -> dict[str, Any]:
-    """Merge the languages' lists for Home Assistant's match; a name two languages define differently stays a wildcard."""
-    merged: dict[str, Any] = {}
-    clashing: set[str] = set()
+def _sentences(language: LanguageSentences) -> list[str]:
+    return [sentence for group in language.groups for sentence in group.sentences]
+
+
+def _list_prefix(code: str) -> str:
+    return re.sub(r"\W", "_", code.lower())
+
+
+def _gate_sentences(languages: Sequence[LanguageSentences]) -> tuple[list[str], dict[str, Any]]:
+    """
+    Collect every language's sentences and lists for Home Assistant's language-blind match.
+
+    A list name that the languages using it do not all define the same way is renamed per
+    language, ``{scope}`` to ``{de_at_scope}``, so each language's sentences keep their own words.
+
+    Returns:
+        The sentences and the lists they reference.
+
+    """
+    specs: dict[str, list[Any]] = {}
     for language in languages:
-        for name, spec in language.lists.items():
-            if name in merged and merged[name] != spec:
-                clashing.add(name)
-            merged.setdefault(name, spec)
-    return {name: spec for name, spec in merged.items() if name not in clashing}
+        for name in {name for sentence in _sentences(language) for name in _LIST_REFERENCE.findall(sentence)}:
+            specs.setdefault(name, []).append(language.lists.get(name))
+    shared = {name for name, found in specs.items() if found[0] is not None and all(spec == found[0] for spec in found)}
+
+    sentences: list[str] = []
+    lists: dict[str, Any] = {}
+    for language in languages:
+        prefix = _list_prefix(language.code)
+        own = {name: name if name in shared else f"{prefix}_{name}" for name in language.lists}
+
+        def rename(match: re.Match[str], own: Mapping[str, str] = own) -> str:
+            name = match.group(1)
+            return match.group(0).replace(name, own[name], 1) if name in own else match.group(0)
+
+        sentences.extend(_LIST_REFERENCE.sub(rename, sentence) for sentence in _sentences(language))
+        lists.update({own[name]: spec for name, spec in language.lists.items()})
+    return sentences, lists
 
 
 def _value_text(value: Any) -> str:
@@ -266,8 +294,7 @@ def async_register_sentence_triggers(
         return await match.group.callback(given)
 
     manager = get_agent_manager(hass)
-    sentences = [sentence for language in languages for group in language.groups for sentence in group.sentences]
-    lists = _gate_lists(languages)
+    sentences, lists = _gate_sentences(languages)
     unregister = manager.register_trigger(sentences=sentences, trigger_callback=on_trigger)
     if _inject_lists(manager, sentences, lists):
         return unregister
