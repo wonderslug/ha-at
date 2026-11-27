@@ -14,7 +14,12 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.at.const import CONF_DEFER_RELATIVE
 from custom_components.at.core.manager import JobManager
 from custom_components.at.ha_internal.fallthrough import async_hand_off
-from custom_components.at.ha_internal.sentence_triggers import LanguageSentences, TriggerInput, _gate_lists
+from custom_components.at.ha_internal.sentence_triggers import (
+    LanguageSentences,
+    SentenceGroup,
+    TriggerInput,
+    _gate_sentences,
+)
 from custom_components.at.lang.en import EN
 from homeassistant.components import conversation
 from homeassistant.components.conversation.chat_log import current_chat_log
@@ -356,15 +361,63 @@ async def test_public_fallback_when_lists_cannot_be_injected(
     assert (await say(hass, home, "cancel all jobs")) == "Cancelled 2 jobs."
 
 
-def test_lists_two_languages_define_differently_become_wildcards() -> None:
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "in 30 minutes run the bedtime script",
+        "in an hour and a half turn on the master bathroom light",
+        "in forty five minutes run the bedtime script",
+        "at six forty five pm turn on the master bathroom light",
+    ],
+)
+@pytest.mark.usefixtures("script_calls")
+async def test_a_second_pack_with_its_own_list_words_leaves_english_working(
+    hass: HomeAssistant, home: Assist, config_entry: MockConfigEntry, sentence: str
+) -> None:
+    german = replace(
+        EN,
+        code="de",
+        sentence_lists={
+            **EN.sentence_lists,
+            "unit": {"values": [{"in": "minuten", "out": "minutes"}, {"in": "stunden", "out": "hours"}]},
+            "number_word": {"values": [{"in": "fünf", "out": 5}]},
+            "hour_word": {"values": [{"in": "sechs", "out": 6}]},
+            "meridiem": {"values": [{"in": "abends", "out": "pm"}]},
+        },
+    )
+    config_entry.add_to_hass(hass)
+    with patch.dict("custom_components.at.lang._PACKS", {"de": lambda: german}):
+        await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+
+        speech = await say(hass, home, sentence)
+
+    assert speech.startswith("OK, "), speech
+    assert len(config_entry.runtime_data.manager.pending()) == 1
+
+
+def test_a_list_two_languages_define_differently_gets_a_name_per_language() -> None:
     async def unparsed(_given: object) -> str:
         return ""
 
     hour = {"range": {"from": 1, "to": 12}}
-    english = LanguageSentences("en", [], {"hour": hour, "scope": {"values": ["tonight"]}}, unparsed)
-    german = LanguageSentences("de", [], {"hour": hour, "scope": {"values": ["heute abend"]}}, unparsed)
+    english = LanguageSentences(
+        "en",
+        [SentenceGroup("list", ["what's on {scope}", "at {hour}"], unparsed)],
+        {"hour": hour, "scope": {"values": ["tonight"]}},
+        unparsed,
+    )
+    german = LanguageSentences(
+        "de-AT",
+        [SentenceGroup("list", ["was steht {scope:when} an", "um {hour}"], unparsed)],
+        {"hour": hour, "scope": {"values": ["heute abend"]}},
+        unparsed,
+    )
 
-    assert _gate_lists([english, german]) == {"hour": hour}
+    sentences, lists = _gate_sentences([english, german])
+
+    assert sentences == ["what's on {en_scope}", "at {hour}", "was steht {de_at_scope:when} an", "um {hour}"]
+    assert lists == {"hour": hour, "en_scope": {"values": ["tonight"]}, "de_at_scope": {"values": ["heute abend"]}}
 
 
 @pytest.mark.parametrize("group", ["schedule_absolute", "schedule_relative", "list", "cancel"])
