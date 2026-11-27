@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read # read the default branch and the maintainer list
-      pull-requests: read # reviews, files and head commit
+      pull-requests: write # reviews, files and head commit
       issues: write # labels and the report comment
       actions: read # download the report artifact
     steps:
@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read # read the default branch and the maintainer list
-      pull-requests: read # reviews, files and head commit
+      pull-requests: write # reviews, files and head commit
       issues: write # labels and the report comment
     steps:
       - name: Checkout the default branch
