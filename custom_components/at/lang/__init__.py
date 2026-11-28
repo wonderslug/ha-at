@@ -68,7 +68,13 @@ def _en() -> LanguagePack:
     return EN
 
 
-_PACKS: dict[str, Callable[[], LanguagePack]] = {"en": _en}
+def _ru() -> LanguagePack:
+    from .ru import RU  # noqa: PLC0415 - ru imports this module
+
+    return RU
+
+
+_PACKS: dict[str, Callable[[], LanguagePack]] = {"en": _en, "ru": _ru}
 
 
 def language_packs() -> list[LanguagePack]:
