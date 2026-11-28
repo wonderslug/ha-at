@@ -1,0 +1,276 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Налаштуйте at — планувальник одноразових завдань. Додаткова конфігурація не потрібна."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Дозволено лише один екземпляр at."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Параметри at",
+        "description": "Налаштуйте, як зберігаються заплановані завдання та як обробляються голосові команди. Зміни застосовуються одразу; запущені завдання не перериваються.",
+        "data": {
+          "grace_minutes": "Вікно запізнення",
+          "history_days": "Термін зберігання історії",
+          "history_max": "Розмір історії",
+          "panel_admin_only": "Панель лише для адміністраторів",
+          "defer_relative_to_ha": "Відносний час залишати Home Assistant"
+        },
+        "data_description": {
+          "grace_minutes": "Скільки хвилин запізнення завдання ще може виконатися після перезапуску чи перезавантаження. Пізніші завдання позначаються як пропущені. Від 0 до 1440.",
+          "history_days": "Скільки днів завершені завдання зберігаються в історії. Від 1 до 365.",
+          "history_max": "Максимальна кількість завершених завдань в історії. Від 1 до 10000.",
+          "panel_admin_only": "Показувати бічну панель at лише адміністраторам.",
+          "defer_relative_to_ha": "Дозволити Home Assistant обробляти фрази на кшталт «через 5 хвилин» своїми таймерами замість планування тут."
+        }
+      }
+    }
+  },
+  "services": {
+    "schedule": {
+      "name": "Запланувати",
+      "description": "Планує команду або дію на одноразове виконання в пізніший час. Вкажіть або команду, або дію, та один із параметрів: at, delay або when.",
+      "fields": {
+        "command": {
+          "name": "Команда",
+          "description": "Речення для виконання пізніше, наприклад «увімкни світло на ґанку»."
+        },
+        "action": {
+          "name": "Дія",
+          "description": "Дія для виконання пізніше. Будь-який користувач може запланувати одну дію; кілька кроків або шаблони потребують адміністратора."
+        },
+        "at": {
+          "name": "У час",
+          "description": "Дата й час виконання."
+        },
+        "delay": {
+          "name": "Затримка",
+          "description": "Скільки чекати від поточного моменту."
+        },
+        "when": {
+          "name": "Коли",
+          "description": "Фраза часу, наприклад «завтра о 7 ранку»."
+        },
+        "name": {
+          "name": "Назва",
+          "description": "Назва, яку показувати замість згенерованого опису."
+        }
+      }
+    },
+    "list": {
+      "name": "Список",
+      "description": "Повертає заплановані та завершені завдання.",
+      "fields": {
+        "status": {
+          "name": "Стан",
+          "description": "Включити лише завдання в цих станах."
+        },
+        "start": {
+          "name": "Початок",
+          "description": "Включити лише завдання з часом виконання не раніше цього моменту."
+        },
+        "end": {
+          "name": "Кінець",
+          "description": "Включити лише завдання з часом виконання не пізніше цього моменту."
+        }
+      }
+    },
+    "cancel": {
+      "name": "Скасувати",
+      "description": "Скасовує заплановані завдання за ID або всі одразу.",
+      "fields": {
+        "job_id": {
+          "name": "ID завдання",
+          "description": "ID завдання або кілька ID."
+        },
+        "all": {
+          "name": "Усі",
+          "description": "Скасувати всі заплановані завдання, включно зі створеними діями та автоматизаціями."
+        }
+      }
+    },
+    "run_now": {
+      "name": "Виконати зараз",
+      "description": "Виконує заплановане завдання негайно, не чекаючи часу виконання.",
+      "fields": {
+        "job_id": {
+          "name": "ID завдання",
+          "description": "ID завдання для виконання."
+        }
+      }
+    },
+    "clear_history": {
+      "name": "Очистити історію",
+      "description": "Видаляє всі завершені завдання з історії.",
+      "fields": {}
+    }
+  },
+  "selector": {
+    "job_status": {
+      "options": {
+        "pending": "Очікує",
+        "running": "Виконується",
+        "done": "Виконано",
+        "failed": "Не виконано",
+        "cancelled": "Скасовано",
+        "missed": "Пропущено"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "at не налаштований. Спочатку додайте інтеграцію."
+    },
+    "action_not_allowed": {
+      "message": "{reason}"
+    },
+    "invalid_action": {
+      "message": "{error}"
+    },
+    "schedule_refused": {
+      "message": "{speech}"
+    },
+    "bad_time": {
+      "message": "«{when}» — це не час, який я розумію."
+    },
+    "unsupported_language": {
+      "message": "Фрази часу ще недоступні мовою Home Assistant. Використайте at або delay."
+    },
+    "job_not_found": {
+      "message": "Немає запланованого завдання з ID {job_id}."
+    },
+    "job_not_pending": {
+      "message": "Завдання {job_id} не очікує виконання, тому його не можна змінити."
+    },
+    "summary_not_editable": {
+      "message": "Щоб змінити завдання, скасуйте його та додайте знову."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_job": {
+        "name": "Наступне завдання"
+      },
+      "pending_jobs": {
+        "name": "Заплановані завдання"
+      }
+    }
+  },
+  "config_panel": {
+    "panel": {
+      "title": "Заплановані завдання",
+      "update_needed": "Ця панель потребує оновлення для цієї версії Home Assistant.",
+      "missing_elements": "Відсутні: {elements}",
+      "more_options": "Більше параметрів",
+      "cancel_all": "Скасувати все",
+      "confirm_cancel_all": "Підтвердити скасування всього?",
+      "clear_history": "Очистити історію",
+      "reconnecting": "Перепідключення…",
+      "request_failed": "Запит не вдався",
+      "dismiss": "Закрити",
+      "add_job": "Додати завдання"
+    },
+    "upcoming_table": {
+      "title": "Найближчі ({count})",
+      "column_when": "Коли",
+      "column_job": "Завдання",
+      "column_source": "Джерело",
+      "running": "Виконується…",
+      "run_now": "Виконати зараз",
+      "cancel": "Скасувати",
+      "empty": "Нічого не заплановано."
+    },
+    "history_table": {
+      "title": "Історія",
+      "column_time": "Час",
+      "column_job": "Завдання",
+      "column_details": "Подробиці",
+      "filter_all": "Усі",
+      "filter_done": "Виконано",
+      "filter_failed": "Не виконано",
+      "filter_missed": "Пропущено",
+      "filter_cancelled": "Скасовано",
+      "reschedule": "Перепланувати",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "empty_filtered": "Немає завдань за цим фільтром.",
+      "empty": "Історія порожня.",
+      "show_all": "Показати всі ({count})"
+    },
+    "job_details": {
+      "title": "Подробиці завдання",
+      "intent": "Інтент",
+      "action": "Дія",
+      "created_by": "Створив",
+      "created": "Створено",
+      "id": "ID",
+      "close": "Закрити"
+    },
+    "add_job_dialog": {
+      "title": "Додати завдання",
+      "tab_type": "Ввести текстом",
+      "tab_pick": "Обрати",
+      "tab_sequence": "Послідовність",
+      "type_label": "Що має статися і коли?",
+      "type_placeholder": "увімкни світло на ґанку о 23:00",
+      "when": "Коли",
+      "chip_15m": "+15 хв",
+      "chip_1h": "+1 год",
+      "date_time": "Дата й час",
+      "time_in_past": "Час має бути в майбутньому",
+      "choose_time": "Оберіть час",
+      "choose_action": "Оберіть дію",
+      "loading": "Завантаження…",
+      "parse_failed": "Не вдалося розпізнати",
+      "add_failed": "Не вдалося додати завдання",
+      "cancel": "Скасувати",
+      "add": "Додати"
+    },
+    "pick_fallback": {
+      "action": "Дія",
+      "op_turn_on": "Увімкнути",
+      "op_turn_off": "Вимкнути",
+      "op_toggle": "Перемкнути",
+      "op_script": "Запустити скрипт",
+      "op_automation": "Активувати автоматизацію",
+      "target": "Ціль",
+      "choose": "Оберіть…",
+      "variables": "Змінні (JSON, необов'язково)"
+    },
+    "sequence_editor": {
+      "action_list": "Список дій (JSON)"
+    },
+    "add_job": {
+      "must_be_json_object": "Має бути JSON-об'єктом, наприклад {example}",
+      "invalid_json": "Некоректний JSON",
+      "must_be_action_list": "Має бути непорожнім JSON-списком об'єктів дій"
+    },
+    "source": {
+      "assist": "Assist",
+      "add_job": "Додано вручну",
+      "reschedule": "Переплановано",
+      "todo": "Список завдань",
+      "action": "Дія",
+      "cancelled": "Скасовано",
+      "missed": "Home Assistant був вимкнений у момент виконання",
+      "cancelled_by_user": "Скасував(-ла) {name}",
+      "cancelled_from_assist": "Скасовано через Assist",
+      "cancelled_from_assist_by_user": "Скасовано через Assist ({name})",
+      "cancelled_in_panel": "Скасовано на панелі",
+      "cancelled_in_panel_by_user": "Скасовано на панелі ({name})",
+      "cancelled_from_todo": "Скасовано зі списку завдань",
+      "cancelled_from_todo_by_user": "Скасовано зі списку завдань ({name})",
+      "cancelled_by_action": "Скасовано дією",
+      "cancelled_by_action_by_user": "Скасовано дією ({name})",
+      "cancelled_by_origin": "Скасовано: {domain} {origin}",
+      "cancelled_by_origin_by_user": "Скасовано: {domain} {origin} ({name})",
+      "cancelled_from_assist_device": "Скасовано через Assist · {device}",
+      "cancelled_from_assist_device_by_user": "Скасовано через Assist · {device} ({name})"
+    }
+  }
+}
