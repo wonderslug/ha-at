@@ -122,9 +122,23 @@ What is only reported, and never fails:
    you did: running it on a live Home Assistant instance and running only the tests are different things.
 4. If you know a native speaker, name them in the "Reviewer I have asked" line.
 
-A pull request that changes only translation files gets a report comment from the automated checks, and labels. If a
-check fails, the report says which one and the labels are removed until it passes. A pull request that also changes
-code is confirmed by hand.
+Every translation pull request gets a report comment from the automated checks, and labels. If a check fails, the
+report says which one and the labels are removed until it passes.
+
+### Change only your language's files
+
+A pull request is verified automatically only when every file it changes is one of these, for your language:
+
+- `custom_components/at/translations/<code>.json`
+- `custom_components/at/lang/<code>.py`
+- `tests/translations/examples/<code>.yaml`
+
+Do not edit this guide, the [Languages](#languages) table, the README, or any other file, even to list your language.
+The maintainer updates the table and the reviewer list after your translation is merged. A pull request that changes
+any other file keeps `translation: needs native review` until the maintainer confirms it by hand.
+
+A voice pack is the one exception. It has to be registered in `custom_components/at/lang/__init__.py`, so a voice pack
+pull request is always confirmed by hand. This is why the strings go in a pull request of their own.
 
 ## Reviewing as a native speaker
 
@@ -170,7 +184,8 @@ it never gets `translation: verified` or `translation: unverified`, and the main
 ## Languages
 
 The list of reviewers per language lives in [`.github/translation-maintainers.yml`](../../.github/translation-maintainers.yml).
-To become one, ask in a translation pull request for your language.
+To become one, ask in a translation pull request for your language. The maintainer keeps this table up to date; do not
+change it in your pull request.
 
 | Language | Strings and panel | Voice pack | Status          |
 | -------- | ----------------- | ---------- | --------------- |

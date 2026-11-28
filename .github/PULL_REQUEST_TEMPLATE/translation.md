@@ -32,5 +32,6 @@ Details:
 ## Checklist
 
 - [ ] I read [Translating Scheduled Jobs](https://github.com/wonderslug/ha-at/blob/main/docs/user/TRANSLATING.md)
+- [ ] I changed only my language's files, and did not edit `docs/user/TRANSLATING.md` or any other file
 - [ ] I left out keys I did not translate instead of copying the English text
 - [ ] I accurately described the extent of human review, automated testing, and real-world testing
