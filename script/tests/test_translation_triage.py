@@ -829,6 +829,10 @@ def test_unlisted_approver_beside_listed_maintainer_is_not_mentioned() -> None:
         pytest.param("> Native speaker review: uk", "uk", False, id="quoted"),
         pytest.param("I did a Native speaker review: uk", "uk", False, id="mid-sentence"),
         pytest.param("", "uk", False, id="empty"),
+        pytest.param("LGTM\r\n\r\nNative speaker review: uk\r\nThanks", "uk", True, id="crlf-middle"),
+        pytest.param("Native speaker review: de\r\nNative speaker review: fr", "de", True, id="crlf-first-of-two"),
+        pytest.param("Native speaker review: uk\r\n", "uk", True, id="crlf-trailing"),
+        pytest.param("    Native speaker review: uk", "uk", True, id="indented-like-the-report-hint"),
     ],
 )
 def test_attests(body: str, language: str, expected: bool) -> None:

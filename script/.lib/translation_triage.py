@@ -91,7 +91,8 @@ def _normal_code(code: str) -> str:
 def attests(body: str, language: str) -> bool:
     """Return whether a review's text has the native speaker attestation line for the language."""
     wanted = _normal_code(language)
-    return any(_normal_code(code) == wanted for code in _ATTESTATION.findall(body[:MAX_REVIEW_BODY]))
+    text = body[:MAX_REVIEW_BODY].replace("\r\n", "\n").replace("\r", "\n")
+    return any(_normal_code(code) == wanted for code in _ATTESTATION.findall(text))
 
 
 def latest_reviews(reviews: Iterable[Review]) -> dict[str, Review]:
