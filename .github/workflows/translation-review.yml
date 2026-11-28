@@ -1,0 +1,25 @@
+name: Translation review
+
+# Review events on fork pull requests only get a read-only token, so this workflow only signals; Translation triage
+# chains off it with the write token.
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  signal:
+    name: "Signal the triage"
+    if: contains(github.event.pull_request.labels.*.name, 'translation')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 2
+    steps:
+      - name: Record the review
+        env:
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "Review event on #${NUMBER}"
