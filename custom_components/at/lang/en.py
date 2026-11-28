@@ -12,6 +12,7 @@ def format_clock(dt: datetime) -> str:
     return f"{dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
 
 
+# Said in a language that has no pack, so it is always English; other packs leave it out.
 UNSUPPORTED_LANGUAGE = "Sorry, scheduling isn't available in this language yet."
 
 
