@@ -1,0 +1,276 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Настройка at — планировщика разовых заданий. Дополнительная настройка не требуется."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Допускается только один экземпляр at."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Настройки at",
+        "description": "Настройте хранение заданий и обработку голосовых команд. Изменения применяются сразу; выполняющиеся задания не прерываются.",
+        "data": {
+          "grace_minutes": "Льготное окно",
+          "history_days": "Срок истории",
+          "history_max": "Размер истории",
+          "panel_admin_only": "Панель только для администраторов",
+          "defer_relative_to_ha": "Оставить относительное время Home Assistant"
+        },
+        "data_description": {
+          "grace_minutes": "На сколько минут позже срока задание ещё может выполниться после перезапуска или перезагрузки. Более поздние помечаются как пропущенные. От 0 до 1440.",
+          "history_days": "Сколько дней выполненные задания хранятся в истории. От 1 до 365.",
+          "history_max": "Сколько выполненных заданий максимум хранится в истории. От 1 до 10000.",
+          "panel_admin_only": "Показывать боковую панель at только администраторам.",
+          "defer_relative_to_ha": "Пусть Home Assistant обрабатывает фразы вроде «через 5 минут» своими таймерами вместо планирования здесь."
+        }
+      }
+    }
+  },
+  "services": {
+    "schedule": {
+      "name": "Запланировать",
+      "description": "Планирует команду или действие к однократному запуску позже. Укажите либо команду, либо действие — и один из вариантов: at, delay или when.",
+      "fields": {
+        "command": {
+          "name": "Команда",
+          "description": "Фраза для запуска позже, например «включи свет на крыльце»."
+        },
+        "action": {
+          "name": "Действие",
+          "description": "Действие для запуска позже. Одиночное действие может запланировать любой пользователь; несколько шагов или шаблоны — только администратор."
+        },
+        "at": {
+          "name": "Когда",
+          "description": "Дата и время запуска."
+        },
+        "delay": {
+          "name": "Задержка",
+          "description": "Сколько ждать от текущего момента."
+        },
+        "when": {
+          "name": "Время фразой",
+          "description": "Фраза со временем, например «завтра в 7 утра»."
+        },
+        "name": {
+          "name": "Название",
+          "description": "Название вместо автоматически составленного описания."
+        }
+      }
+    },
+    "list": {
+      "name": "Список",
+      "description": "Возвращает запланированные и завершённые задания.",
+      "fields": {
+        "status": {
+          "name": "Статус",
+          "description": "Включать только задания в этих состояниях."
+        },
+        "start": {
+          "name": "Начало",
+          "description": "Включать задания со сроком не раньше этого времени."
+        },
+        "end": {
+          "name": "Конец",
+          "description": "Включать задания со сроком не позднее этого времени."
+        }
+      }
+    },
+    "cancel": {
+      "name": "Отменить",
+      "description": "Отменяет запланированные задания по идентификатору или все сразу.",
+      "fields": {
+        "job_id": {
+          "name": "ID задания",
+          "description": "Идентификатор задания или несколько идентификаторов."
+        },
+        "all": {
+          "name": "Все",
+          "description": "Отменить все запланированные задания, включая созданные действиями и автоматизациями."
+        }
+      }
+    },
+    "run_now": {
+      "name": "Запустить сейчас",
+      "description": "Запускает задание немедленно, не дожидаясь срока.",
+      "fields": {
+        "job_id": {
+          "name": "ID задания",
+          "description": "Идентификатор задания для запуска."
+        }
+      }
+    },
+    "clear_history": {
+      "name": "Очистить историю",
+      "description": "Удаляет все завершённые задания из истории.",
+      "fields": {}
+    }
+  },
+  "selector": {
+    "job_status": {
+      "options": {
+        "pending": "Ожидает",
+        "running": "Выполняется",
+        "done": "Выполнено",
+        "failed": "Ошибка",
+        "cancelled": "Отменено",
+        "missed": "Пропущено"
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "at не настроена. Сначала добавьте интеграцию."
+    },
+    "action_not_allowed": {
+      "message": "{reason}"
+    },
+    "invalid_action": {
+      "message": "{error}"
+    },
+    "schedule_refused": {
+      "message": "{speech}"
+    },
+    "bad_time": {
+      "message": "«{when}» — не время, которое я понимаю."
+    },
+    "unsupported_language": {
+      "message": "Фразы со временем пока недоступны для языка Home Assistant. Используйте поля at или delay."
+    },
+    "job_not_found": {
+      "message": "Запланированного задания с ID {job_id} нет."
+    },
+    "job_not_pending": {
+      "message": "Задание {job_id} не ожидает запуска, поэтому его нельзя изменить."
+    },
+    "summary_not_editable": {
+      "message": "Чтобы изменить задание, отмените его и создайте заново."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "next_job": {
+        "name": "Следующее задание"
+      },
+      "pending_jobs": {
+        "name": "Запланированные задания"
+      }
+    }
+  },
+  "config_panel": {
+    "panel": {
+      "title": "Запланированные задания",
+      "update_needed": "Для этой версии Home Assistant панель требует обновления.",
+      "missing_elements": "Отсутствуют: {elements}",
+      "more_options": "Ещё параметры",
+      "cancel_all": "Отменить всё",
+      "confirm_cancel_all": "Точно отменить всё?",
+      "clear_history": "Очистить историю",
+      "reconnecting": "Переподключение…",
+      "request_failed": "Запрос не удался",
+      "dismiss": "Скрыть",
+      "add_job": "Добавить задание"
+    },
+    "upcoming_table": {
+      "title": "Предстоящие ({count})",
+      "column_when": "Когда",
+      "column_job": "Задание",
+      "column_source": "Источник",
+      "running": "Выполняется…",
+      "run_now": "Запустить сейчас",
+      "cancel": "Отменить",
+      "empty": "Ничего не запланировано."
+    },
+    "history_table": {
+      "title": "История",
+      "column_time": "Время",
+      "column_job": "Задание",
+      "column_details": "Подробности",
+      "filter_all": "Все",
+      "filter_done": "Выполнено",
+      "filter_failed": "Ошибка",
+      "filter_missed": "Пропущено",
+      "filter_cancelled": "Отменено",
+      "reschedule": "Перепланировать",
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "empty_filtered": "Под этот фильтр заданий нет.",
+      "empty": "История пока пуста.",
+      "show_all": "Показать все ({count})"
+    },
+    "job_details": {
+      "title": "О задании",
+      "intent": "Интент",
+      "action": "Действие",
+      "created_by": "Кем создано",
+      "created": "Создано",
+      "id": "ID",
+      "close": "Закрыть"
+    },
+    "add_job_dialog": {
+      "title": "Добавить задание",
+      "tab_type": "Написать",
+      "tab_pick": "Выбрать",
+      "tab_sequence": "Последовательность",
+      "type_label": "Что сделать и когда?",
+      "type_placeholder": "включи свет на крыльце в 23:00",
+      "when": "Когда",
+      "chip_15m": "+15 мин",
+      "chip_1h": "+1 ч",
+      "date_time": "Дата и время",
+      "time_in_past": "Время должно быть в будущем",
+      "choose_time": "Выберите время",
+      "choose_action": "Выберите действие",
+      "loading": "Загрузка…",
+      "parse_failed": "Не удалось разобрать",
+      "add_failed": "Не удалось добавить задание",
+      "cancel": "Отмена",
+      "add": "Добавить"
+    },
+    "pick_fallback": {
+      "action": "Действие",
+      "op_turn_on": "Включить",
+      "op_turn_off": "Выключить",
+      "op_toggle": "Переключить",
+      "op_script": "Запустить сценарий",
+      "op_automation": "Запустить автоматизацию",
+      "target": "Цель",
+      "choose": "Выберите…",
+      "variables": "Переменные (JSON, необязательно)"
+    },
+    "sequence_editor": {
+      "action_list": "Список действий (JSON)"
+    },
+    "add_job": {
+      "must_be_json_object": "Должен быть JSON-объектом, например {example}",
+      "invalid_json": "Недопустимый JSON",
+      "must_be_action_list": "Должен быть непустым JSON-списком объектов-действий"
+    },
+    "source": {
+      "assist": "Assist",
+      "add_job": "Добавить задание",
+      "reschedule": "Перепланировано",
+      "todo": "Список задач",
+      "action": "Действие",
+      "cancelled": "Отменено",
+      "missed": "Home Assistant был выключен в срок выполнения",
+      "cancelled_by_user": "Отменено ({name})",
+      "cancelled_from_assist": "Отменено из Assist",
+      "cancelled_from_assist_by_user": "Отменено из Assist ({name})",
+      "cancelled_in_panel": "Отменено на панели",
+      "cancelled_in_panel_by_user": "Отменено на панели ({name})",
+      "cancelled_from_todo": "Отменено из списка задач",
+      "cancelled_from_todo_by_user": "Отменено из списка задач ({name})",
+      "cancelled_by_action": "Отменено действием",
+      "cancelled_by_action_by_user": "Отменено действием ({name})",
+      "cancelled_by_origin": "Отменено: {domain} {origin}",
+      "cancelled_by_origin_by_user": "Отменено: {domain} {origin} ({name})",
+      "cancelled_from_assist_device": "Отменено из Assist · {device}",
+      "cancelled_from_assist_device_by_user": "Отменено из Assist · {device} ({name})"
+    }
+  }
+}
