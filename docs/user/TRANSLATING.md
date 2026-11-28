@@ -7,6 +7,40 @@ and how a translation is reviewed. You need a GitHub account and a text editor.
 The maintainer does not speak every language. Automated checks catch structural mistakes, and a native speaker of the
 language reads the result before it is called verified.
 
+## Reviewing as a native speaker
+
+A native speaker's approval is what verifies a language. If you were asked to review a translation, this is all you
+need to do:
+
+1. Open the pull request and select **Files changed**.
+2. Read the strings and the panel in your language. Check that they are natural and that the meaning matches English.
+3. If there is a voice pack, also read `tests/translations/examples/<code>.yaml`. Check that each phrase is something
+   a person really says, and that the `expect` result is correct.
+4. Select **Review changes**.
+   - If something needs fixing, choose **Request changes** and say what.
+   - If it is right, choose **Approve**, and put this line in the review text, with the pull request's language code
+     in place of `uk`:
+
+     ```text
+     Native speaker review: uk
+     ```
+
+5. Select **Submit review**.
+
+The line is your statement that you are a native speaker of that language and reviewed the translation. Without it,
+an approval does not count. Put it on a line of its own, exactly as shown. For a pull request with several
+languages, add one line for each language you reviewed. You can write anything else you like above or below it.
+
+Your approval counts when all of these are true:
+
+- You chose **Approve**. The line in a comment or a "Request changes" review does not count.
+- It is on the latest commit. If the author pushes again, approve again.
+- You are not the author of the pull request.
+- It is your latest review. A later review from you replaces it.
+
+If you forgot the line, edit your review and add it; you do not need to submit a new one. The labels update a few
+minutes after you submit or edit a review.
+
 ## What can be translated
 
 A language has up to three parts. You can contribute one or all of them.
@@ -140,19 +174,6 @@ any other file keeps `translation: needs native review` until the maintainer con
 A voice pack is the one exception. It has to be registered in `custom_components/at/lang/__init__.py`, so a voice pack
 pull request is always confirmed by hand. This is why the strings go in a pull request of their own.
 
-## Reviewing as a native speaker
-
-A native speaker's approval is what verifies a language. To review a translation pull request:
-
-1. Read the strings and the panel in your language. Check that they are natural and that the meaning matches English.
-2. If there is a voice pack, read `tests/translations/examples/<code>.yaml`. Check that each phrase is something a
-   person really says, and that the `expect` result is correct.
-3. Select **Review changes** on the pull request, then **Approve** or **Request changes**, and write what needs
-   fixing.
-
-The pull request author cannot verify their own translation. An approval counts only for the commit it was made on,
-so a new push needs a fresh approval. A later review from you replaces your earlier one.
-
 ## Verified and unverified
 
 The report comment ends with a review line for each language, and these labels show where a pull request stands:
@@ -167,10 +188,14 @@ The report comment ends with a review line for each language, and these labels s
 A language is verified when one of these is true on the current commit:
 
 - A reviewer listed for that language in [`.github/translation-maintainers.yml`](../../.github/translation-maintainers.yml)
-  approves it. The author cannot be that reviewer.
-- A repository maintainer approves it after another approver has. This is how a language's first reviewer is
-  confirmed, so they can be added to that file afterwards: the native speaker approves first, then the repository
-  maintainer approves. A maintainer approval that comes before the other one does not count, so approve again.
+  approves it with the `Native speaker review` line. The author cannot be that reviewer.
+- Someone not listed approves it with the `Native speaker review` line, and a repository maintainer approves after
+  them. This is how a language's first reviewer is confirmed, so they can be added to that file afterwards. The
+  maintainer's approval needs no line of its own, but it has to come after the native speaker's; one that comes
+  before does not count, so approve again.
+
+The report comment names any approval that has no `Native speaker review` line, and shows the line to paste until
+the language is verified.
 
 Only the automation sets `translation: verified`. Do not apply it by hand: the next run removes it.
 

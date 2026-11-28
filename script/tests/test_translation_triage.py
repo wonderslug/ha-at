@@ -24,12 +24,13 @@ NOW = datetime(2026, 12, 1, tzinfo=UTC)
 HEAD = "a" * 40
 OLD = "b" * 40
 MAINT = {"de": ["Anna", "bob"], "fr": ["claire"]}
+ATTEST_DE = "Native speaker review: de"
 REPORT = {"failed": False, "languages": {"de": {"strings": {"status": "pass"}, "voice": {"status": "absent"}}}}
 
 
-def review(login: str, state: str = "APPROVED", hours: int = 0, commit: str = HEAD) -> Any:
+def review(login: str, state: str = "APPROVED", hours: int = 0, commit: str = HEAD, body: str = ATTEST_DE) -> Any:
     """Review."""
-    return tt.Review(login, state, NOW - timedelta(days=5) + timedelta(hours=hours), commit)
+    return tt.Review(login, state, NOW - timedelta(days=5) + timedelta(hours=hours), commit, body)
 
 
 def decide(report: dict = REPORT, reviews: list | None = None, **kwargs: Any) -> Any:
@@ -105,7 +106,9 @@ def test_every_language_needs_a_qualifying_approver() -> None:
     d = decide(two_languages(), [review("bob")])
     assert tt.VERIFIED not in d.add
     assert tt.NEEDS_REVIEW in d.add
-    assert decide(two_languages(), [review("bob"), review("claire")]).add >= {tt.VERIFIED}
+    assert decide(two_languages(), [review("bob"), review("claire", body="Native speaker review: fr")]).add >= {
+        tt.VERIFIED
+    }
 
 
 def test_other_approvers_lists_unlisted_only() -> None:
@@ -216,7 +219,13 @@ class FakeGh:
         self.perm_errors: set[str] = set()
         self.files = [{"filename": "custom_components/at/translations/de.json"}]
         self.reviews = [
-            {"user": {"login": "bob"}, "state": "APPROVED", "submitted_at": "2026-11-28T00:00:00Z", "commit_id": HEAD}
+            {
+                "user": {"login": "bob"},
+                "state": "APPROVED",
+                "submitted_at": "2026-11-28T00:00:00Z",
+                "commit_id": HEAD,
+                "body": ATTEST_DE,
+            }
         ]
         self.pr = {
             "number": 12,
@@ -648,7 +657,8 @@ def test_daily_with_moved_head_removes_stale_verified(env: None, monkeypatch: py
 
 def test_privileged_plus_other_approver_verifies() -> None:
     """A repository maintainer and one other approver verify every language."""
-    d = decide(two_languages(), [review("rob"), review("sam")], privileged={"rob"})
+    sam = review("sam", body="Native speaker review: de\nNative speaker review: fr")
+    d = decide(two_languages(), [review("rob"), sam], privileged={"rob"})
     assert tt.VERIFIED in d.add
     assert "confirmed by @\u200brob (repository maintainer) with @\u200bsam" in d.comment
 
@@ -692,7 +702,13 @@ def test_beyond_blocks_privileged_verification() -> None:
 def two_reviewers(gh: FakeGh, *logins: str) -> None:
     """Make the fake return approvals on the current head by the given logins."""
     gh.reviews = [
-        {"user": {"login": login}, "state": "APPROVED", "submitted_at": "2026-11-28T00:00:00Z", "commit_id": HEAD}
+        {
+            "user": {"login": login},
+            "state": "APPROVED",
+            "submitted_at": "2026-11-28T00:00:00Z",
+            "commit_id": HEAD,
+            "body": ATTEST_DE,
+        }
         for login in logins
     ]
 
@@ -801,3 +817,113 @@ def test_unlisted_approver_beside_listed_maintainer_is_not_mentioned() -> None:
     assert review_line(d) == (
         "- `de`  Review  verified by @bob · approved by @\u200by — not a listed maintainer, needs confirmation"
     )
+
+
+@pytest.mark.parametrize(
+    ("body", "language", "expected"),
+    [
+        pytest.param("Native speaker review: uk", "uk", True, id="plain"),
+        pytest.param("Looks good.\n  native SPEAKER review:   UK  \nThanks", "uk", True, id="case-and-spaces"),
+        pytest.param("Native speaker review: pt_BR", "pt-br", True, id="underscore-and-hyphen"),
+        pytest.param("Native speaker review: de", "uk", False, id="other-language"),
+        pytest.param("> Native speaker review: uk", "uk", False, id="quoted"),
+        pytest.param("I did a Native speaker review: uk", "uk", False, id="mid-sentence"),
+        pytest.param("", "uk", False, id="empty"),
+        pytest.param("LGTM\r\n\r\nNative speaker review: uk\r\nThanks", "uk", True, id="crlf-middle"),
+        pytest.param("Native speaker review: de\r\nNative speaker review: fr", "de", True, id="crlf-first-of-two"),
+        pytest.param("Native speaker review: uk\r\n", "uk", True, id="crlf-trailing"),
+        pytest.param("    Native speaker review: uk", "uk", True, id="indented-like-the-report-hint"),
+    ],
+)
+def test_attests(body: str, language: str, expected: bool) -> None:
+    """The attestation is a line of its own naming the language."""
+    assert tt.attests(body, language) is expected
+
+
+def test_attestation_past_the_cap_is_ignored() -> None:
+    """Only the first MAX_REVIEW_BODY characters are read."""
+    assert not tt.attests("x" * tt.MAX_REVIEW_BODY + "\nNative speaker review: uk", "uk")
+
+
+def test_listed_approval_without_attestation_does_not_verify() -> None:
+    """A listed reviewer still has to attest."""
+    d = decide(reviews=[review("anna", body="LGTM")])
+    assert tt.VERIFIED not in d.add
+    assert "approval by @\u200banna has no `Native speaker review: de` line, not counted" in d.comment
+
+
+def test_unlisted_attested_approval_needs_confirmation() -> None:
+    """An attested approval from someone not listed waits for a maintainer."""
+    d = decide(reviews=[review("sam")])
+    assert tt.VERIFIED not in d.add
+    assert "@\u200bsam — not a listed maintainer, needs confirmation" in d.comment
+
+
+def test_unlisted_unattested_approval_cannot_be_confirmed() -> None:
+    """A maintainer cannot confirm an approval that attests nothing."""
+    d = decide(reviews=[review("sam", body="", hours=0), review("rob", body="", hours=1)], privileged={"rob"})
+    assert tt.VERIFIED not in d.add
+
+
+def test_confirmation_needs_no_attestation_from_the_maintainer() -> None:
+    """The maintainer vouches for the reviewer, not for the language."""
+    d = decide(reviews=[review("sam", hours=0), review("rob", body="", hours=1)], privileged={"rob"})
+    assert tt.VERIFIED in d.add
+
+
+def test_attestation_in_a_comment_review_does_not_count() -> None:
+    """Only an approval carries the attestation."""
+    assert tt.VERIFIED not in decide(reviews=[review("anna", "COMMENTED")]).add
+
+
+def test_attestation_on_an_older_commit_does_not_count() -> None:
+    """A new push needs a fresh attested approval."""
+    assert tt.VERIFIED not in decide(reviews=[review("anna", commit=OLD)]).add
+
+
+def test_author_attestation_never_counts() -> None:
+    """The author cannot attest their own translation."""
+    assert tt.VERIFIED not in decide(reviews=[review("bob")], author="bob").add
+
+
+def test_attesting_one_language_verifies_only_that_one() -> None:
+    """Each language needs its own attestation line."""
+    d = decide(two_languages(), [review("anna"), review("claire", body="Native speaker review: de")])
+    assert tt.VERIFIED not in d.add
+    assert "    Native speaker review: fr" in d.comment
+    assert "    Native speaker review: de" not in d.comment
+
+
+def test_paste_hint_shown_until_verified() -> None:
+    """The report shows the line to paste while a language waits."""
+    assert "    Native speaker review: de" in decide().comment
+    assert "Native speaker review:" not in decide(reviews=[review("anna")]).comment.split("### Review")[1]
+
+
+def test_paste_hint_hidden_when_checks_failed() -> None:
+    """Nobody is asked to review while the checks fail."""
+    assert "    Native speaker review:" not in decide({"failed": True, "languages": {"de": {}}}).comment
+
+
+@pytest.mark.parametrize("body", [pytest.param(None, id="null"), pytest.param("LGTM", id="no-line")])
+def test_daily_does_not_verify_without_attestation(env: None, monkeypatch: pytest.MonkeyPatch, body: Any) -> None:
+    """A review with no attestation, or no text at all, never verifies."""
+    gh = FakeGh(comments=[bot_comment(decide().comment)])
+    gh.pr["labels"] = [{"name": tt.BASE}, {"name": tt.NEEDS_REVIEW}]
+    gh.reviews[0]["body"] = body
+    monkeypatch.setattr(tt, "_gh", gh)
+    assert tt.main(["daily"]) == 0
+    assert tt.VERIFIED not in label_posts(gh)
+
+
+def test_daily_counts_an_attestation_added_by_editing_the_review(env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Bodies are read fresh, so an approval edited to add the line counts on the next run."""
+    gh = FakeGh(comments=[bot_comment(decide().comment)])
+    gh.pr["labels"] = [{"name": tt.BASE}, {"name": tt.NEEDS_REVIEW}]
+    gh.reviews[0]["body"] = "LGTM"
+    monkeypatch.setattr(tt, "_gh", gh)
+    assert tt.main(["daily"]) == 0
+    assert tt.VERIFIED not in label_posts(gh)
+    gh.reviews[0]["body"] = "LGTM\n" + ATTEST_DE
+    assert tt.main(["daily"]) == 0
+    assert tt.VERIFIED in label_posts(gh)

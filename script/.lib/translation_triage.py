@@ -39,6 +39,10 @@ MAX_LANGUAGES = 100
 MAX_LISTED_MAINTAINERS = 10
 BEYOND_NOTE = "This pull request also changes code beyond translations — confirm by hand."
 MAINTAINERS_PATH = ".github/translation-maintainers.yml"
+PASTE_HINT = (
+    "To verify, a native speaker of the language selects **Review changes** > **Approve** on the latest commit and "
+    "puts this line in the review text:"
+)
 
 _SHA = re.compile(r"[0-9a-f]{40}")
 _CODE = re.compile(r"[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*")
@@ -55,6 +59,8 @@ _SURFACES = (
 _ENGLISH_STRINGS = "custom_components/at/translations/en.json"
 _MAX_ARTIFACT_BYTES = 1_000_000
 _COUNTED_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
+MAX_REVIEW_BODY = 10_000
+_ATTESTATION = re.compile(r"^[ \t]*native speaker review:[ \t]*(\S+)[ \t]*$", re.IGNORECASE | re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -65,6 +71,7 @@ class Review:
     state: str
     submitted_at: datetime
     commit_id: str
+    body: str = ""
 
 
 @dataclass
@@ -75,6 +82,17 @@ class Decision:
     remove: set[str]
     comment: str
     post_unverified_notice: bool
+
+
+def _normal_code(code: str) -> str:
+    return code.lower().replace("_", "-")
+
+
+def attests(body: str, language: str) -> bool:
+    """Return whether a review's text has the native speaker attestation line for the language."""
+    wanted = _normal_code(language)
+    text = body[:MAX_REVIEW_BODY].replace("\r\n", "\n").replace("\r", "\n")
+    return any(_normal_code(code) == wanted for code in _ATTESTATION.findall(text))
 
 
 def latest_reviews(reviews: Iterable[Review]) -> dict[str, Review]:
@@ -101,6 +119,12 @@ def _listed(maintainers: Mapping[str, list[str]], language: str) -> set[str]:
     return {login.lower() for login in maintainers.get(language.lower(), [])}
 
 
+def _attested_approvers(reviews: Iterable[Review], author: str, language: str, head_sha: str | None) -> list[str]:
+    reviews = list(reviews)
+    latest = latest_reviews(reviews)
+    return [login for login in _approvers(reviews, author, head_sha) if attests(latest[login].body, language)]
+
+
 def qualifying_approvers(
     reviews: Iterable[Review],
     author: str,
@@ -108,9 +132,9 @@ def qualifying_approvers(
     maintainers: Mapping[str, list[str]],
     head_sha: str | None = None,
 ) -> list[str]:
-    """Return listed maintainers whose latest review approves the current head and who are not the author."""
+    """Return listed maintainers whose latest review approves the current head with an attestation for the language."""
     listed = _listed(maintainers, language)
-    return sorted(login for login in _approvers(reviews, author, head_sha) if login in listed)
+    return sorted(login for login in _attested_approvers(reviews, author, language, head_sha) if login in listed)
 
 
 def other_approvers(
@@ -120,9 +144,25 @@ def other_approvers(
     maintainers: Mapping[str, list[str]],
     head_sha: str | None = None,
 ) -> list[str]:
-    """Return approvers who are not listed maintainers for the language."""
+    """Return approvers not listed for the language whose approval attests it."""
     listed = _listed(maintainers, language)
-    return sorted(login for login in _approvers(reviews, author, head_sha) if login not in listed)
+    return sorted(login for login in _attested_approvers(reviews, author, language, head_sha) if login not in listed)
+
+
+def unattested_approvers(
+    reviews: Iterable[Review],
+    author: str,
+    language: str,
+    privileged: Collection[str],
+    head_sha: str | None = None,
+) -> list[str]:
+    """Return current-head approvers, other than repository maintainers, whose approval does not attest the language."""
+    reviews = list(reviews)
+    attested = set(_attested_approvers(reviews, author, language, head_sha))
+    trusted = {login.lower() for login in privileged}
+    return sorted(
+        login for login in _approvers(reviews, author, head_sha) if login not in attested and login not in trusted
+    )
 
 
 def waiting_day(applied_at: datetime | None, now: datetime) -> int | None:
@@ -160,6 +200,7 @@ def _review_line(
     reported: bool,
     confirmation: tuple[str, str] | None = None,
     privileged_alone: bool = False,
+    unattested: Sequence[str] = (),
 ) -> str:
     if failed:
         line = f"`{code}`  Review  waiting for the checks to pass"
@@ -180,6 +221,9 @@ def _review_line(
     if others and not failed and not (confirmation and not approvers):
         names = ", ".join(f"@\u200b{o}" for o in others)
         line += f" · approved by {names} — not a listed maintainer, needs confirmation"
+    if unattested and not failed:
+        names = ", ".join(f"@\u200b{u}" for u in unattested)
+        line += f" · approval by {names} has no `Native speaker review: {code}` line, not counted"
     return f"- {line}"
 
 
@@ -209,23 +253,24 @@ def decide(
     on_head = _approvers(reviews, author, head_sha)
     trusted = {login.lower() for login in privileged}
     latest = latest_reviews(reviews)
-    confirmation = next(
-        (
-            (p, o)
-            for p in on_head
-            if p in trusted
-            for o in on_head
-            if o != p and latest[p].submitted_at >= latest[o].submitted_at
-        ),
-        None,
-    )
     privileged_alone = any(p in trusted for p in on_head)
     review_lines: list[str] = []
-    approved = True
+    waiting: list[str] = []
     for code in codes:
         approvers = qualifying_approvers(reviews, author, code, maintainers, head_sha)
         others = other_approvers(reviews, author, code, maintainers, head_sha)
-        approved = approved and bool(approvers or confirmation)
+        confirmation = next(
+            (
+                (p, o)
+                for p in on_head
+                if p in trusted
+                for o in others
+                if o != p and latest[p].submitted_at >= latest[o].submitted_at
+            ),
+            None,
+        )
+        if not (approvers or confirmation):
+            waiting.append(code)
         review_lines.append(
             _review_line(
                 code,
@@ -237,10 +282,15 @@ def decide(
                 reported=code not in unreported,
                 confirmation=confirmation,
                 privileged_alone=privileged_alone,
+                unattested=unattested_approvers(reviews, author, code, trusted, head_sha),
             )
         )
+    approved = not waiting
     if beyond:
         review_lines.append(f"- {BEYOND_NOTE}")
+    if waiting and not failed:
+        review_lines.append("\n" + PASTE_HINT + "\n")
+        review_lines.extend(f"    Native speaker review: {code}" for code in waiting)
 
     add = {BASE}
     remove: set[str] = set()
@@ -352,7 +402,13 @@ def _fetch_maintainers(repo: str, default_branch: str) -> dict[str, list[str]]:
 
 def _fetch_reviews(repo: str, number: int) -> list[Review]:
     return [
-        Review(item["user"]["login"], item["state"], _parse_time(item["submitted_at"]), item.get("commit_id") or "")
+        Review(
+            item["user"]["login"],
+            item["state"],
+            _parse_time(item["submitted_at"]),
+            item.get("commit_id") or "",
+            str(item.get("body") or ""),
+        )
         for item in _paged(f"repos/{repo}/pulls/{number}/reviews")
         if item.get("user") and item.get("submitted_at")
     ]
