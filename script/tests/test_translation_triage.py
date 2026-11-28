@@ -24,6 +24,7 @@ NOW = datetime(2026, 12, 1, tzinfo=UTC)
 HEAD = "a" * 40
 OLD = "b" * 40
 MAINT = {"de": ["Anna", "bob"], "fr": ["claire"]}
+ATTEST_DE = "Native speaker review: de"
 REPORT = {"failed": False, "languages": {"de": {"strings": {"status": "pass"}, "voice": {"status": "absent"}}}}
 
 
@@ -801,3 +802,25 @@ def test_unlisted_approver_beside_listed_maintainer_is_not_mentioned() -> None:
     assert review_line(d) == (
         "- `de`  Review  verified by @bob · approved by @\u200by — not a listed maintainer, needs confirmation"
     )
+
+
+@pytest.mark.parametrize(
+    ("body", "language", "expected"),
+    [
+        pytest.param("Native speaker review: uk", "uk", True, id="plain"),
+        pytest.param("Looks good.\n  native SPEAKER review:   UK  \nThanks", "uk", True, id="case-and-spaces"),
+        pytest.param("Native speaker review: pt_BR", "pt-br", True, id="underscore-and-hyphen"),
+        pytest.param("Native speaker review: de", "uk", False, id="other-language"),
+        pytest.param("> Native speaker review: uk", "uk", False, id="quoted"),
+        pytest.param("I did a Native speaker review: uk", "uk", False, id="mid-sentence"),
+        pytest.param("", "uk", False, id="empty"),
+    ],
+)
+def test_attests(body: str, language: str, expected: bool) -> None:
+    """The attestation is a line of its own naming the language."""
+    assert tt.attests(body, language) is expected
+
+
+def test_attestation_past_the_cap_is_ignored() -> None:
+    """Only the first MAX_REVIEW_BODY characters are read."""
+    assert not tt.attests("x" * tt.MAX_REVIEW_BODY + "\nNative speaker review: uk", "uk")

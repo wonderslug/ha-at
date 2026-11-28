@@ -55,6 +55,8 @@ _SURFACES = (
 _ENGLISH_STRINGS = "custom_components/at/translations/en.json"
 _MAX_ARTIFACT_BYTES = 1_000_000
 _COUNTED_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
+MAX_REVIEW_BODY = 10_000
+_ATTESTATION = re.compile(r"^[ \t]*native speaker review:[ \t]*(\S+)[ \t]*$", re.IGNORECASE | re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,7 @@ class Review:
     state: str
     submitted_at: datetime
     commit_id: str
+    body: str = ""
 
 
 @dataclass
@@ -75,6 +78,16 @@ class Decision:
     remove: set[str]
     comment: str
     post_unverified_notice: bool
+
+
+def _normal_code(code: str) -> str:
+    return code.lower().replace("_", "-")
+
+
+def attests(body: str, language: str) -> bool:
+    """Return whether a review's text has the native speaker attestation line for the language."""
+    wanted = _normal_code(language)
+    return any(_normal_code(code) == wanted for code in _ATTESTATION.findall(body[:MAX_REVIEW_BODY]))
 
 
 def latest_reviews(reviews: Iterable[Review]) -> dict[str, Review]:
@@ -352,7 +365,13 @@ def _fetch_maintainers(repo: str, default_branch: str) -> dict[str, list[str]]:
 
 def _fetch_reviews(repo: str, number: int) -> list[Review]:
     return [
-        Review(item["user"]["login"], item["state"], _parse_time(item["submitted_at"]), item.get("commit_id") or "")
+        Review(
+            item["user"]["login"],
+            item["state"],
+            _parse_time(item["submitted_at"]),
+            item.get("commit_id") or "",
+            str(item.get("body") or ""),
+        )
         for item in _paged(f"repos/{repo}/pulls/{number}/reviews")
         if item.get("user") and item.get("submitted_at")
     ]
