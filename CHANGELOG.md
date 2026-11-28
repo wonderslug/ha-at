@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/wonderslug/ha-at/compare/v1.0.2...v1.0.3) (2026-11-28)
+
+
+### Bug Fixes
+
+* **voice:** keep each language's own words when a second voice pack is loaded ([#67](https://github.com/wonderslug/ha-at/issues/67)) ([2263d3c](https://github.com/wonderslug/ha-at/commit/2263d3cbd9b71b1f8c2d3db5d729bb3cf27b2203))
+
 ## [1.0.2](https://github.com/wonderslug/ha-at/compare/v1.0.1...v1.0.2) (2026-11-24)
 
 
