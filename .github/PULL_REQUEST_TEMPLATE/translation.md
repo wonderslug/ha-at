@@ -1,3 +1,5 @@
+> **Reviewing as a native speaker?** Approve and put the line `Native speaker review: <code>` in your review. Steps: [Reviewing as a native speaker](https://github.com/wonderslug/ha-at/blob/main/docs/user/TRANSLATING.md#reviewing-as-a-native-speaker).
+
 ## Language
 
 <!-- The language code, for example `de` or `pt-BR`. -->
