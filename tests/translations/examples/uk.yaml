@@ -1,0 +1,59 @@
+language: uk
+now: "2026-11-17 22:22"
+time_zone: Europe/Kyiv
+
+times:
+  - {category: relative, text: "через 20 хвилин", expect: "2026-11-17 22:42"}
+  - {category: relative, text: "через 1 годину", expect: "2026-11-17 23:22"}
+  - {category: relative, text: "через 2 години", expect: "2026-11-18 00:22"}
+  - {category: relative, text: "через півтори години", expect: "2026-11-17 23:52"}
+  - {category: relative, text: "через пів години", expect: "2026-11-17 22:52"}
+  - {category: relative, text: "через 3 дні", expect: "2026-11-20 22:22"}
+  - {category: clock, text: "о 6:00", expect: "2026-11-18 06:00"}
+  - {category: clock, text: "о 18:30", expect: "2026-11-18 18:30"}
+  - {category: clock, text: "о 7 ранку", expect: "2026-11-18 07:00"}
+  - {category: clock, text: "о сьомій вечора", expect: "2026-11-18 19:00"}
+  - {category: clock, text: "о 18 годині", expect: "2026-11-18 18:00"}
+  - {category: day, text: "завтра о 7:00", expect: "2026-11-18 07:00"}
+  - {category: day, text: "завтра вранці о 8:00", expect: "2026-11-18 08:00"}
+  - {category: day, text: "завтра ввечері о 19:00", expect: "2026-11-18 19:00"}
+  - {category: weekday, text: "у п'ятницю о 8:00", expect: "2026-11-20 08:00"}
+  - {category: weekday, text: "у вівторок о 9:30", expect: "2026-11-24 09:30"}
+  - {category: weekday, text: "у понеділок о 9:00", expect: "2026-11-23 09:00"}
+  - {category: named, text: "опівдні", expect: "2026-11-18 12:00"}
+  - {category: named, text: "опівночі", expect: "2026-11-18 00:00"}
+  - {category: spelled_number, text: "через сорок п'ять хвилин", expect: "2026-11-17 23:07"}
+  - {category: spelled_number, text: "через дві години", expect: "2026-11-18 00:22"}
+  - {category: spelled_number, text: "через сто двадцять хвилин", expect: "2026-11-18 00:22"}
+  - {category: relative, text: "через дві з половиною години", expect: "2026-11-18 00:52"}
+  - {category: relative, text: "через 2 години і пів", expect: "2026-11-18 00:52"}
+  - {category: clock, text: "о сьомій годині вечора", expect: "2026-11-18 19:00"}
+  - {category: clock, text: "о фіолетовому місяці", expect: null}
+  - {category: clock, text: "о пів на сьому", expect: null}
+
+sentences:
+  - {text: "через 10 хвилин вимкни світло в кухні", group: schedule, slots: {command: "вимкни світло в кухні"}}
+  - {text: "увімкни світло на ґанку о 19:00", group: schedule, slots: {command: "увімкни світло на ґанку"}}
+  - {text: "увімкни кавоварку завтра о 7:00", group: schedule, slots: {command: "увімкни кавоварку"}}
+  - {text: "о 7:00 завтра увімкни кавоварку", group: schedule, slots: {command: "увімкни кавоварку"}}
+  - {text: "через півтори години вимкни світло під навісом", group: schedule, slots: {command: "вимкни світло під навісом"}}
+  - {text: "о 19:00 увімкни світло у вітальні", group: schedule, slots: {command: "увімкни світло у вітальні"}}
+  - {text: "що заплановано", group: list}
+  - {text: "що заплановано на завтра", group: list, slots: {scope: tomorrow}}
+  - {text: "що заплановано на вечір", group: list, slots: {scope: tonight}}
+  - {text: "скасуй все", group: cancel}
+  - {text: "скасуй всі завдання", group: cancel}
+  - {text: "скасуй завдання о 18:00", group: cancel}
+  - {text: "скасуй завдання о 18:00 у п'ятницю", group: cancel}
+  - {text: "запусти ранкову рутину", group: run, slots: {name: "ранкову рутину"}}
+  - {text: "запусти вечірню рутину", group: run, slots: {name: "вечірню рутину"}}
+  - {text: "оголоси в кухні що вечеря готова", group: announce}
+  - {text: "оголоси що вечеря готова в кухні", group: announce}
+  - {text: "оголоси на другому поверсі що вечеря готова", group: announce}
+  - {text: "скажи всім що вечеря готова", group: announce}
+  - {text: "скажи всім що час спати", group: announce}
+  - {text: "о сьомій вечора запусти скрипт bedtime", group: schedule, slots: {command: "запусти скрипт bedtime"}}
+  - {text: "о 18 годині запусти скрипт bedtime", group: schedule, slots: {command: "запусти скрипт bedtime"}}
+  - {text: "через дві з половиною години вимкни світло", group: schedule, slots: {command: "вимкни світло"}}
+  - {text: "через 2 години і пів вимкни світло", group: schedule, slots: {command: "вимкни світло"}}
+  - {text: "що заплановано для вечеря", group: list, slots: {name: "вечеря"}}
